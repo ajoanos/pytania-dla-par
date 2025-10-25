@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pytania dla par – Start</title>
+  <title>Momentypdp – Gry do rozmów</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,10 +14,48 @@
 <body class="page page--start" data-theme="light">
   <main class="container">
     <header class="hero">
-      <h1>Pytania dla par</h1>
-      <p>Wejdź do wspólnego pokoju i odkryj pytania, które pomogą Wam się zbliżyć.</p>
+      <div class="hero__text">
+        <h1>Momentypdp</h1>
+        <p>Wybierz produkt, podaj hasło i zacznij rozmowę pełną bliskości.</p>
+      </div>
+      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
-    <section class="card">
+
+    <section class="card card--products" id="products-card">
+      <h2>Dostępne gry</h2>
+      <div class="products">
+        <article class="product" data-product="pytania-dla-par">
+          <div class="product__header">
+            <h3>Pytania dla par</h3>
+            <span class="product__badge">Nowość</span>
+          </div>
+          <p>Odkryj ponad sto pytań, które pomogą Wam lepiej się poznać i zbliżyć.</p>
+          <button class="btn btn--primary" type="button" data-action="open-product">Otwórz</button>
+        </article>
+      </div>
+      <p class="form__hint">Aby uzyskać dostęp, przygotuj hasło dostępu.</p>
+    </section>
+
+    <section class="card card--password" id="password-card" hidden>
+      <h2>Podaj hasło dostępu</h2>
+      <form id="password-form" class="form form--inline">
+        <label class="form__field">
+          <span>Hasło</span>
+          <input type="password" id="access-password" name="access_password" placeholder="momentypdp25" autocomplete="current-password" required />
+        </label>
+        <div class="form__actions">
+          <button type="submit" class="btn btn--primary">Potwierdź</button>
+          <button type="button" class="btn btn--ghost" id="password-cancel">Anuluj</button>
+        </div>
+      </form>
+      <p class="form__hint" id="password-error" hidden>Niepoprawne hasło. Spróbuj ponownie.</p>
+    </section>
+
+    <section class="card card--game" id="game-card" hidden>
+      <header class="card__header">
+        <h2>Pytania dla par</h2>
+        <p class="form__hint">Ustal wspólny kod pokoju i dołączcie razem, aby rozpocząć grę.</p>
+      </header>
       <form id="join-form" class="form">
         <label class="form__field">
           <span>Kod pokoju</span>
@@ -30,6 +68,7 @@
         <button type="submit" class="btn btn--primary">Dołącz</button>
       </form>
     </section>
+
     <footer class="footer">
       <p>Nie masz konta – to MVP. Po prostu ustal z partnerem kod pokoju.</p>
       <nav class="footer__nav">

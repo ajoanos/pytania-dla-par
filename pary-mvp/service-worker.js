@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pary-mvp-v1';
+const CACHE_NAME = 'pary-mvp-v2';
 const ASSETS = [
   '/pary-mvp/',
   '/pary-mvp/index.html',

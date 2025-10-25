@@ -1,4 +1,6 @@
 const STORAGE_KEY_THEME = 'pary.theme';
+const ACCESS_PASSWORD = 'momentypdp25';
+const ACCESS_STORAGE_KEY = 'pary.access.pdp';
 
 export async function postJson(url, data) {
   const response = await fetch(url, {
@@ -52,6 +54,75 @@ export function initThemeToggle(button) {
 
 document.addEventListener('DOMContentLoaded', () => {
   initThemeToggle(document.getElementById('theme-toggle'));
+
+  const productsCard = document.getElementById('products-card');
+  const passwordCard = document.getElementById('password-card');
+  const passwordForm = document.getElementById('password-form');
+  const passwordInput = document.getElementById('access-password');
+  const passwordError = document.getElementById('password-error');
+  const passwordCancel = document.getElementById('password-cancel');
+  const productButtons = document.querySelectorAll('[data-action="open-product"]');
+  const gameCard = document.getElementById('game-card');
+
+  function openPasswordCard() {
+    if (!passwordCard) return;
+    passwordCard.hidden = false;
+    passwordError && (passwordError.hidden = true);
+    if (passwordInput) {
+      passwordInput.value = '';
+      setTimeout(() => passwordInput.focus(), 50);
+    }
+  }
+
+  function hidePasswordCard() {
+    if (!passwordCard) return;
+    passwordCard.hidden = true;
+    if (passwordInput) {
+      passwordInput.value = '';
+    }
+  }
+
+  function unlockGameAccess() {
+    sessionStorage.setItem(ACCESS_STORAGE_KEY, 'true');
+    if (productsCard) {
+      productsCard.hidden = true;
+    }
+    if (passwordCard) {
+      passwordCard.hidden = true;
+    }
+    if (gameCard) {
+      gameCard.hidden = false;
+    }
+  }
+
+  if (sessionStorage.getItem(ACCESS_STORAGE_KEY) === 'true') {
+    unlockGameAccess();
+  }
+
+  productButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      openPasswordCard();
+    });
+  });
+
+  passwordCancel?.addEventListener('click', () => {
+    hidePasswordCard();
+  });
+
+  passwordForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!passwordInput) return;
+    const value = passwordInput.value.trim();
+    if (value === '') {
+      passwordError && (passwordError.hidden = false);
+      return;
+    }
+    if (value === ACCESS_PASSWORD) {
+      unlockGameAccess();
+    } else {
+      passwordError && (passwordError.hidden = false);
+    }
+  });
 
   const joinForm = document.getElementById('join-form');
   if (joinForm) {
