@@ -68,6 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!passwordCard) return;
     passwordCard.hidden = false;
     passwordError && (passwordError.hidden = true);
+    if (productsCard) {
+      productsCard.hidden = true;
+    }
     if (passwordInput) {
       passwordInput.value = '';
       setTimeout(() => passwordInput.focus(), 50);
@@ -77,9 +80,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function hidePasswordCard() {
     if (!passwordCard) return;
     passwordCard.hidden = true;
+    if (productsCard) {
+      productsCard.hidden = false;
+    }
     if (passwordInput) {
       passwordInput.value = '';
     }
+    passwordError && (passwordError.hidden = true);
   }
 
   function unlockGameAccess() {
@@ -108,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
   passwordCancel?.addEventListener('click', () => {
     hidePasswordCard();
   });
+
 
   passwordForm?.addEventListener('submit', (event) => {
     event.preventDefault();
