@@ -131,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const submitButton = joinForm.querySelector('button[type="submit"]');
       const roomKey = joinForm.room_key.value.trim().toUpperCase();
       const displayName = joinForm.display_name.value.trim();
+      const mode = joinForm.mode?.value || 'create';
       if (!roomKey || !displayName) {
         alert('Uzupełnij wszystkie pola.');
         return;
@@ -142,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = await postJson('api/create_or_join.php', {
           room_key: roomKey,
           display_name: displayName,
+          mode,
         });
         if (!payload.ok) {
           throw new Error(payload.error || 'Nie udało się dołączyć do pokoju.');

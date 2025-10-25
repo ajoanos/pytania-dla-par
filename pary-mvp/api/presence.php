@@ -13,6 +13,8 @@ if ($roomKey === '' || $participantId <= 0) {
     respond(['ok' => false, 'error' => 'Brak danych obecności.']);
 }
 
+purgeExpiredRooms();
+
 $room = getRoomByKeyOrFail($roomKey);
 
 $stmt = db()->prepare('UPDATE participants SET last_seen = :last_seen WHERE id = :id AND room_id = :room_id');

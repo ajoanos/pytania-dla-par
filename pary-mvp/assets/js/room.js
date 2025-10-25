@@ -11,7 +11,7 @@ if (!roomKey || !participantId) {
 const roomLabel = document.getElementById('room-label');
 const participantsList = document.getElementById('participants-list');
 const questionCard = document.getElementById('question-card');
-const questionPlaceholder = document.getElementById('question-placeholder');
+const questionEmpty = document.getElementById('question-empty');
 const questionCategory = document.getElementById('question-category');
 const questionId = document.getElementById('question-id');
 const questionText = document.getElementById('question-text');
@@ -35,14 +35,6 @@ let activeCategory = '';
 roomLabel.textContent = roomKey;
 
 setupCategoryOptions();
-
-questionPlaceholder?.addEventListener('click', () => revealQuestion());
-questionPlaceholder?.addEventListener('keypress', (event) => {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault();
-    revealQuestion();
-  }
-});
 
 nextQuestionButton?.addEventListener('click', async () => {
   try {
@@ -99,6 +91,7 @@ reactionButtons?.addEventListener('click', async (event) => {
     if (!payload.ok) {
       throw new Error(payload.error || 'Nie udało się zapisać reakcji.');
     }
+    setQuestionHighlight(action);
     await refreshState();
   } catch (error) {
     console.error(error);
@@ -115,12 +108,14 @@ async function refreshState() {
       throw new Error(payload.error || 'Nie udało się pobrać stanu.');
     }
     renderParticipants(payload.participants || []);
-    renderReactions(payload.reactions || []);
+    const reactions = payload.reactions || [];
     if (payload.current_question) {
       applyQuestion(payload.current_question);
+      updateQuestionHighlight(reactions);
     } else {
       clearQuestion();
     }
+    renderReactions(reactions);
   } catch (error) {
     console.error(error);
   }
@@ -157,28 +152,53 @@ function renderReactions(reactions) {
   });
 }
 
+function updateQuestionHighlight(reactions) {
+  if (!currentQuestion) {
+    setQuestionHighlight(null);
+    return;
+  }
+  const highlight = reactions.find((reaction) => reaction.question_id === currentQuestion.id);
+  setQuestionHighlight(highlight?.action || null);
+}
+
+function setQuestionHighlight(action) {
+  if (!questionCard) return;
+  questionCard.classList.remove('question--reaction', 'question--reaction-ok', 'question--reaction-skip', 'question--reaction-fav');
+  if (!action) {
+    return;
+  }
+  const map = {
+    ok: 'question--reaction-ok',
+    skip: 'question--reaction-skip',
+    fav: 'question--reaction-fav',
+  };
+  const className = map[action];
+  if (className) {
+    questionCard.classList.add('question--reaction', className);
+  }
+}
+
 function applyQuestion(question) {
   currentQuestion = question;
   questionCategory.textContent = question.category;
   questionId.textContent = question.id;
   questionText.textContent = question.text;
   questionCard.hidden = false;
-  questionPlaceholder.hidden = true;
+  if (questionEmpty) {
+    questionEmpty.hidden = true;
+  }
+  setQuestionHighlight(null);
   reactionButtons.hidden = false;
 }
 
 function clearQuestion() {
   currentQuestion = null;
   questionCard.hidden = true;
-  questionPlaceholder.hidden = false;
+  if (questionEmpty) {
+    questionEmpty.hidden = false;
+  }
+  setQuestionHighlight(null);
   reactionButtons.hidden = true;
-}
-
-function revealQuestion() {
-  if (!currentQuestion) return;
-  questionCard.hidden = false;
-  questionPlaceholder.hidden = true;
-  reactionButtons.hidden = false;
 }
 
 function formatCategoryLabel(category) {

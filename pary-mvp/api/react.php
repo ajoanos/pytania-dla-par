@@ -19,6 +19,8 @@ if (!in_array($action, ['ok', 'skip', 'fav'], true)) {
     respond(['ok' => false, 'error' => 'Nieprawidłowa akcja.']);
 }
 
+purgeExpiredRooms();
+
 $room = getRoomByKeyOrFail($roomKey);
 
 $stmt = db()->prepare('SELECT id FROM participants WHERE id = :id AND room_id = :room_id');

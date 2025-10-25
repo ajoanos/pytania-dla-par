@@ -5,6 +5,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 define('DB_FILE', __DIR__ . '/../db/data.sqlite');
+const ROOM_LIFETIME_SECONDS = 24 * 60 * 60;
 
 if (!function_exists('array_is_list')) {
     function array_is_list(array $array): bool
@@ -100,23 +101,68 @@ function fetchQuestions(): array
     return is_array($decoded) ? $decoded : [];
 }
 
+function purgeExpiredRooms(): void
+{
+    $stmt = db()->query('SELECT id, room_key, created_at FROM rooms');
+    $idsToDelete = [];
+    while ($room = $stmt->fetch()) {
+        if (isRoomExpired($room)) {
+            $idsToDelete[] = (int)$room['id'];
+        }
+    }
+    if (empty($idsToDelete)) {
+        return;
+    }
+    $deleteStmt = db()->prepare('DELETE FROM rooms WHERE id = :id');
+    foreach ($idsToDelete as $id) {
+        $deleteStmt->execute(['id' => $id]);
+    }
+}
+
+function isRoomExpired(array $room): bool
+{
+    $createdAtRaw = $room['created_at'] ?? '';
+    if ($createdAtRaw === '') {
+        return false;
+    }
+    try {
+        $createdAt = new DateTimeImmutable($createdAtRaw, new DateTimeZone('UTC'));
+    } catch (Exception $exception) {
+        return false;
+    }
+    $expiresAt = $createdAt->modify('+' . ROOM_LIFETIME_SECONDS . ' seconds');
+    $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+    return $expiresAt < $now;
+}
+
 function getRoomByKey(string $roomKey): ?array
 {
+    $roomKey = strtoupper($roomKey);
     $stmt = db()->prepare('SELECT * FROM rooms WHERE room_key = :room_key');
     $stmt->execute(['room_key' => $roomKey]);
     $room = $stmt->fetch();
-    return $room ?: null;
+    if (!$room) {
+        return null;
+    }
+    if (isRoomExpired($room)) {
+        $deleteStmt = db()->prepare('DELETE FROM rooms WHERE id = :id');
+        $deleteStmt->execute(['id' => $room['id']]);
+        return null;
+    }
+    return $room;
 }
 
-function ensureRoom(string $roomKey): array
+function createRoom(string $roomKey): ?array
 {
     $roomKey = strtoupper($roomKey);
-    $room = getRoomByKey($roomKey);
-    if ($room) {
-        return $room;
+    if (getRoomByKey($roomKey)) {
+        return null;
     }
-    $stmt = db()->prepare('INSERT INTO rooms (room_key) VALUES (:room_key)');
-    $stmt->execute(['room_key' => $roomKey]);
+    $stmt = db()->prepare('INSERT INTO rooms (room_key, created_at) VALUES (:room_key, :created_at)');
+    $stmt->execute([
+        'room_key' => $roomKey,
+        'created_at' => gmdate('Y-m-d H:i:s'),
+    ]);
     return getRoomByKey($roomKey);
 }
 
@@ -181,9 +227,9 @@ function getLatestQuestion(int $roomId): ?array
 
 function getRoomByKeyOrFail(string $roomKey): array
 {
-    $room = getRoomByKey(strtoupper($roomKey));
+    $room = getRoomByKey($roomKey);
     if (!$room) {
-        respond(['ok' => false, 'error' => 'Pokój nie istnieje']);
+        respond(['ok' => false, 'error' => 'Pokój nie istnieje lub wygasł.']);
     }
     return $room;
 }

@@ -6,14 +6,28 @@ require __DIR__ . '/bootstrap.php';
 
 $data = requireJsonInput();
 
+purgeExpiredRooms();
+
 $roomKey = strtoupper(trim((string)($data['room_key'] ?? '')));
 $displayName = trim((string)($data['display_name'] ?? ''));
+$mode = strtolower(trim((string)($data['mode'] ?? 'join')));
 
 if ($roomKey === '' || $displayName === '') {
     respond(['ok' => false, 'error' => 'Wymagany kod pokoju i imię.']);
 }
 
-$room = ensureRoom($roomKey);
+if ($mode === 'create') {
+    $room = createRoom($roomKey);
+    if ($room === null) {
+        respond(['ok' => false, 'error' => 'Pokój o tym kodzie już istnieje. Wybierz inną nazwę.']);
+    }
+} else {
+    $room = getRoomByKey($roomKey);
+    if ($room === null) {
+        respond(['ok' => false, 'error' => 'Pokój nie istnieje lub wygasł.']);
+    }
+}
+
 $participant = ensureParticipant((int)$room['id'], $displayName);
 
 $stmt = db()->prepare('UPDATE participants SET last_seen = :last_seen WHERE id = :id');
