@@ -1,5 +1,5 @@
 const STORAGE_KEY_THEME = 'pary.theme';
-const ACCESS_PASSWORD = 'momentyptp25';
+const ACCESS_PASSWORD = 'test2';
 const ACCESS_STORAGE_KEY = 'pary.access.pdp';
 
 export async function postJson(url, data) {
@@ -60,14 +60,7 @@ function focusElement(element) {
 document.addEventListener('DOMContentLoaded', () => {
   initThemeToggle(document.getElementById('theme-toggle'));
 
-  const passwordCard = document.getElementById('password-card');
-  const passwordForm = document.getElementById('password-form');
-  const passwordInput = document.getElementById('access-password');
-  const passwordError = document.getElementById('password-error');
-  const passwordCancel = document.getElementById('password-cancel');
   const productButtons = document.querySelectorAll('[data-action="open-product"]');
-  const gameCard = document.getElementById('game-card');
-
   productButtons.forEach((button) => {
     const target = button.dataset.target;
     if (!target) return;
@@ -80,72 +73,59 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  function showPasswordCard() {
-    if (!passwordCard) return;
-    passwordCard.hidden = false;
-    if (gameCard) {
-      gameCard.hidden = true;
-    }
+  const passwordForm = document.getElementById('password-form');
+  const passwordInput = document.getElementById('access-password');
+  const passwordError = document.getElementById('password-error');
+  const passwordCancel = document.getElementById('password-cancel');
+
+  if (passwordForm) {
+    const successTarget = passwordForm.dataset.success || 'pytania-dla-par-room.html';
+
     if (passwordInput) {
       passwordInput.value = '';
       focusElement(passwordInput);
+      passwordInput.addEventListener('input', () => {
+        if (passwordError) {
+          passwordError.hidden = true;
+        }
+      });
     }
-    if (passwordError) {
-      passwordError.hidden = true;
-    }
-  }
 
-  function unlockGameAccess() {
-    sessionStorage.setItem(ACCESS_STORAGE_KEY, 'true');
-    if (passwordCard) {
-      passwordCard.hidden = true;
-    }
-    if (gameCard) {
-      gameCard.hidden = false;
-      const firstInput = gameCard.querySelector('input');
-      focusElement(firstInput);
-    }
-    if (passwordError) {
-      passwordError.hidden = true;
-    }
-  }
+    passwordCancel?.addEventListener('click', () => {
+      const backTarget = passwordCancel.dataset.back;
+      if (backTarget) {
+        window.location.href = backTarget;
+      }
+    });
 
-  if (passwordCard) {
-    if (sessionStorage.getItem(ACCESS_STORAGE_KEY) === 'true') {
-      unlockGameAccess();
-    } else {
-      showPasswordCard();
-    }
-  }
-
-  passwordCancel?.addEventListener('click', () => {
-    const backTarget = passwordCancel.dataset.back;
-    if (backTarget) {
-      window.location.href = backTarget;
-      return;
-    }
-    showPasswordCard();
-  });
-
-  passwordForm?.addEventListener('submit', (event) => {
-    event.preventDefault();
-    if (!passwordInput) return;
-    const value = passwordInput.value.trim();
-    if (value === '') {
-      if (passwordError) {
+    passwordForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const value = passwordInput?.value.trim() || '';
+      if (!value) {
+        if (passwordError) {
+          passwordError.hidden = false;
+        }
+        return;
+      }
+      if (value === ACCESS_PASSWORD) {
+        sessionStorage.setItem(ACCESS_STORAGE_KEY, 'true');
+        window.location.href = successTarget;
+      } else if (passwordError) {
         passwordError.hidden = false;
       }
-      return;
-    }
-    if (value === ACCESS_PASSWORD) {
-      unlockGameAccess();
-    } else if (passwordError) {
-      passwordError.hidden = false;
-    }
-  });
+    });
+  }
 
   const joinForm = document.getElementById('join-form');
   if (joinForm) {
+    if (sessionStorage.getItem(ACCESS_STORAGE_KEY) !== 'true') {
+      window.location.replace('pytania-dla-par.html');
+      return;
+    }
+
+    const firstInput = joinForm.querySelector('input');
+    focusElement(firstInput);
+
     joinForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const submitButton = joinForm.querySelector('button[type="submit"]');

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pytania dla par – Hasło dostępu</title>
+  <title>Pytania dla par – Stwórz pokój</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,33 +11,36 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
   <script type="module" src="assets/js/app.js"></script>
 </head>
-<body class="page page--access" data-theme="light">
+<body class="page page--game" data-theme="light">
   <main class="container">
     <header class="hero">
       <div class="hero__text">
         <h1>Pytania dla par</h1>
-        <p>Podaj hasło, aby uzyskać dostęp do gry i utworzyć pokój.</p>
+        <p>Stwórz pokój i zaproś partnera, aby rozpocząć grę.</p>
       </div>
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--password" id="password-card">
-      <h2>Podaj hasło dostępu</h2>
-      <form id="password-form" class="form form--inline" data-success="pytania-dla-par-room.html">
+    <section class="card card--game" id="game-card">
+      <header class="card__header">
+        <h2>Stwórz pokój</h2>
+        <p class="form__hint">Ustal wspólny kod pokoju i dołączcie razem, aby rozpocząć grę.</p>
+      </header>
+      <form id="join-form" class="form">
         <label class="form__field">
-          <span>Hasło</span>
-          <input type="password" id="access-password" name="access_password" placeholder="••••" autocomplete="current-password" required />
+          <span>Kod pokoju</span>
+          <input type="text" id="room_key" name="room_key" placeholder="np. MIŁOŚĆ" required maxlength="12" autocomplete="off" />
         </label>
-        <div class="form__actions">
-          <button type="submit" class="btn btn--primary">Potwierdź</button>
-          <button type="button" class="btn btn--ghost" id="password-cancel" data-back="index.html">Wróć</button>
-        </div>
+        <label class="form__field">
+          <span>Twoje imię</span>
+          <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
+        </label>
+        <button type="submit" class="btn btn--primary">Dołącz</button>
       </form>
-      <p class="form__hint" id="password-error" hidden>Niepoprawne hasło. Spróbuj ponownie.</p>
     </section>
 
     <footer class="footer">
-      <p>Podaj hasło, aby przejść do tworzenia pokoju i rozpocząć grę.</p>
+      <p>Nie masz konta – to MVP. Po prostu ustal z partnerem kod pokoju.</p>
       <nav class="footer__nav">
         <a href="admin-import.html">Import pytań</a>
         <a href="index.html">Powrót do wyboru gier</a>
