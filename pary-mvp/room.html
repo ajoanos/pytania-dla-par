@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pytania dla par – Pokój</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="assets/js/room.js"></script>
+</head>
+<body class="page page--room" data-theme="light">
+  <main class="container">
+    <header class="hero">
+      <h1>Pokój <span id="room-label"></span></h1>
+      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
+    </header>
+
+    <section class="card card--participants">
+      <h2>Uczestnicy</h2>
+      <ul id="participants-list" class="participants"></ul>
+    </section>
+
+    <section class="card card--question">
+      <div id="question-placeholder" class="question question--hidden" role="button" tabindex="0">
+        <span class="question__label">Stuknij, aby odkryć pytanie</span>
+      </div>
+      <article id="question-card" class="question" hidden>
+        <header class="question__meta">
+          <span id="question-category" class="question__category"></span>
+          <span id="question-id" class="question__id"></span>
+        </header>
+        <p id="question-text" class="question__text"></p>
+      </article>
+      <div class="question__actions">
+        <label class="form__field">
+          <span>Kategoria</span>
+          <select id="category-select">
+            <option value="">Dowolna</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn--primary" id="next-question">Losuj pytanie</button>
+      </div>
+      <div class="question__reactions" id="reaction-buttons" hidden>
+        <button class="btn btn--ok" data-action="ok">OK</button>
+        <button class="btn btn--skip" data-action="skip">Pomiń</button>
+        <button class="btn btn--fav" data-action="fav">Ulubione</button>
+      </div>
+    </section>
+
+    <section class="card card--reactions">
+      <h2>Reakcje</h2>
+      <ul id="reactions-list" class="reactions"></ul>
+    </section>
+  </main>
+</body>
+</html>
