@@ -1,0 +1,10 @@
+{
+  "name": "Pytania dla par",
+  "short_name": "Pary",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#faf5ff",
+  "theme_color": "#7c3aed",
+  "description": "Losuj pytania, by porozmawiać z partnerem i pogłębiać relację.",
+  "icons": []
+}
