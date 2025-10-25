@@ -13,6 +13,8 @@ if ($roomKey === '') {
     respond(['ok' => false, 'error' => 'Brak kodu pokoju.']);
 }
 
+purgeExpiredRooms();
+
 $room = getRoomByKeyOrFail($roomKey);
 $questions = fetchQuestions();
 $selectedQuestion = null;

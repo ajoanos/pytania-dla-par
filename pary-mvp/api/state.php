@@ -9,6 +9,8 @@ if ($roomKey === '') {
     respond(['ok' => false, 'error' => 'Brak kodu pokoju.']);
 }
 
+purgeExpiredRooms();
+
 $room = getRoomByKeyOrFail($roomKey);
 
 $participants = getRoomParticipants((int)$room['id']);
