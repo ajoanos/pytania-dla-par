@@ -16,7 +16,7 @@
     <header class="hero">
       <div class="hero__text">
         <h1>Momentypdp</h1>
-        <p>Wybierz produkt, podaj hasło i zacznij rozmowę pełną bliskości.</p>
+        <p>Wybierz produkt i zacznij rozmowę pełną bliskości.</p>
       </div>
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
@@ -30,47 +30,13 @@
             <span class="product__badge">Nowość</span>
           </div>
           <p>Odkryj ponad sto pytań, które pomogą Wam lepiej się poznać i zbliżyć.</p>
-          <button class="btn btn--primary" type="button" data-action="open-product">Otwórz</button>
+          <a class="btn btn--primary" data-action="open-product" data-target="pytania-dla-par.html" href="pytania-dla-par.html">Otwórz</a>
         </article>
       </div>
-      <p class="form__hint">Aby uzyskać dostęp, przygotuj hasło dostępu.</p>
-    </section>
-
-    <section class="card card--password" id="password-card" hidden>
-      <h2>Podaj hasło dostępu</h2>
-      <form id="password-form" class="form form--inline">
-        <label class="form__field">
-          <span>Hasło</span>
-          <input type="password" id="access-password" name="access_password" placeholder="momentypdp25" autocomplete="current-password" required />
-        </label>
-        <div class="form__actions">
-          <button type="submit" class="btn btn--primary">Potwierdź</button>
-          <button type="button" class="btn btn--ghost" id="password-cancel">Anuluj</button>
-        </div>
-      </form>
-      <p class="form__hint" id="password-error" hidden>Niepoprawne hasło. Spróbuj ponownie.</p>
-    </section>
-
-    <section class="card card--game" id="game-card" hidden>
-      <header class="card__header">
-        <h2>Pytania dla par</h2>
-        <p class="form__hint">Ustal wspólny kod pokoju i dołączcie razem, aby rozpocząć grę.</p>
-      </header>
-      <form id="join-form" class="form">
-        <label class="form__field">
-          <span>Kod pokoju</span>
-          <input type="text" id="room_key" name="room_key" placeholder="np. MIŁOŚĆ" required maxlength="12" autocomplete="off" />
-        </label>
-        <label class="form__field">
-          <span>Twoje imię</span>
-          <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
-        </label>
-        <button type="submit" class="btn btn--primary">Dołącz</button>
-      </form>
     </section>
 
     <footer class="footer">
-      <p>Nie masz konta – to MVP. Po prostu ustal z partnerem kod pokoju.</p>
+      <p>Nie masz konta – to MVP. Po prostu wybierz produkt i wejdź do gry.</p>
       <nav class="footer__nav">
         <a href="admin-import.html">Import pytań</a>
       </nav>
