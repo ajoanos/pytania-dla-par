@@ -1,0 +1,1 @@
+# pytania-dla-par
