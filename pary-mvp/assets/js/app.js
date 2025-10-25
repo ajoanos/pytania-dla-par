@@ -1,5 +1,5 @@
 const STORAGE_KEY_THEME = 'pary.theme';
-const ACCESS_PASSWORD = 'momentypdp25';
+const ACCESS_PASSWORD = 'momentyptp25';
 const ACCESS_STORAGE_KEY = 'pary.access.pdp';
 
 export async function postJson(url, data) {
@@ -52,10 +52,14 @@ export function initThemeToggle(button) {
   }
 }
 
+function focusElement(element) {
+  if (!element) return;
+  setTimeout(() => element.focus(), 50);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initThemeToggle(document.getElementById('theme-toggle'));
 
-  const productsCard = document.getElementById('products-card');
   const passwordCard = document.getElementById('password-card');
   const passwordForm = document.getElementById('password-form');
   const passwordInput = document.getElementById('access-password');
@@ -64,71 +68,79 @@ document.addEventListener('DOMContentLoaded', () => {
   const productButtons = document.querySelectorAll('[data-action="open-product"]');
   const gameCard = document.getElementById('game-card');
 
-  function openPasswordCard() {
+  productButtons.forEach((button) => {
+    const target = button.dataset.target;
+    if (!target) return;
+    button.addEventListener('click', (event) => {
+      if (button.tagName.toLowerCase() === 'a') {
+        return;
+      }
+      event.preventDefault();
+      window.location.href = target;
+    });
+  });
+
+  function showPasswordCard() {
     if (!passwordCard) return;
     passwordCard.hidden = false;
-    passwordError && (passwordError.hidden = true);
-    if (productsCard) {
-      productsCard.hidden = true;
+    if (gameCard) {
+      gameCard.hidden = true;
     }
     if (passwordInput) {
       passwordInput.value = '';
-      setTimeout(() => passwordInput.focus(), 50);
+      focusElement(passwordInput);
     }
-  }
-
-  function hidePasswordCard() {
-    if (!passwordCard) return;
-    passwordCard.hidden = true;
-    if (productsCard) {
-      productsCard.hidden = false;
+    if (passwordError) {
+      passwordError.hidden = true;
     }
-    if (passwordInput) {
-      passwordInput.value = '';
-    }
-    passwordError && (passwordError.hidden = true);
   }
 
   function unlockGameAccess() {
     sessionStorage.setItem(ACCESS_STORAGE_KEY, 'true');
-    if (productsCard) {
-      productsCard.hidden = true;
-    }
     if (passwordCard) {
       passwordCard.hidden = true;
     }
     if (gameCard) {
       gameCard.hidden = false;
+      const firstInput = gameCard.querySelector('input');
+      focusElement(firstInput);
+    }
+    if (passwordError) {
+      passwordError.hidden = true;
     }
   }
 
-  if (sessionStorage.getItem(ACCESS_STORAGE_KEY) === 'true') {
-    unlockGameAccess();
+  if (passwordCard) {
+    if (sessionStorage.getItem(ACCESS_STORAGE_KEY) === 'true') {
+      unlockGameAccess();
+    } else {
+      showPasswordCard();
+    }
   }
 
-  productButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      openPasswordCard();
-    });
-  });
-
   passwordCancel?.addEventListener('click', () => {
-    hidePasswordCard();
+    const backTarget = passwordCancel.dataset.back;
+    if (backTarget) {
+      window.location.href = backTarget;
+      return;
+    }
+    showPasswordCard();
   });
-
 
   passwordForm?.addEventListener('submit', (event) => {
     event.preventDefault();
     if (!passwordInput) return;
     const value = passwordInput.value.trim();
     if (value === '') {
-      passwordError && (passwordError.hidden = false);
+      if (passwordError) {
+        passwordError.hidden = false;
+      }
       return;
     }
     if (value === ACCESS_PASSWORD) {
       unlockGameAccess();
-    } else {
-      passwordError && (passwordError.hidden = false);
+    } else if (passwordError) {
+      passwordError.hidden = false;
     }
   });
 
@@ -136,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (joinForm) {
     joinForm.addEventListener('submit', async (event) => {
       event.preventDefault();
+      const submitButton = joinForm.querySelector('button[type="submit"]');
       const roomKey = joinForm.room_key.value.trim().toUpperCase();
       const displayName = joinForm.display_name.value.trim();
       if (!roomKey || !displayName) {
@@ -143,7 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       try {
-        joinForm.querySelector('button[type="submit"]').disabled = true;
+        if (submitButton) {
+          submitButton.disabled = true;
+        }
         const payload = await postJson('api/create_or_join.php', {
           room_key: roomKey,
           display_name: displayName,
@@ -160,7 +175,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error(error);
         alert(error.message);
       } finally {
-        joinForm.querySelector('button[type="submit"]').disabled = false;
+        if (submitButton) {
+          submitButton.disabled = false;
+        }
       }
     });
   }

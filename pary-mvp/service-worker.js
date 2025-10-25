@@ -2,6 +2,7 @@ const CACHE_NAME = 'pary-mvp-v2';
 const ASSETS = [
   '/pary-mvp/',
   '/pary-mvp/index.html',
+  '/pary-mvp/pytania-dla-par.html',
   '/pary-mvp/room.html',
   '/pary-mvp/admin-import.html',
   '/pary-mvp/assets/css/style.css',
