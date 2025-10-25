@@ -19,10 +19,18 @@ const nextQuestionButton = document.getElementById('next-question');
 const reactionButtons = document.getElementById('reaction-buttons');
 const reactionsList = document.getElementById('reactions-list');
 const categorySelect = document.getElementById('category-select');
+const catalogContainer = document.getElementById('category-browser');
+const catalogCategories = document.getElementById('catalog-categories');
+const catalogQuestions = document.getElementById('catalog-questions');
+const catalogCategoryTitle = document.getElementById('catalog-category-title');
+const catalogList = document.getElementById('catalog-list');
+const catalogEmpty = document.getElementById('catalog-empty');
 
 let currentQuestion = null;
 let pollTimer;
 let presenceTimer;
+let allQuestions = [];
+let activeCategory = '';
 
 roomLabel.textContent = roomKey;
 
@@ -53,6 +61,26 @@ nextQuestionButton?.addEventListener('click', async () => {
   } finally {
     nextQuestionButton.disabled = false;
   }
+});
+
+catalogCategories?.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const button = target.closest('.catalog__category');
+  if (!(button instanceof HTMLElement)) return;
+  const { category } = button.dataset;
+  if (!category) return;
+  showCategoryQuestions(category);
+});
+
+catalogList?.addEventListener('click', async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const button = target.closest('.catalog__question');
+  if (!(button instanceof HTMLButtonElement)) return;
+  const questionId = button.dataset.questionId;
+  if (!questionId) return;
+  await chooseQuestionById(questionId, button);
 });
 
 reactionButtons?.addEventListener('click', async (event) => {
@@ -153,22 +181,122 @@ function revealQuestion() {
   reactionButtons.hidden = false;
 }
 
+function formatCategoryLabel(category) {
+  return category.replace(/_/g, ' ');
+}
+
 async function setupCategoryOptions() {
-  if (!categorySelect) return;
   try {
     const response = await fetch('data/questions.json');
     if (!response.ok) return;
     const data = await response.json();
-    const uniqueCategories = [...new Set(data.map((item) => item.category))];
+    if (!Array.isArray(data)) return;
+    allQuestions = data;
+    const uniqueCategories = [...new Set(data.map((item) => item.category).filter(Boolean))];
     uniqueCategories.sort();
-    uniqueCategories.forEach((category) => {
-      const option = document.createElement('option');
-      option.value = category;
-      option.textContent = category.replace(/_/g, ' ');
-      categorySelect.appendChild(option);
-    });
+    if (categorySelect) {
+      uniqueCategories.forEach((category) => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = formatCategoryLabel(category);
+        categorySelect.appendChild(option);
+      });
+    }
+    renderCategoryButtons(uniqueCategories);
   } catch (error) {
     console.warn('Nie udało się pobrać kategorii', error);
+  }
+}
+
+function renderCategoryButtons(categories) {
+  if (!catalogCategories) return;
+  catalogCategories.innerHTML = '';
+  categories.forEach((category) => {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'catalog__category';
+    button.dataset.category = category;
+    button.textContent = formatCategoryLabel(category);
+    if (category === activeCategory) {
+      button.classList.add('catalog__category--active');
+    }
+    item.appendChild(button);
+    catalogCategories.appendChild(item);
+  });
+  if (catalogContainer) {
+    catalogContainer.hidden = categories.length === 0;
+  }
+  if (catalogQuestions && categories.length === 0) {
+    catalogQuestions.hidden = true;
+  }
+}
+
+function showCategoryQuestions(category) {
+  activeCategory = category;
+  if (catalogCategories) {
+    catalogCategories
+      .querySelectorAll('.catalog__category')
+      .forEach((btn) => btn.classList.toggle('catalog__category--active', btn.dataset.category === category));
+  }
+  if (catalogCategoryTitle) {
+    catalogCategoryTitle.textContent = formatCategoryLabel(category);
+  }
+  if (catalogQuestions) {
+    catalogQuestions.hidden = false;
+  }
+  const questions = allQuestions.filter((item) => item.category === category);
+  renderCategoryQuestions(questions);
+}
+
+function renderCategoryQuestions(questions) {
+  if (!catalogList) return;
+  catalogList.innerHTML = '';
+  if (catalogEmpty) {
+    catalogEmpty.hidden = questions.length !== 0;
+  }
+  if (questions.length === 0) {
+    return;
+  }
+  questions.forEach((question) => {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'catalog__question';
+    button.dataset.questionId = question.id;
+    const id = document.createElement('span');
+    id.className = 'catalog__question-id';
+    id.textContent = question.id;
+    const text = document.createElement('span');
+    text.className = 'catalog__question-text';
+    text.textContent = question.text;
+    button.appendChild(id);
+    button.appendChild(text);
+    item.appendChild(button);
+    catalogList.appendChild(item);
+  });
+}
+
+async function chooseQuestionById(questionId, triggerButton) {
+  try {
+    if (triggerButton) {
+      triggerButton.disabled = true;
+    }
+    const payload = await postJson('api/next_question.php', {
+      room_key: roomKey,
+      question_id: questionId,
+    });
+    if (!payload.ok) {
+      throw new Error(payload.error || 'Nie udało się wybrać pytania.');
+    }
+    applyQuestion(payload.current_question);
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  } finally {
+    if (triggerButton) {
+      triggerButton.disabled = false;
+    }
   }
 }
 
