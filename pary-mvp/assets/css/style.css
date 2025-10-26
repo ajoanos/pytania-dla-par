@@ -553,43 +553,97 @@ body {
 }
 
 .question__video {
-  display: grid;
-  gap: 1rem;
-  width: 100%;
-  max-width: 420px;
+  width: min(540px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.question__video-stream {
+.question__video-surface {
   position: relative;
-  border-radius: 16px;
-  overflow: hidden;
+  width: 100%;
   background: #000;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.18);
+  display: flex;
 }
 
 .question__video-item {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  height: 100%;
   object-fit: cover;
+}
+
+.question__video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.55);
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .question__video-label {
   position: absolute;
-  inset-inline-end: 0.75rem;
-  inset-block-end: 0.75rem;
-  padding: 0.2rem 0.6rem;
+  inset-inline-end: 1rem;
+  inset-block-end: 1rem;
+  padding: 0.35rem 0.8rem;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.65);
   color: #fff;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.question__video-self {
+  position: absolute;
+  inset-inline-end: 1rem;
+  inset-block-end: 1rem;
+  width: min(38%, 150px);
+  max-height: 45%;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+}
+
+.question__video-self .question__video-item {
+  aspect-ratio: 3 / 4;
+}
+
+.question__video-item--self {
+  aspect-ratio: 3 / 4;
+}
+
+.question__video-label--self {
+  inset-inline-end: 0.6rem;
+  inset-block-end: 0.6rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+}
+
+.question__video-self .question__video-label {
+  background: rgba(0, 0, 0, 0.55);
 }
 
 .question__video-status {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: var(--color-muted);
+  text-align: center;
 }
 
 .question__empty-text {

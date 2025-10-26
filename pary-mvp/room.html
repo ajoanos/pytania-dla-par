@@ -38,13 +38,20 @@
       <section class="card card--question">
         <div id="question-empty" class="question__empty">
           <div id="video-preview" class="question__video" hidden>
-            <div class="question__video-stream">
-              <video id="local-video" class="question__video-item" autoplay playsinline muted></video>
-              <span class="question__video-label">Ty</span>
-            </div>
-            <div class="question__video-stream" id="remote-video-wrapper" hidden>
+            <div id="remote-video-wrapper" class="question__video-surface">
               <video id="remote-video" class="question__video-item" autoplay playsinline></video>
+              <div id="remote-placeholder" class="question__video-placeholder">Czekam na obraz partnera…</div>
               <span class="question__video-label">Partner</span>
+              <div id="local-video-wrapper" class="question__video-self" hidden>
+                <video
+                  id="local-video"
+                  class="question__video-item question__video-item--self"
+                  autoplay
+                  playsinline
+                  muted
+                ></video>
+                <span class="question__video-label question__video-label--self">Ty</span>
+              </div>
             </div>
             <p id="video-status" class="question__video-status" role="status" aria-live="polite" hidden></p>
           </div>
