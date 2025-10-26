@@ -42,7 +42,10 @@
       </section>
 
       <section class="card card--question">
-        <p id="question-empty" class="question__empty">Wylosuj pytanie, aby rozpocząć rozmowę.</p>
+        <div id="question-empty" class="question__empty">
+          <p id="question-empty-text" class="question__empty-text">Wylosuj pytanie, aby rozpocząć rozmowę.</p>
+          <button type="button" class="btn btn--primary btn--question" id="next-question">Losuj pytanie</button>
+        </div>
         <article id="question-card" class="question" hidden>
           <header class="question__meta">
             <span id="question-category" class="question__category"></span>
@@ -57,7 +60,6 @@
               <option value="">Dowolna</option>
             </select>
           </label>
-          <button type="button" class="btn btn--primary" id="next-question">Losuj pytanie</button>
         </div>
         <div class="question__reactions" id="reaction-buttons" hidden>
           <button class="btn btn--ok" data-action="ok">OK</button>

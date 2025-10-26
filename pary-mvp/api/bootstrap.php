@@ -5,7 +5,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 define('DB_FILE', __DIR__ . '/../db/data.sqlite');
-const ROOM_LIFETIME_SECONDS = 24 * 60 * 60;
+const ROOM_LIFETIME_SECONDS = 6 * 60 * 60;
 
 if (!function_exists('array_is_list')) {
     function array_is_list(array $array): bool

@@ -42,7 +42,31 @@ if ($hasFullAccess) {
         WHERE r.room_id = :room_id
         ORDER BY r.created_at DESC LIMIT 50');
     $stmt->execute(['room_id' => $room['id']]);
-    $reactions = $stmt->fetchAll();
+    $reactionsRaw = $stmt->fetchAll();
+
+    $questions = fetchQuestions();
+    $questionMap = [];
+    foreach ($questions as $question) {
+        $id = (string)($question['id'] ?? '');
+        if ($id === '') {
+            continue;
+        }
+        $questionMap[$id] = [
+            'text' => (string)($question['text'] ?? ''),
+        ];
+    }
+
+    $reactions = array_map(static function (array $reaction) use ($questionMap): array {
+        $questionId = (string)($reaction['question_id'] ?? '');
+        $question = $questionMap[$questionId] ?? ['text' => ''];
+        return [
+            'question_id' => $questionId,
+            'action' => (string)($reaction['action'] ?? ''),
+            'created_at' => (string)($reaction['created_at'] ?? ''),
+            'display_name' => (string)($reaction['display_name'] ?? ''),
+            'question_text' => (string)($question['text'] ?? ''),
+        ];
+    }, $reactionsRaw);
 }
 
 $currentQuestion = $hasFullAccess ? getLatestQuestion((int)$room['id']) : null;
