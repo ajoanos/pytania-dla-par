@@ -185,6 +185,39 @@ body {
   color: var(--color-muted);
 }
 
+.waiting-room__actions {
+  display: flex;
+  justify-content: center;
+}
+
+[data-theme="dark"] .catalog__category {
+  background: rgba(255, 143, 150, 0.16);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .participants li,
+[data-theme="dark"] .reactions__item {
+  background: rgba(18, 12, 24, 0.78);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .question__empty:not(.question__empty--has-question),
+[data-theme="dark"] .catalog__question {
+  background: rgba(18, 12, 24, 0.78);
+  border-color: rgba(242, 141, 145, 0.35);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .question:not(.question--reaction) {
+  background: rgba(22, 15, 30, 0.82);
+  border-color: rgba(242, 141, 145, 0.35);
+}
+
+[data-theme="dark"] .catalog__question:hover,
+[data-theme="dark"] .catalog__question:focus {
+  box-shadow: 0 12px 24px rgba(242, 141, 145, 0.28);
+}
+
 .room__content {
   display: contents;
 }

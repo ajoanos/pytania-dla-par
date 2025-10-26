@@ -39,6 +39,9 @@ const defaultTitle = document.title;
 let selfInfo = null;
 let previousPendingCount = 0;
 let lastKnownStatus = '';
+let hasRedirectedToWaiting = false;
+
+const waitingRoomPath = 'room-waiting.html';
 
 let currentQuestion = null;
 let pollTimer;
@@ -156,6 +159,9 @@ async function refreshState() {
       throw new Error(payload.error || 'Nie udało się pobrać stanu.');
     }
     selfInfo = payload.self || null;
+    if (maybeRedirectToWaiting(selfInfo)) {
+      return;
+    }
     updateAccessState(selfInfo);
     renderParticipants(payload.participants || []);
     const reactions = payload.reactions || [];
@@ -378,6 +384,26 @@ function updateQuestionEmptyState(hasQuestion) {
   }
 }
 
+function maybeRedirectToWaiting(participant) {
+  if (hasRedirectedToWaiting) {
+    return false;
+  }
+  if (!participant || participant.is_host) {
+    return false;
+  }
+  const status = participant.status || 'unknown';
+  if (status !== 'pending') {
+    return false;
+  }
+  hasRedirectedToWaiting = true;
+  const params = new URLSearchParams({
+    room_key: roomKey,
+    pid: participantId,
+  });
+  window.location.replace(`${waitingRoomPath}?${params.toString()}`);
+  return true;
+}
+
 function updateAccessState(participant) {
   const status = participant?.status || 'unknown';
   const isActive = status === 'active';
@@ -390,10 +416,6 @@ function updateAccessState(participant) {
   const hasFullAccess = Boolean(participant) && (status === 'active' || participant.is_host);
   if (roomContent) {
     roomContent.hidden = !hasFullAccess;
-  }
-
-  if (waitingRoom) {
-    waitingRoom.hidden = !isPending;
   }
 
   const shouldShowBanner = !hasFullAccess && !isPending;
