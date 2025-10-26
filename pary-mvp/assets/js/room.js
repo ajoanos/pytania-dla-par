@@ -299,7 +299,7 @@ function clearRemoteStream() {
   }
   remoteStream = null;
   showRemotePlaceholder(true);
-  setVideoStatus('Czekamy na połączenie kamery partnera…', { persist: true });
+  setVideoStatus('Czekamy na obraz partnera. Może mieć wyłączoną kamerę.', { persist: true });
 }
 
 async function startVideoPreview(forceRestart = false) {
@@ -310,12 +310,16 @@ async function startVideoPreview(forceRestart = false) {
   videoPreview.hidden = false;
   showRemotePlaceholder(true);
   if (!canUseMedia) {
-    setVideoStatus('Twoja przeglądarka nie obsługuje podglądu wideo.', { persist: true });
+    setVideoStatus('Twoja przeglądarka nie obsługuje kamery. Nadal możesz zobaczyć partnera.', {
+      persist: true,
+    });
     return;
   }
   if (!forceRestart && isStreamActive(localStream)) {
     attachLocalStream(localStream);
-    setVideoStatus('Twoja kamera działa. Czekamy na obraz partnera…', { persist: true });
+    setVideoStatus('Twoja kamera działa. Jeśli partner ją włączy, zobaczysz go tutaj.', {
+      persist: true,
+    });
     return;
   }
   if (forceRestart) {
@@ -333,10 +337,14 @@ async function startVideoPreview(forceRestart = false) {
     });
     localStream = stream;
     attachLocalStream(stream);
-    setVideoStatus('Twoja kamera działa. Czekamy na obraz partnera…', { persist: true });
+    setVideoStatus('Twoja kamera działa. Jeśli partner ją włączy, zobaczysz go tutaj.', {
+      persist: true,
+    });
   } catch (error) {
     console.error('Nie udało się włączyć podglądu wideo:', error);
-    setVideoStatus('Nie udało się uruchomić kamery. Sprawdź uprawnienia.', { persist: true });
+    setVideoStatus('Nie udało się uruchomić kamery. Sprawdź uprawnienia lub kontynuuj bez niej.', {
+      persist: true,
+    });
   }
 }
 
