@@ -33,6 +33,10 @@ const requestsCard = document.getElementById('requests-card');
 const requestsList = document.getElementById('requests-list');
 const requestsEmpty = document.getElementById('requests-empty');
 
+if (roomContent) {
+  roomContent.hidden = true;
+}
+
 const defaultTitle = document.title;
 let selfInfo = null;
 let previousPendingCount = 0;
@@ -171,9 +175,27 @@ async function refreshState() {
 }
 
 function renderParticipants(participants) {
+  if (!participantsList) {
+    return;
+  }
+
+  const normalized = Array.isArray(participants) ? [...participants] : [];
+
+  if (selfInfo && selfInfo.status === 'active') {
+    const selfId = Number(selfInfo.id);
+    const alreadyListed = normalized.some((participant) => Number(participant.id) === selfId);
+    if (!alreadyListed) {
+      normalized.unshift({
+        id: selfId,
+        display_name: selfInfo.display_name || 'Ty',
+        last_seen: new Date().toISOString(),
+      });
+    }
+  }
+
   participantsList.innerHTML = '';
   const now = Date.now();
-  participants.forEach((participant) => {
+  normalized.forEach((participant) => {
     const li = document.createElement('li');
     li.textContent = participant.display_name;
     const status = document.createElement('span');
