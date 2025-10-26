@@ -12,6 +12,7 @@ const roomLabel = document.getElementById('room-label');
 const participantsList = document.getElementById('participants-list');
 const questionCard = document.getElementById('question-card');
 const questionEmpty = document.getElementById('question-empty');
+const questionEmptyText = document.getElementById('question-empty-text');
 const questionCategory = document.getElementById('question-category');
 const questionId = document.getElementById('question-id');
 const questionText = document.getElementById('question-text');
@@ -29,6 +30,7 @@ const accessBanner = document.getElementById('access-banner');
 const accessMessage = document.getElementById('access-message');
 const accessLeave = document.getElementById('access-leave');
 const roomContent = document.getElementById('room-content');
+const waitingRoom = document.getElementById('waiting-room');
 const requestsCard = document.getElementById('requests-card');
 const requestsList = document.getElementById('requests-list');
 const requestsEmpty = document.getElementById('requests-empty');
@@ -205,6 +207,9 @@ function renderParticipants(participants) {
 }
 
 function renderReactions(reactions) {
+  if (!reactionsList) {
+    return;
+  }
   reactionsList.innerHTML = '';
   const labels = {
     ok: 'OK',
@@ -213,8 +218,31 @@ function renderReactions(reactions) {
   };
   reactions.forEach((reaction) => {
     const li = document.createElement('li');
+    li.className = 'reactions__item';
     const label = labels[reaction.action] || reaction.action;
-    li.textContent = `${reaction.display_name || 'Ktoś'} • ${label}`;
+    const meta = document.createElement('div');
+    meta.className = 'reactions__meta';
+
+    const name = document.createElement('span');
+    name.className = 'reactions__author';
+    name.textContent = reaction.display_name || 'Ktoś';
+
+    const action = document.createElement('span');
+    action.className = 'reactions__label';
+    action.textContent = label;
+
+    meta.appendChild(name);
+    meta.appendChild(action);
+    li.appendChild(meta);
+
+    const questionText = reaction.question_text || '';
+    if (questionText) {
+      const question = document.createElement('p');
+      question.className = 'reactions__question';
+      question.textContent = questionText;
+      li.appendChild(question);
+    }
+
     reactionsList.appendChild(li);
   });
 }
@@ -327,9 +355,7 @@ function applyQuestion(question) {
   questionId.textContent = question.id;
   questionText.textContent = question.text;
   questionCard.hidden = false;
-  if (questionEmpty) {
-    questionEmpty.hidden = true;
-  }
+  updateQuestionEmptyState(true);
   setQuestionHighlight(null);
   reactionButtons.hidden = false;
 }
@@ -337,16 +363,25 @@ function applyQuestion(question) {
 function clearQuestion() {
   currentQuestion = null;
   questionCard.hidden = true;
-  if (questionEmpty) {
-    questionEmpty.hidden = false;
-  }
+  updateQuestionEmptyState(false);
   setQuestionHighlight(null);
   reactionButtons.hidden = true;
+}
+
+function updateQuestionEmptyState(hasQuestion) {
+  if (!questionEmpty) {
+    return;
+  }
+  questionEmpty.classList.toggle('question__empty--has-question', hasQuestion);
+  if (questionEmptyText) {
+    questionEmptyText.hidden = hasQuestion;
+  }
 }
 
 function updateAccessState(participant) {
   const status = participant?.status || 'unknown';
   const isActive = status === 'active';
+  const isPending = status === 'pending';
 
   if (isActive && lastKnownStatus !== 'active') {
     sendPresence();
@@ -357,13 +392,17 @@ function updateAccessState(participant) {
     roomContent.hidden = !hasFullAccess;
   }
 
-  if (!hasFullAccess) {
+  if (waitingRoom) {
+    waitingRoom.hidden = !isPending;
+  }
+
+  const shouldShowBanner = !hasFullAccess && !isPending;
+
+  if (shouldShowBanner) {
     if (accessBanner && accessMessage) {
       let message = 'Trwa oczekiwanie na dostęp do pokoju.';
       if (!participant) {
         message = 'Nie znaleziono Twojego zgłoszenia w tym pokoju. Wróć do ekranu tworzenia pokoju.';
-      } else if (status === 'pending') {
-        message = 'Czekasz na akceptację gospodarza. Otrzymasz dostęp, gdy gospodarz zaakceptuje Twoją prośbę.';
       } else if (status === 'rejected') {
         message = 'Gospodarz odrzucił Twoją prośbę o dołączenie. Możesz spróbować ponownie później.';
       }
@@ -383,6 +422,10 @@ function updateAccessState(participant) {
     if (accessLeave) {
       accessLeave.hidden = true;
     }
+  }
+
+  if (!shouldShowBanner && accessLeave) {
+    accessLeave.hidden = true;
   }
 
   setInteractionEnabled(isActive);
