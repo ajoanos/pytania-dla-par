@@ -31,6 +31,14 @@ const hostRequestsOverlay = document.getElementById('host-requests-overlay');
 const hostRequestsPanel = document.getElementById('host-requests');
 const hostRequestsList = document.getElementById('host-requests-list');
 const hostRequestsEmpty = document.getElementById('host-requests-empty');
+const shareCard = document.getElementById('share-card');
+const shareCopyButton = document.getElementById('share-copy-link');
+const shareQrButton = document.getElementById('share-show-qr');
+const shareCopyFeedback = document.getElementById('share-copy-feedback');
+const shareQrModal = document.getElementById('share-qr-modal');
+const shareQrImage = document.getElementById('share-qr-image');
+const shareQrUrl = document.getElementById('share-qr-url');
+const shareQrClose = document.getElementById('share-qr-close');
 
 const defaultTitle = document.title;
 let selfInfo = null;
@@ -40,8 +48,10 @@ let pulseTarget = null;
 let pulseClass = '';
 let lastKnownStatus = '';
 let hasRedirectedToWaiting = false;
+let shareFeedbackTimer = null;
 
 const waitingRoomPath = 'room-waiting.html';
+const shareLinkUrl = buildShareUrl();
 
 let currentQuestion = null;
 let pollTimer;
@@ -144,6 +154,30 @@ hostRequestsList?.addEventListener('click', async (event) => {
   const decision = button.dataset.action;
   if (!requestId || !decision) return;
   await respondToRequest(requestId, decision, button);
+});
+
+shareCopyButton?.addEventListener('click', () => {
+  copyShareLink();
+});
+
+shareQrButton?.addEventListener('click', () => {
+  openQrModal();
+});
+
+shareQrClose?.addEventListener('click', () => {
+  closeQrModal();
+});
+
+shareQrModal?.addEventListener('click', (event) => {
+  if (event.target === shareQrModal) {
+    closeQrModal();
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !shareQrModal?.hidden) {
+    closeQrModal();
+  }
 });
 
 async function refreshState() {
@@ -480,6 +514,15 @@ function updateAccessState(participant) {
     roomContent.hidden = !hasFullAccess;
   }
 
+  if (shareCard) {
+    const shouldShowShare = Boolean(participant?.is_host);
+    shareCard.hidden = !shouldShowShare;
+    if (!shouldShowShare) {
+      resetShareFeedback();
+      closeQrModal();
+    }
+  }
+
   if (!hasFullAccess && !isPending && status !== lastKnownStatus) {
     let message = 'Trwa oczekiwanie na dostęp do pokoju.';
     if (!participant) {
@@ -494,6 +537,81 @@ function updateAccessState(participant) {
   setInteractionEnabled(hasFullAccess && isActive);
 
   lastKnownStatus = status;
+}
+
+function buildShareUrl() {
+  if (!roomKey) {
+    return '';
+  }
+  const url = new URL('room-invite.html', window.location.href);
+  url.searchParams.set('room_key', roomKey);
+  return url.toString();
+}
+
+async function copyShareLink() {
+  if (!shareLinkUrl) {
+    return;
+  }
+  let message = 'Skopiowano link do pokoju.';
+  let isError = false;
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(shareLinkUrl);
+    } else {
+      throw new Error('Clipboard API unavailable');
+    }
+  } catch (error) {
+    console.warn('Clipboard copy failed', error);
+    isError = true;
+    message = 'Skopiuj link ręcznie z wyświetlonego okna.';
+    window.prompt('Skopiuj link do pokoju', shareLinkUrl);
+  }
+  showShareFeedback(message, isError);
+}
+
+function openQrModal() {
+  if (!shareLinkUrl || !shareQrModal || !shareQrImage || !shareQrUrl) {
+    return;
+  }
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(shareLinkUrl)}`;
+  shareQrImage.src = qrSrc;
+  shareQrUrl.href = shareLinkUrl;
+  shareQrModal.hidden = false;
+  shareQrModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeQrModal() {
+  if (!shareQrModal) {
+    return;
+  }
+  shareQrModal.hidden = true;
+  shareQrModal.setAttribute('aria-hidden', 'true');
+}
+
+function showShareFeedback(message, isError = false) {
+  if (!shareCopyFeedback) {
+    return;
+  }
+  shareCopyFeedback.textContent = message;
+  shareCopyFeedback.classList.toggle('share__feedback--error', isError);
+  if (shareFeedbackTimer) {
+    clearTimeout(shareFeedbackTimer);
+  }
+  shareFeedbackTimer = window.setTimeout(() => {
+    resetShareFeedback();
+  }, 4000);
+}
+
+function resetShareFeedback() {
+  if (!shareCopyFeedback) {
+    return;
+  }
+  if (shareFeedbackTimer) {
+    clearTimeout(shareFeedbackTimer);
+    shareFeedbackTimer = null;
+  }
+  shareCopyFeedback.textContent = '';
+  shareCopyFeedback.classList.remove('share__feedback--error');
 }
 
 function setInteractionEnabled(enabled) {
