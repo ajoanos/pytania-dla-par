@@ -275,7 +275,14 @@ function renderHostRequests(requests) {
     return;
   }
 
-  updateHostRequestsVisibility(pending.length);
+  const pendingCount = pending.length;
+  const hasNewRequests = pendingCount > previousPendingCount;
+
+  if (hasNewRequests) {
+    hostRequestsCollapsed = false;
+  }
+
+  updateHostRequestsVisibility(pendingCount);
 
   if (hostRequestsEmpty) {
     hostRequestsEmpty.hidden = true;
@@ -316,12 +323,12 @@ function renderHostRequests(requests) {
     hostRequestsList.appendChild(item);
   });
 
-  if (pending.length > previousPendingCount) {
+  if (hasNewRequests) {
     triggerHostRequestsPulse();
   }
 
-  document.title = `(${pending.length}) ${defaultTitle}`;
-  previousPendingCount = pending.length;
+  document.title = `(${pendingCount}) ${defaultTitle}`;
+  previousPendingCount = pendingCount;
 }
 
 function hideHostRequests() {
@@ -566,6 +573,8 @@ async function respondToRequest(requestId, decision, triggerButton) {
     if (!payload.ok) {
       throw new Error(payload.error || 'Nie udało się zaktualizować zgłoszenia.');
     }
+    hostRequestsCollapsed = true;
+    updateHostRequestsVisibility(Math.max(previousPendingCount - 1, 0));
     await refreshState();
   } catch (error) {
     console.error(error);
