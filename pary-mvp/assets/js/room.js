@@ -33,10 +33,6 @@ const requestsCard = document.getElementById('requests-card');
 const requestsList = document.getElementById('requests-list');
 const requestsEmpty = document.getElementById('requests-empty');
 
-if (roomContent) {
-  roomContent.hidden = true;
-}
-
 const defaultTitle = document.title;
 let selfInfo = null;
 let previousPendingCount = 0;
@@ -356,11 +352,12 @@ function updateAccessState(participant) {
     sendPresence();
   }
 
+  const hasFullAccess = Boolean(participant) && (status === 'active' || participant.is_host);
   if (roomContent) {
-    roomContent.hidden = !isActive;
+    roomContent.hidden = !hasFullAccess;
   }
 
-  if (!isActive) {
+  if (!hasFullAccess) {
     if (accessBanner && accessMessage) {
       let message = 'Trwa oczekiwanie na dostęp do pokoju.';
       if (!participant) {
