@@ -27,11 +27,10 @@ const catalogCategoryTitle = document.getElementById('catalog-category-title');
 const catalogList = document.getElementById('catalog-list');
 const catalogEmpty = document.getElementById('catalog-empty');
 const roomContent = document.getElementById('room-content');
+const hostRequestsOverlay = document.getElementById('host-requests-overlay');
 const hostRequestsPanel = document.getElementById('host-requests');
 const hostRequestsList = document.getElementById('host-requests-list');
 const hostRequestsEmpty = document.getElementById('host-requests-empty');
-const hostRequestsClose = document.getElementById('host-requests-close');
-const hostRequestsToggle = document.getElementById('host-requests-toggle');
 
 const defaultTitle = document.title;
 let selfInfo = null;
@@ -41,7 +40,6 @@ let pulseTarget = null;
 let pulseClass = '';
 let lastKnownStatus = '';
 let hasRedirectedToWaiting = false;
-let hostRequestsCollapsed = false;
 
 const waitingRoomPath = 'room-waiting.html';
 
@@ -146,18 +144,6 @@ hostRequestsList?.addEventListener('click', async (event) => {
   const decision = button.dataset.action;
   if (!requestId || !decision) return;
   await respondToRequest(requestId, decision, button);
-});
-
-hostRequestsClose?.addEventListener('click', () => {
-  hostRequestsCollapsed = true;
-  updateHostRequestsVisibility(previousPendingCount);
-  hostRequestsToggle?.focus();
-});
-
-hostRequestsToggle?.addEventListener('click', () => {
-  hostRequestsCollapsed = false;
-  updateHostRequestsVisibility(previousPendingCount);
-  triggerHostRequestsPulse();
 });
 
 async function refreshState() {
@@ -278,10 +264,6 @@ function renderHostRequests(requests) {
   const pendingCount = pending.length;
   const hasNewRequests = pendingCount > previousPendingCount;
 
-  if (hasNewRequests) {
-    hostRequestsCollapsed = false;
-  }
-
   updateHostRequestsVisibility(pendingCount);
 
   if (hostRequestsEmpty) {
@@ -325,6 +307,8 @@ function renderHostRequests(requests) {
 
   if (hasNewRequests) {
     triggerHostRequestsPulse();
+    const firstAction = hostRequestsList?.querySelector('button');
+    firstAction?.focus();
   }
 
   document.title = `(${pendingCount}) ${defaultTitle}`;
@@ -332,6 +316,10 @@ function renderHostRequests(requests) {
 }
 
 function hideHostRequests() {
+  if (hostRequestsOverlay) {
+    hostRequestsOverlay.hidden = true;
+    hostRequestsOverlay.setAttribute('aria-hidden', 'true');
+  }
   if (!hostRequestsPanel) {
     return;
   }
@@ -342,13 +330,6 @@ function hideHostRequests() {
   }
   if (hostRequestsEmpty) {
     hostRequestsEmpty.hidden = false;
-  }
-  if (hostRequestsToggle) {
-    hostRequestsToggle.hidden = true;
-    hostRequestsToggle.classList.remove('host-requests__toggle--pulse');
-    hostRequestsToggle.textContent = 'Prośby o dołączenie';
-    hostRequestsToggle.setAttribute('aria-label', 'Prośby o dołączenie');
-    hostRequestsToggle.setAttribute('aria-expanded', 'false');
   }
   document.title = defaultTitle;
   previousPendingCount = 0;
@@ -390,49 +371,22 @@ function updateHostRequestsVisibility(count) {
   }
 
   const hasRequests = count > 0;
-  const label = count > 0 ? `Prośby o dołączenie (${count})` : 'Prośby o dołączenie';
-  if (hostRequestsToggle) {
-    hostRequestsToggle.textContent = label;
-    hostRequestsToggle.setAttribute('aria-label', label);
-  }
 
   if (!hasRequests) {
-    hostRequestsPanel.hidden = true;
-    hostRequestsPanel.classList.remove('host-requests--pulse');
-    if (hostRequestsToggle) {
-      hostRequestsToggle.hidden = true;
-      hostRequestsToggle.classList.remove('host-requests__toggle--pulse');
-      hostRequestsToggle.setAttribute('aria-expanded', 'false');
-    }
+    hideHostRequests();
     return;
   }
 
-  if (hostRequestsCollapsed) {
-    hostRequestsPanel.hidden = true;
-    hostRequestsPanel.classList.remove('host-requests--pulse');
-    if (hostRequestsToggle) {
-      hostRequestsToggle.hidden = false;
-      hostRequestsToggle.setAttribute('aria-expanded', 'false');
-    }
-  } else {
-    hostRequestsPanel.hidden = false;
-    if (hostRequestsToggle) {
-      hostRequestsToggle.hidden = true;
-      hostRequestsToggle.setAttribute('aria-expanded', 'true');
-      hostRequestsToggle.classList.remove('host-requests__toggle--pulse');
-    }
+  if (hostRequestsOverlay) {
+    hostRequestsOverlay.hidden = false;
+    hostRequestsOverlay.setAttribute('aria-hidden', 'false');
   }
+  hostRequestsPanel.hidden = false;
 }
 
 function getPulseTarget() {
-  if (hostRequestsCollapsed && hostRequestsToggle && !hostRequestsToggle.hidden) {
-    return { element: hostRequestsToggle, className: 'host-requests__toggle--pulse' };
-  }
   if (hostRequestsPanel && !hostRequestsPanel.hidden) {
     return { element: hostRequestsPanel, className: 'host-requests--pulse' };
-  }
-  if (hostRequestsToggle && !hostRequestsToggle.hidden) {
-    return { element: hostRequestsToggle, className: 'host-requests__toggle--pulse' };
   }
   return { element: null, className: '' };
 }
@@ -573,7 +527,6 @@ async function respondToRequest(requestId, decision, triggerButton) {
     if (!payload.ok) {
       throw new Error(payload.error || 'Nie udało się zaktualizować zgłoszenia.');
     }
-    hostRequestsCollapsed = true;
     updateHostRequestsVisibility(Math.max(previousPendingCount - 1, 0));
     await refreshState();
   } catch (error) {
