@@ -62,9 +62,8 @@ body {
 }
 
 .hero__logo {
-  max-height: 56px;
-  width: auto;
-  max-width: 180px;
+  width: min(100%, 180px);
+  height: auto;
   display: block;
   margin: 0 auto;
 }
@@ -732,7 +731,7 @@ body {
   }
 
   .hero__logo {
-    max-height: 48px;
+    width: min(100%, 150px);
   }
 }
 
