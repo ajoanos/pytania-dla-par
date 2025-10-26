@@ -352,12 +352,12 @@ function updateAccessState(participant) {
     sendPresence();
   }
 
-  const shouldShowRoomContent = Boolean(participant) && status !== 'rejected';
+  const hasFullAccess = Boolean(participant) && (status === 'active' || participant.is_host);
   if (roomContent) {
-    roomContent.hidden = !shouldShowRoomContent;
+    roomContent.hidden = !hasFullAccess;
   }
 
-  if (!isActive) {
+  if (!hasFullAccess) {
     if (accessBanner && accessMessage) {
       let message = 'Trwa oczekiwanie na dostęp do pokoju.';
       if (!participant) {
