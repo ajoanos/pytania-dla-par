@@ -198,7 +198,7 @@ function createRoom(string $roomKey): ?array
     return getRoomByKey($roomKey);
 }
 
-function ensureParticipant(int $roomId, string $displayName, bool $isHost = false): array
+function ensureParticipant(int $roomId, string $displayName, bool $isHost = false, bool $forceActive = false): array
 {
     $stmt = db()->prepare('SELECT * FROM participants WHERE room_id = :room_id AND display_name = :display_name');
     $stmt->execute([
@@ -207,22 +207,38 @@ function ensureParticipant(int $roomId, string $displayName, bool $isHost = fals
     ]);
     $participant = $stmt->fetch();
     if ($participant) {
+        $participantId = (int)$participant['id'];
+        $needsRefresh = false;
+
         if ($isHost && (int)($participant['is_host'] ?? 0) !== 1) {
             $update = db()->prepare('UPDATE participants SET is_host = 1, status = :status WHERE id = :id');
             $update->execute([
                 'status' => 'active',
-                'id' => $participant['id'],
+                'id' => $participantId,
             ]);
-            $participant['is_host'] = 1;
-            $participant['status'] = 'active';
-        } elseif (!$isHost && ($participant['status'] ?? '') === 'rejected') {
+            $needsRefresh = true;
+        }
+
+        if ($forceActive && ($participant['status'] ?? '') !== 'active') {
+            $update = db()->prepare('UPDATE participants SET status = :status WHERE id = :id');
+            $update->execute([
+                'status' => 'active',
+                'id' => $participantId,
+            ]);
+            $needsRefresh = true;
+        } elseif (!$isHost && !$forceActive && ($participant['status'] ?? '') === 'rejected') {
             $update = db()->prepare('UPDATE participants SET status = :status WHERE id = :id');
             $update->execute([
                 'status' => 'pending',
-                'id' => $participant['id'],
+                'id' => $participantId,
             ]);
-            $participant['status'] = 'pending';
+            $needsRefresh = true;
         }
+
+        if ($needsRefresh) {
+            $participant = getParticipantById($participantId, $roomId) ?: $participant;
+        }
+
         return $participant;
     }
     $stmt = db()->prepare('INSERT INTO participants (room_id, display_name, last_seen, status, is_host) VALUES (:room_id, :display_name, :last_seen, :status, :is_host)');
@@ -230,7 +246,7 @@ function ensureParticipant(int $roomId, string $displayName, bool $isHost = fals
         'room_id' => $roomId,
         'display_name' => $displayName,
         'last_seen' => gmdate('c'),
-        'status' => $isHost ? 'active' : 'pending',
+        'status' => ($isHost || $forceActive) ? 'active' : 'pending',
         'is_host' => $isHost ? 1 : 0,
     ]);
     $participantId = (int)db()->lastInsertId();

@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
   <title>Pytania dla par – Pokój</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
@@ -77,6 +78,18 @@
         <h2>Reakcje</h2>
         <ul id="reactions-list" class="reactions"></ul>
       </section>
+
+      <section class="card card--share" id="share-card" hidden>
+        <h2>Udostępnianie pokoju</h2>
+        <p class="share__description">
+          Wyślij partnerowi link lub kod QR, aby mógł dołączyć z drugiego urządzenia.
+        </p>
+        <div class="share__buttons">
+          <button type="button" class="btn btn--primary" id="share-copy-link">Skopiuj link</button>
+          <button type="button" class="btn btn--ghost" id="share-show-qr">Pokaż QR</button>
+        </div>
+        <p class="share__feedback" id="share-copy-feedback" role="status" aria-live="polite"></p>
+      </section>
     </div>
 
     <div id="host-requests-overlay" class="host-requests-modal" hidden aria-hidden="true">
@@ -93,6 +106,17 @@
         <p id="host-requests-empty" class="host-requests__empty">Gdy ktoś poprosi o wejście do pokoju, zobaczysz to tutaj.</p>
         <ul id="host-requests-list" class="host-requests__list requests"></ul>
       </aside>
+    </div>
+
+    <div id="share-qr-modal" class="qr-modal" hidden aria-hidden="true">
+      <div class="qr-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="share-qr-title">
+        <h2 id="share-qr-title">Zeskanuj kod QR</h2>
+        <img id="share-qr-image" class="qr-modal__image" alt="Kod QR prowadzący do pokoju" loading="lazy" />
+        <p class="qr-modal__link">
+          <a id="share-qr-url" href="#" target="_blank" rel="noopener">Otwórz link w nowej karcie</a>
+        </p>
+        <button type="button" class="btn btn--ghost" id="share-qr-close">Zamknij</button>
+      </div>
     </div>
   </main>
 </body>
