@@ -131,7 +131,19 @@ body {
   gap: 1rem;
 }
 
-.form { 
+.card--notice {
+  gap: 0.75rem;
+}
+
+.card--notice p {
+  margin: 0;
+}
+
+.room__content {
+  display: contents;
+}
+
+.form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -246,6 +258,36 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.requests {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.requests__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 12px;
+}
+
+.requests__name {
+  font-weight: 700;
+}
+
+.requests__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .participants li {
@@ -458,6 +500,7 @@ body {
   }
 
   .card--participants,
+  .card--requests,
   .card--reactions {
     flex: 1;
   }

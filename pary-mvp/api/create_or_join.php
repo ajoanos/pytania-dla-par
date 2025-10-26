@@ -16,7 +16,9 @@ if ($roomKey === '' || $displayName === '') {
     respond(['ok' => false, 'error' => 'Wymagany kod pokoju i imię.']);
 }
 
-if ($mode === 'create') {
+$isCreating = $mode === 'create';
+
+if ($isCreating) {
     $room = createRoom($roomKey);
     if ($room === null) {
         respond(['ok' => false, 'error' => 'Pokój o tym kodzie już istnieje. Wybierz inną nazwę.']);
@@ -28,7 +30,7 @@ if ($mode === 'create') {
     }
 }
 
-$participant = ensureParticipant((int)$room['id'], $displayName);
+$participant = ensureParticipant((int)$room['id'], $displayName, $isCreating);
 
 $stmt = db()->prepare('UPDATE participants SET last_seen = :last_seen WHERE id = :id');
 $stmt->execute([
@@ -43,6 +45,9 @@ respond([
     'ok' => true,
     'room_key' => $room['room_key'],
     'participant_id' => $participant['id'],
+    'participant_status' => $participant['status'] ?? 'pending',
+    'is_host' => (bool)($participant['is_host'] ?? 0),
+    'requires_approval' => ($participant['status'] ?? '') !== 'active',
     'participants' => $participants,
     'current_question' => $currentQuestion,
 ]);

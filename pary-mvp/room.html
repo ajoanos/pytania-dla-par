@@ -19,52 +19,65 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--participants">
-      <h2>Uczestnicy</h2>
-      <ul id="participants-list" class="participants"></ul>
+    <section class="card card--notice" id="access-banner" hidden>
+      <p id="access-message"></p>
+      <button type="button" class="btn btn--ghost" id="access-leave" hidden>Wróć do tworzenia pokoju</button>
     </section>
 
-    <section class="card card--question">
-      <p id="question-empty" class="question__empty">Wylosuj pytanie, aby rozpocząć rozmowę.</p>
-      <article id="question-card" class="question" hidden>
-        <header class="question__meta">
-          <span id="question-category" class="question__category"></span>
-          <span id="question-id" class="question__id"></span>
-        </header>
-        <p id="question-text" class="question__text"></p>
-      </article>
-      <div class="question__actions">
-        <label class="form__field">
-          <span>Kategoria</span>
-          <select id="category-select">
-            <option value="">Dowolna</option>
-          </select>
-        </label>
-        <button type="button" class="btn btn--primary" id="next-question">Losuj pytanie</button>
-      </div>
-      <div class="question__reactions" id="reaction-buttons" hidden>
-        <button class="btn btn--ok" data-action="ok">OK</button>
-        <button class="btn btn--skip" data-action="skip">Pomiń</button>
-        <button class="btn btn--fav" data-action="fav">Ulubione</button>
-      </div>
-    </section>
+    <div id="room-content" class="room__content">
+      <section class="card card--participants">
+        <h2>Uczestnicy</h2>
+        <ul id="participants-list" class="participants"></ul>
+      </section>
 
-    <section class="card card--catalog" id="category-browser">
-      <h2>Kategorie pytań</h2>
-      <div class="catalog">
-        <ul id="catalog-categories" class="catalog__categories"></ul>
-        <div id="catalog-questions" class="catalog__questions" hidden>
-          <h3 id="catalog-category-title" class="catalog__panel-title"></h3>
-          <p id="catalog-empty" class="catalog__empty" hidden>Brak pytań w tej kategorii.</p>
-          <ul id="catalog-list" class="catalog__list"></ul>
+      <section class="card card--requests" id="requests-card" hidden>
+        <h2>Prośby o dołączenie</h2>
+        <p id="requests-empty" class="form__hint">Brak oczekujących próśb.</p>
+        <ul id="requests-list" class="requests"></ul>
+      </section>
+
+      <section class="card card--question">
+        <p id="question-empty" class="question__empty">Wylosuj pytanie, aby rozpocząć rozmowę.</p>
+        <article id="question-card" class="question" hidden>
+          <header class="question__meta">
+            <span id="question-category" class="question__category"></span>
+            <span id="question-id" class="question__id"></span>
+          </header>
+          <p id="question-text" class="question__text"></p>
+        </article>
+        <div class="question__actions">
+          <label class="form__field">
+            <span>Kategoria</span>
+            <select id="category-select">
+              <option value="">Dowolna</option>
+            </select>
+          </label>
+          <button type="button" class="btn btn--primary" id="next-question">Losuj pytanie</button>
         </div>
-      </div>
-    </section>
+        <div class="question__reactions" id="reaction-buttons" hidden>
+          <button class="btn btn--ok" data-action="ok">OK</button>
+          <button class="btn btn--skip" data-action="skip">Pomiń</button>
+          <button class="btn btn--fav" data-action="fav">Ulubione</button>
+        </div>
+      </section>
 
-    <section class="card card--reactions">
-      <h2>Reakcje</h2>
-      <ul id="reactions-list" class="reactions"></ul>
-    </section>
+      <section class="card card--catalog" id="category-browser">
+        <h2>Kategorie pytań</h2>
+        <div class="catalog">
+          <ul id="catalog-categories" class="catalog__categories"></ul>
+          <div id="catalog-questions" class="catalog__questions" hidden>
+            <h3 id="catalog-category-title" class="catalog__panel-title"></h3>
+            <p id="catalog-empty" class="catalog__empty" hidden>Brak pytań w tej kategorii.</p>
+            <ul id="catalog-list" class="catalog__list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card card--reactions">
+        <h2>Reakcje</h2>
+        <ul id="reactions-list" class="reactions"></ul>
+      </section>
+    </div>
   </main>
 </body>
 </html>

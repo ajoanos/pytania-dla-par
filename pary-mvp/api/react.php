@@ -23,7 +23,7 @@ purgeExpiredRooms();
 
 $room = getRoomByKeyOrFail($roomKey);
 
-$stmt = db()->prepare('SELECT id FROM participants WHERE id = :id AND room_id = :room_id');
+$stmt = db()->prepare('SELECT id, status FROM participants WHERE id = :id AND room_id = :room_id');
 $stmt->execute([
     'id' => $participantId,
     'room_id' => $room['id'],
@@ -31,6 +31,10 @@ $stmt->execute([
 $participant = $stmt->fetch();
 if (!$participant) {
     respond(['ok' => false, 'error' => 'Nie znaleziono uczestnika w tym pokoju.']);
+}
+
+if (($participant['status'] ?? '') !== 'active') {
+    respond(['ok' => false, 'error' => 'Tylko zatwierdzeni uczestnicy mogą reagować.']);
 }
 
 $stmt = db()->prepare('INSERT INTO reactions (room_id, participant_id, question_id, action) VALUES (:room_id, :participant_id, :question_id, :action)
