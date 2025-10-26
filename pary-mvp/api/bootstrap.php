@@ -82,6 +82,22 @@ function initializeDatabase(PDO $pdo): void
         FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
     )');
 
+    $pdo->exec('CREATE TABLE IF NOT EXISTS video_signals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL,
+        sender_id INTEGER NOT NULL,
+        target_id INTEGER,
+        type TEXT NOT NULL,
+        payload TEXT,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+        FOREIGN KEY (sender_id) REFERENCES participants(id) ON DELETE CASCADE,
+        FOREIGN KEY (target_id) REFERENCES participants(id) ON DELETE CASCADE
+    )');
+
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_video_signals_room_target ON video_signals (room_id, target_id, id)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_video_signals_room_created ON video_signals (room_id, created_at)');
+
     $statusAdded = addColumnIfMissing($pdo, 'participants', 'status', "TEXT NOT NULL DEFAULT 'pending'");
     $isHostAdded = addColumnIfMissing($pdo, 'participants', 'is_host', 'INTEGER NOT NULL DEFAULT 0');
 
