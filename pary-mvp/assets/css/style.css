@@ -665,6 +665,10 @@ body {
   display: none;
 }
 
+.question__empty--has-question .question__video {
+  display: none;
+}
+
 .btn--question {
   font-size: 1.1rem;
   padding: 1rem 2.8rem;
