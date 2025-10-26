@@ -12,6 +12,7 @@ const roomLabel = document.getElementById('room-label');
 const participantsList = document.getElementById('participants-list');
 const questionCard = document.getElementById('question-card');
 const questionEmpty = document.getElementById('question-empty');
+const questionEmptyText = document.getElementById('question-empty-text');
 const questionCategory = document.getElementById('question-category');
 const questionId = document.getElementById('question-id');
 const questionText = document.getElementById('question-text');
@@ -25,18 +26,19 @@ const catalogQuestions = document.getElementById('catalog-questions');
 const catalogCategoryTitle = document.getElementById('catalog-category-title');
 const catalogList = document.getElementById('catalog-list');
 const catalogEmpty = document.getElementById('catalog-empty');
-const accessBanner = document.getElementById('access-banner');
-const accessMessage = document.getElementById('access-message');
-const accessLeave = document.getElementById('access-leave');
 const roomContent = document.getElementById('room-content');
-const requestsCard = document.getElementById('requests-card');
-const requestsList = document.getElementById('requests-list');
-const requestsEmpty = document.getElementById('requests-empty');
+const hostRequestsPanel = document.getElementById('host-requests');
+const hostRequestsList = document.getElementById('host-requests-list');
+const hostRequestsEmpty = document.getElementById('host-requests-empty');
 
 const defaultTitle = document.title;
 let selfInfo = null;
 let previousPendingCount = 0;
+let pulseTimer = null;
 let lastKnownStatus = '';
+let hasRedirectedToWaiting = false;
+
+const waitingRoomPath = 'room-waiting.html';
 
 let currentQuestion = null;
 let pollTimer;
@@ -51,10 +53,6 @@ function isActiveParticipant() {
 roomLabel.textContent = roomKey;
 
 setupCategoryOptions();
-
-accessLeave?.addEventListener('click', () => {
-  window.location.href = 'pytania-dla-par-room.html';
-});
 
 nextQuestionButton?.addEventListener('click', async () => {
   try {
@@ -133,7 +131,7 @@ reactionButtons?.addEventListener('click', async (event) => {
   }
 });
 
-requestsList?.addEventListener('click', async (event) => {
+hostRequestsList?.addEventListener('click', async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
   const button = target.closest('button[data-action]');
@@ -154,6 +152,9 @@ async function refreshState() {
       throw new Error(payload.error || 'Nie udało się pobrać stanu.');
     }
     selfInfo = payload.self || null;
+    if (maybeRedirectToWaiting(selfInfo)) {
+      return;
+    }
     updateAccessState(selfInfo);
     renderParticipants(payload.participants || []);
     const reactions = payload.reactions || [];
@@ -164,7 +165,7 @@ async function refreshState() {
       clearQuestion();
     }
     renderReactions(reactions);
-    renderPendingRequests(payload.pending_requests || []);
+    renderHostRequests(payload.pending_requests || []);
   } catch (error) {
     console.error(error);
   }
@@ -205,6 +206,9 @@ function renderParticipants(participants) {
 }
 
 function renderReactions(reactions) {
+  if (!reactionsList) {
+    return;
+  }
   reactionsList.innerHTML = '';
   const labels = {
     ok: 'OK',
@@ -213,53 +217,65 @@ function renderReactions(reactions) {
   };
   reactions.forEach((reaction) => {
     const li = document.createElement('li');
+    li.className = 'reactions__item';
     const label = labels[reaction.action] || reaction.action;
-    li.textContent = `${reaction.display_name || 'Ktoś'} • ${label}`;
+    const meta = document.createElement('div');
+    meta.className = 'reactions__meta';
+
+    const name = document.createElement('span');
+    name.className = 'reactions__author';
+    name.textContent = reaction.display_name || 'Ktoś';
+
+    const action = document.createElement('span');
+    action.className = 'reactions__label';
+    action.textContent = label;
+
+    meta.appendChild(name);
+    meta.appendChild(action);
+    li.appendChild(meta);
+
+    const questionText = reaction.question_text || '';
+    if (questionText) {
+      const question = document.createElement('p');
+      question.className = 'reactions__question';
+      question.textContent = questionText;
+      li.appendChild(question);
+    }
+
     reactionsList.appendChild(li);
   });
 }
 
-function renderPendingRequests(requests) {
-  if (!requestsCard) {
-    return;
-  }
-  if (!selfInfo || !selfInfo.is_host) {
-    requestsCard.hidden = true;
-    if (requestsList) {
-      requestsList.innerHTML = '';
-    }
-    if (requestsEmpty) {
-      requestsEmpty.hidden = false;
-    }
-    clearHostNotice();
-    document.title = defaultTitle;
-    previousPendingCount = 0;
+function renderHostRequests(requests) {
+  if (!hostRequestsPanel || !selfInfo || !selfInfo.is_host) {
+    hideHostRequests();
     return;
   }
 
-  requestsCard.hidden = false;
-  if (requestsEmpty) {
-    requestsEmpty.hidden = requests.length !== 0;
-  }
-  if (requestsList) {
-    requestsList.innerHTML = '';
-  }
-
-  if (requests.length === 0) {
-    clearHostNotice();
-    document.title = defaultTitle;
-    previousPendingCount = 0;
+  const pending = Array.isArray(requests) ? requests : [];
+  if (pending.length === 0) {
+    hideHostRequests();
     return;
   }
 
-  requests.forEach((request) => {
-    if (!requestsList) return;
+  hostRequestsPanel.hidden = false;
+  if (hostRequestsEmpty) {
+    hostRequestsEmpty.hidden = true;
+  }
+  if (hostRequestsList) {
+    hostRequestsList.innerHTML = '';
+  }
+
+  pending.forEach((request) => {
+    if (!hostRequestsList) return;
     const item = document.createElement('li');
     item.className = 'requests__item';
     item.dataset.requestId = String(request.id);
+
     const name = document.createElement('span');
     name.className = 'requests__name';
     name.textContent = request.display_name;
+
     const actions = document.createElement('div');
     actions.className = 'requests__actions';
 
@@ -279,20 +295,52 @@ function renderPendingRequests(requests) {
     actions.appendChild(reject);
     item.appendChild(name);
     item.appendChild(actions);
-    requestsList.appendChild(item);
+    hostRequestsList.appendChild(item);
   });
 
-  if (requests.length > previousPendingCount) {
-    const lastRequest = requests[requests.length - 1];
-    const message =
-      requests.length === 1
-        ? `Nowa prośba o dołączenie od ${lastRequest.display_name}.`
-        : `Nowe prośby o dołączenie (${requests.length}).`;
-    showHostNotice(message);
+  if (pending.length > previousPendingCount) {
+    triggerHostRequestsPulse();
   }
 
-  document.title = `(${requests.length}) ${defaultTitle}`;
-  previousPendingCount = requests.length;
+  document.title = `(${pending.length}) ${defaultTitle}`;
+  previousPendingCount = pending.length;
+}
+
+function hideHostRequests() {
+  if (!hostRequestsPanel) {
+    return;
+  }
+  hostRequestsPanel.hidden = true;
+  hostRequestsPanel.classList.remove('host-requests--pulse');
+  if (hostRequestsList) {
+    hostRequestsList.innerHTML = '';
+  }
+  if (hostRequestsEmpty) {
+    hostRequestsEmpty.hidden = false;
+  }
+  document.title = defaultTitle;
+  previousPendingCount = 0;
+  if (pulseTimer) {
+    clearTimeout(pulseTimer);
+    pulseTimer = null;
+  }
+}
+
+function triggerHostRequestsPulse() {
+  if (!hostRequestsPanel) {
+    return;
+  }
+  hostRequestsPanel.classList.remove('host-requests--pulse');
+  if (pulseTimer) {
+    clearTimeout(pulseTimer);
+  }
+  // Force reflow so animation retriggers
+  void hostRequestsPanel.offsetWidth;
+  hostRequestsPanel.classList.add('host-requests--pulse');
+  pulseTimer = setTimeout(() => {
+    hostRequestsPanel.classList.remove('host-requests--pulse');
+    pulseTimer = null;
+  }, 600);
 }
 
 function updateQuestionHighlight(reactions) {
@@ -327,9 +375,7 @@ function applyQuestion(question) {
   questionId.textContent = question.id;
   questionText.textContent = question.text;
   questionCard.hidden = false;
-  if (questionEmpty) {
-    questionEmpty.hidden = true;
-  }
+  updateQuestionEmptyState(true);
   setQuestionHighlight(null);
   reactionButtons.hidden = false;
 }
@@ -337,16 +383,45 @@ function applyQuestion(question) {
 function clearQuestion() {
   currentQuestion = null;
   questionCard.hidden = true;
-  if (questionEmpty) {
-    questionEmpty.hidden = false;
-  }
+  updateQuestionEmptyState(false);
   setQuestionHighlight(null);
   reactionButtons.hidden = true;
+}
+
+function updateQuestionEmptyState(hasQuestion) {
+  if (!questionEmpty) {
+    return;
+  }
+  questionEmpty.classList.toggle('question__empty--has-question', hasQuestion);
+  if (questionEmptyText) {
+    questionEmptyText.hidden = hasQuestion;
+  }
+}
+
+function maybeRedirectToWaiting(participant) {
+  if (hasRedirectedToWaiting) {
+    return false;
+  }
+  if (!participant || participant.is_host) {
+    return false;
+  }
+  const status = participant.status || 'unknown';
+  if (status !== 'pending') {
+    return false;
+  }
+  hasRedirectedToWaiting = true;
+  const params = new URLSearchParams({
+    room_key: roomKey,
+    pid: participantId,
+  });
+  window.location.replace(`${waitingRoomPath}?${params.toString()}`);
+  return true;
 }
 
 function updateAccessState(participant) {
   const status = participant?.status || 'unknown';
   const isActive = status === 'active';
+  const isPending = status === 'pending';
 
   if (isActive && lastKnownStatus !== 'active') {
     sendPresence();
@@ -357,60 +432,20 @@ function updateAccessState(participant) {
     roomContent.hidden = !hasFullAccess;
   }
 
-  if (!hasFullAccess) {
-    if (accessBanner && accessMessage) {
-      let message = 'Trwa oczekiwanie na dostęp do pokoju.';
-      if (!participant) {
-        message = 'Nie znaleziono Twojego zgłoszenia w tym pokoju. Wróć do ekranu tworzenia pokoju.';
-      } else if (status === 'pending') {
-        message = 'Czekasz na akceptację gospodarza. Otrzymasz dostęp, gdy gospodarz zaakceptuje Twoją prośbę.';
-      } else if (status === 'rejected') {
-        message = 'Gospodarz odrzucił Twoją prośbę o dołączenie. Możesz spróbować ponownie później.';
-      }
-      accessMessage.textContent = message;
-      accessBanner.hidden = false;
-      accessBanner.dataset.mode = 'status';
+  if (!hasFullAccess && !isPending && status !== lastKnownStatus) {
+    let message = 'Trwa oczekiwanie na dostęp do pokoju.';
+    if (!participant) {
+      message = 'Nie znaleziono Twojego zgłoszenia w tym pokoju. Wróć do ekranu tworzenia pokoju.';
+    } else if (status === 'rejected') {
+      message = 'Gospodarz odrzucił Twoją prośbę o dołączenie. Możesz spróbować ponownie później.';
     }
-    if (accessLeave) {
-      accessLeave.hidden = false;
-    }
-  } else if (accessBanner && accessBanner.dataset.mode === 'status') {
-    accessBanner.hidden = true;
-    accessBanner.dataset.mode = '';
-    if (accessMessage) {
-      accessMessage.textContent = '';
-    }
-    if (accessLeave) {
-      accessLeave.hidden = true;
-    }
+    alert(message);
+    window.location.replace('pytania-dla-par-room.html');
   }
 
-  setInteractionEnabled(isActive);
+  setInteractionEnabled(hasFullAccess && isActive);
 
   lastKnownStatus = status;
-}
-
-function showHostNotice(message) {
-  if (!accessBanner || !accessMessage) {
-    return;
-  }
-  accessBanner.hidden = false;
-  accessBanner.dataset.mode = 'host';
-  accessMessage.textContent = message;
-  if (accessLeave) {
-    accessLeave.hidden = true;
-  }
-}
-
-function clearHostNotice() {
-  if (!accessBanner || accessBanner.dataset.mode !== 'host') {
-    return;
-  }
-  accessBanner.hidden = true;
-  accessBanner.dataset.mode = '';
-  if (accessMessage) {
-    accessMessage.textContent = '';
-  }
 }
 
 function setInteractionEnabled(enabled) {

@@ -1,13 +1,15 @@
-const CACHE_NAME = 'pary-mvp-v2';
+const CACHE_NAME = 'pary-mvp-v3';
 const ASSETS = [
   '/pary-mvp/',
   '/pary-mvp/index.html',
   '/pary-mvp/pytania-dla-par.html',
   '/pary-mvp/room.html',
+  '/pary-mvp/room-waiting.html',
   '/pary-mvp/admin-import.html',
   '/pary-mvp/assets/css/style.css',
   '/pary-mvp/assets/js/app.js',
   '/pary-mvp/assets/js/room.js',
+  '/pary-mvp/assets/js/waiting-room.js',
   '/pary-mvp/assets/js/import.js',
   '/pary-mvp/data/questions.json',
   '/pary-mvp/manifest.webmanifest',

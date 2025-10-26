@@ -152,7 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
           room_key: payload.room_key,
           pid: payload.participant_id,
         });
-        window.location.href = `room.html?${params.toString()}`;
+        const target = payload.requires_approval ? 'room-waiting.html' : 'room.html';
+        window.location.href = `${target}?${params.toString()}`;
       } catch (error) {
         console.error(error);
         alert(error.message);

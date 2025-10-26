@@ -24,25 +24,17 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--notice" id="access-banner" hidden>
-      <p id="access-message"></p>
-      <button type="button" class="btn btn--ghost" id="access-leave" hidden>Wróć do tworzenia pokoju</button>
-    </section>
-
     <div id="room-content" class="room__content" hidden>
       <section class="card card--participants">
         <h2>Uczestnicy</h2>
         <ul id="participants-list" class="participants"></ul>
       </section>
 
-      <section class="card card--requests" id="requests-card" hidden>
-        <h2>Prośby o dołączenie</h2>
-        <p id="requests-empty" class="form__hint">Brak oczekujących próśb.</p>
-        <ul id="requests-list" class="requests"></ul>
-      </section>
-
       <section class="card card--question">
-        <p id="question-empty" class="question__empty">Wylosuj pytanie, aby rozpocząć rozmowę.</p>
+        <div id="question-empty" class="question__empty">
+          <p id="question-empty-text" class="question__empty-text">Wylosuj pytanie, aby rozpocząć rozmowę.</p>
+          <button type="button" class="btn btn--primary btn--question" id="next-question">Losuj pytanie</button>
+        </div>
         <article id="question-card" class="question" hidden>
           <header class="question__meta">
             <span id="question-category" class="question__category"></span>
@@ -57,7 +49,6 @@
               <option value="">Dowolna</option>
             </select>
           </label>
-          <button type="button" class="btn btn--primary" id="next-question">Losuj pytanie</button>
         </div>
         <div class="question__reactions" id="reaction-buttons" hidden>
           <button class="btn btn--ok" data-action="ok">OK</button>
@@ -83,6 +74,12 @@
         <ul id="reactions-list" class="reactions"></ul>
       </section>
     </div>
+
+    <aside id="host-requests" class="host-requests" hidden aria-live="polite">
+      <h2 class="host-requests__title">Prośby o dołączenie</h2>
+      <p id="host-requests-empty" class="host-requests__empty">Gdy ktoś poprosi o wejście do pokoju, zobaczysz to tutaj.</p>
+      <ul id="host-requests-list" class="host-requests__list requests"></ul>
+    </aside>
   </main>
 </body>
 </html>
