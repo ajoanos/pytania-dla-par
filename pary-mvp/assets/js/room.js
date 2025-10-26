@@ -26,18 +26,15 @@ const catalogQuestions = document.getElementById('catalog-questions');
 const catalogCategoryTitle = document.getElementById('catalog-category-title');
 const catalogList = document.getElementById('catalog-list');
 const catalogEmpty = document.getElementById('catalog-empty');
-const accessBanner = document.getElementById('access-banner');
-const accessMessage = document.getElementById('access-message');
-const accessLeave = document.getElementById('access-leave');
 const roomContent = document.getElementById('room-content');
-const waitingRoom = document.getElementById('waiting-room');
-const requestsCard = document.getElementById('requests-card');
-const requestsList = document.getElementById('requests-list');
-const requestsEmpty = document.getElementById('requests-empty');
+const hostRequestsPanel = document.getElementById('host-requests');
+const hostRequestsList = document.getElementById('host-requests-list');
+const hostRequestsEmpty = document.getElementById('host-requests-empty');
 
 const defaultTitle = document.title;
 let selfInfo = null;
 let previousPendingCount = 0;
+let pulseTimer = null;
 let lastKnownStatus = '';
 let hasRedirectedToWaiting = false;
 
@@ -56,10 +53,6 @@ function isActiveParticipant() {
 roomLabel.textContent = roomKey;
 
 setupCategoryOptions();
-
-accessLeave?.addEventListener('click', () => {
-  window.location.href = 'pytania-dla-par-room.html';
-});
 
 nextQuestionButton?.addEventListener('click', async () => {
   try {
@@ -138,7 +131,7 @@ reactionButtons?.addEventListener('click', async (event) => {
   }
 });
 
-requestsList?.addEventListener('click', async (event) => {
+hostRequestsList?.addEventListener('click', async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
   const button = target.closest('button[data-action]');
@@ -172,7 +165,7 @@ async function refreshState() {
       clearQuestion();
     }
     renderReactions(reactions);
-    renderPendingRequests(payload.pending_requests || []);
+    renderHostRequests(payload.pending_requests || []);
   } catch (error) {
     console.error(error);
   }
@@ -253,55 +246,36 @@ function renderReactions(reactions) {
   });
 }
 
-function renderPendingRequests(requests) {
-  if (!requestsCard) {
-    return;
-  }
-  if (!selfInfo || !selfInfo.is_host) {
-    requestsCard.hidden = true;
-    if (requestsList) {
-      requestsList.innerHTML = '';
-    }
-    if (requestsEmpty) {
-      requestsEmpty.hidden = false;
-    }
-    clearHostNotice();
-    document.title = defaultTitle;
-    previousPendingCount = 0;
+function renderHostRequests(requests) {
+  if (!hostRequestsPanel || !selfInfo || !selfInfo.is_host) {
+    hideHostRequests();
     return;
   }
 
-  const hasRequests = Array.isArray(requests) && requests.length > 0;
-  if (!hasRequests) {
-    requestsCard.hidden = true;
-    if (requestsList) {
-      requestsList.innerHTML = '';
-    }
-    if (requestsEmpty) {
-      requestsEmpty.hidden = true;
-    }
-    clearHostNotice();
-    document.title = defaultTitle;
-    previousPendingCount = 0;
+  const pending = Array.isArray(requests) ? requests : [];
+  if (pending.length === 0) {
+    hideHostRequests();
     return;
   }
 
-  requestsCard.hidden = false;
-  if (requestsEmpty) {
-    requestsEmpty.hidden = true;
+  hostRequestsPanel.hidden = false;
+  if (hostRequestsEmpty) {
+    hostRequestsEmpty.hidden = true;
   }
-  if (requestsList) {
-    requestsList.innerHTML = '';
+  if (hostRequestsList) {
+    hostRequestsList.innerHTML = '';
   }
 
-  requests.forEach((request) => {
-    if (!requestsList) return;
+  pending.forEach((request) => {
+    if (!hostRequestsList) return;
     const item = document.createElement('li');
     item.className = 'requests__item';
     item.dataset.requestId = String(request.id);
+
     const name = document.createElement('span');
     name.className = 'requests__name';
     name.textContent = request.display_name;
+
     const actions = document.createElement('div');
     actions.className = 'requests__actions';
 
@@ -321,20 +295,52 @@ function renderPendingRequests(requests) {
     actions.appendChild(reject);
     item.appendChild(name);
     item.appendChild(actions);
-    requestsList.appendChild(item);
+    hostRequestsList.appendChild(item);
   });
 
-  if (requests.length > previousPendingCount) {
-    const lastRequest = requests[requests.length - 1];
-    const message =
-      requests.length === 1
-        ? `Nowa prośba o dołączenie od ${lastRequest.display_name}.`
-        : `Nowe prośby o dołączenie (${requests.length}).`;
-    showHostNotice(message);
+  if (pending.length > previousPendingCount) {
+    triggerHostRequestsPulse();
   }
 
-  document.title = `(${requests.length}) ${defaultTitle}`;
-  previousPendingCount = requests.length;
+  document.title = `(${pending.length}) ${defaultTitle}`;
+  previousPendingCount = pending.length;
+}
+
+function hideHostRequests() {
+  if (!hostRequestsPanel) {
+    return;
+  }
+  hostRequestsPanel.hidden = true;
+  hostRequestsPanel.classList.remove('host-requests--pulse');
+  if (hostRequestsList) {
+    hostRequestsList.innerHTML = '';
+  }
+  if (hostRequestsEmpty) {
+    hostRequestsEmpty.hidden = false;
+  }
+  document.title = defaultTitle;
+  previousPendingCount = 0;
+  if (pulseTimer) {
+    clearTimeout(pulseTimer);
+    pulseTimer = null;
+  }
+}
+
+function triggerHostRequestsPulse() {
+  if (!hostRequestsPanel) {
+    return;
+  }
+  hostRequestsPanel.classList.remove('host-requests--pulse');
+  if (pulseTimer) {
+    clearTimeout(pulseTimer);
+  }
+  // Force reflow so animation retriggers
+  void hostRequestsPanel.offsetWidth;
+  hostRequestsPanel.classList.add('host-requests--pulse');
+  pulseTimer = setTimeout(() => {
+    hostRequestsPanel.classList.remove('host-requests--pulse');
+    pulseTimer = null;
+  }, 600);
 }
 
 function updateQuestionHighlight(reactions) {
@@ -426,64 +432,20 @@ function updateAccessState(participant) {
     roomContent.hidden = !hasFullAccess;
   }
 
-  const shouldShowBanner = !hasFullAccess && !isPending;
-
-  if (shouldShowBanner) {
-    if (accessBanner && accessMessage) {
-      let message = 'Trwa oczekiwanie na dostęp do pokoju.';
-      if (!participant) {
-        message = 'Nie znaleziono Twojego zgłoszenia w tym pokoju. Wróć do ekranu tworzenia pokoju.';
-      } else if (status === 'rejected') {
-        message = 'Gospodarz odrzucił Twoją prośbę o dołączenie. Możesz spróbować ponownie później.';
-      }
-      accessMessage.textContent = message;
-      accessBanner.hidden = false;
-      accessBanner.dataset.mode = 'status';
+  if (!hasFullAccess && !isPending && status !== lastKnownStatus) {
+    let message = 'Trwa oczekiwanie na dostęp do pokoju.';
+    if (!participant) {
+      message = 'Nie znaleziono Twojego zgłoszenia w tym pokoju. Wróć do ekranu tworzenia pokoju.';
+    } else if (status === 'rejected') {
+      message = 'Gospodarz odrzucił Twoją prośbę o dołączenie. Możesz spróbować ponownie później.';
     }
-    if (accessLeave) {
-      accessLeave.hidden = false;
-    }
-  } else if (accessBanner && accessBanner.dataset.mode === 'status') {
-    accessBanner.hidden = true;
-    accessBanner.dataset.mode = '';
-    if (accessMessage) {
-      accessMessage.textContent = '';
-    }
-    if (accessLeave) {
-      accessLeave.hidden = true;
-    }
+    alert(message);
+    window.location.replace('pytania-dla-par-room.html');
   }
 
-  if (!shouldShowBanner && accessLeave) {
-    accessLeave.hidden = true;
-  }
-
-  setInteractionEnabled(isActive);
+  setInteractionEnabled(hasFullAccess && isActive);
 
   lastKnownStatus = status;
-}
-
-function showHostNotice(message) {
-  if (!accessBanner || !accessMessage) {
-    return;
-  }
-  accessBanner.hidden = false;
-  accessBanner.dataset.mode = 'host';
-  accessMessage.textContent = message;
-  if (accessLeave) {
-    accessLeave.hidden = true;
-  }
-}
-
-function clearHostNotice() {
-  if (!accessBanner || accessBanner.dataset.mode !== 'host') {
-    return;
-  }
-  accessBanner.hidden = true;
-  accessBanner.dataset.mode = '';
-  if (accessMessage) {
-    accessMessage.textContent = '';
-  }
 }
 
 function setInteractionEnabled(enabled) {
