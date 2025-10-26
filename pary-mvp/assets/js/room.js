@@ -33,10 +33,6 @@ const requestsCard = document.getElementById('requests-card');
 const requestsList = document.getElementById('requests-list');
 const requestsEmpty = document.getElementById('requests-empty');
 
-if (roomContent) {
-  roomContent.hidden = true;
-}
-
 const defaultTitle = document.title;
 let selfInfo = null;
 let previousPendingCount = 0;
@@ -356,8 +352,9 @@ function updateAccessState(participant) {
     sendPresence();
   }
 
+  const shouldShowRoomContent = Boolean(participant) && status !== 'rejected';
   if (roomContent) {
-    roomContent.hidden = !isActive;
+    roomContent.hidden = !shouldShowRoomContent;
   }
 
   if (!isActive) {
