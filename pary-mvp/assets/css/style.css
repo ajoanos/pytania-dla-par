@@ -493,6 +493,7 @@ body {
   padding: 1rem 2.8rem;
   border-radius: 999px;
   box-shadow: 0 12px 28px rgba(242, 109, 111, 0.15);
+  align-self: center;
 }
 
 .question__meta {
@@ -517,7 +518,7 @@ body {
 }
 
 .question__empty--has-question .btn--question {
-  align-self: flex-start;
+  align-self: center;
 }
 
 .card--catalog {

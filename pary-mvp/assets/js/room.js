@@ -271,19 +271,27 @@ function renderPendingRequests(requests) {
     return;
   }
 
-  requestsCard.hidden = false;
-  if (requestsEmpty) {
-    requestsEmpty.hidden = requests.length !== 0;
-  }
-  if (requestsList) {
-    requestsList.innerHTML = '';
-  }
-
-  if (requests.length === 0) {
+  const hasRequests = Array.isArray(requests) && requests.length > 0;
+  if (!hasRequests) {
+    requestsCard.hidden = true;
+    if (requestsList) {
+      requestsList.innerHTML = '';
+    }
+    if (requestsEmpty) {
+      requestsEmpty.hidden = true;
+    }
     clearHostNotice();
     document.title = defaultTitle;
     previousPendingCount = 0;
     return;
+  }
+
+  requestsCard.hidden = false;
+  if (requestsEmpty) {
+    requestsEmpty.hidden = true;
+  }
+  if (requestsList) {
+    requestsList.innerHTML = '';
   }
 
   requests.forEach((request) => {
