@@ -76,10 +76,23 @@
     </div>
 
     <aside id="host-requests" class="host-requests" hidden aria-live="polite">
+      <button type="button" id="host-requests-close" class="host-requests__close" aria-label="Ukryj prośby">
+        ×
+      </button>
       <h2 class="host-requests__title">Prośby o dołączenie</h2>
       <p id="host-requests-empty" class="host-requests__empty">Gdy ktoś poprosi o wejście do pokoju, zobaczysz to tutaj.</p>
       <ul id="host-requests-list" class="host-requests__list requests"></ul>
     </aside>
+    <button
+      type="button"
+      id="host-requests-toggle"
+      class="host-requests__toggle"
+      hidden
+      aria-expanded="false"
+      aria-controls="host-requests"
+    >
+      Prośby o dołączenie
+    </button>
   </main>
 </body>
 </html>

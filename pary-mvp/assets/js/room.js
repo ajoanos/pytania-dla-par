@@ -30,13 +30,18 @@ const roomContent = document.getElementById('room-content');
 const hostRequestsPanel = document.getElementById('host-requests');
 const hostRequestsList = document.getElementById('host-requests-list');
 const hostRequestsEmpty = document.getElementById('host-requests-empty');
+const hostRequestsClose = document.getElementById('host-requests-close');
+const hostRequestsToggle = document.getElementById('host-requests-toggle');
 
 const defaultTitle = document.title;
 let selfInfo = null;
 let previousPendingCount = 0;
 let pulseTimer = null;
+let pulseTarget = null;
+let pulseClass = '';
 let lastKnownStatus = '';
 let hasRedirectedToWaiting = false;
+let hostRequestsCollapsed = false;
 
 const waitingRoomPath = 'room-waiting.html';
 
@@ -141,6 +146,18 @@ hostRequestsList?.addEventListener('click', async (event) => {
   const decision = button.dataset.action;
   if (!requestId || !decision) return;
   await respondToRequest(requestId, decision, button);
+});
+
+hostRequestsClose?.addEventListener('click', () => {
+  hostRequestsCollapsed = true;
+  updateHostRequestsVisibility(previousPendingCount);
+  hostRequestsToggle?.focus();
+});
+
+hostRequestsToggle?.addEventListener('click', () => {
+  hostRequestsCollapsed = false;
+  updateHostRequestsVisibility(previousPendingCount);
+  triggerHostRequestsPulse();
 });
 
 async function refreshState() {
@@ -258,7 +275,8 @@ function renderHostRequests(requests) {
     return;
   }
 
-  hostRequestsPanel.hidden = false;
+  updateHostRequestsVisibility(pending.length);
+
   if (hostRequestsEmpty) {
     hostRequestsEmpty.hidden = true;
   }
@@ -318,29 +336,98 @@ function hideHostRequests() {
   if (hostRequestsEmpty) {
     hostRequestsEmpty.hidden = false;
   }
+  if (hostRequestsToggle) {
+    hostRequestsToggle.hidden = true;
+    hostRequestsToggle.classList.remove('host-requests__toggle--pulse');
+    hostRequestsToggle.textContent = 'Prośby o dołączenie';
+    hostRequestsToggle.setAttribute('aria-label', 'Prośby o dołączenie');
+    hostRequestsToggle.setAttribute('aria-expanded', 'false');
+  }
   document.title = defaultTitle;
   previousPendingCount = 0;
   if (pulseTimer) {
     clearTimeout(pulseTimer);
     pulseTimer = null;
   }
+  pulseTarget = null;
+  pulseClass = '';
 }
 
 function triggerHostRequestsPulse() {
-  if (!hostRequestsPanel) {
+  const { element, className } = getPulseTarget();
+  if (!element || !className) {
     return;
   }
-  hostRequestsPanel.classList.remove('host-requests--pulse');
+  element.classList.remove(className);
   if (pulseTimer) {
     clearTimeout(pulseTimer);
   }
   // Force reflow so animation retriggers
-  void hostRequestsPanel.offsetWidth;
-  hostRequestsPanel.classList.add('host-requests--pulse');
+  void element.offsetWidth;
+  element.classList.add(className);
+  pulseTarget = element;
+  pulseClass = className;
   pulseTimer = setTimeout(() => {
-    hostRequestsPanel.classList.remove('host-requests--pulse');
+    if (pulseTarget && pulseClass) {
+      pulseTarget.classList.remove(pulseClass);
+    }
     pulseTimer = null;
+    pulseTarget = null;
+    pulseClass = '';
   }, 600);
+}
+
+function updateHostRequestsVisibility(count) {
+  if (!hostRequestsPanel) {
+    return;
+  }
+
+  const hasRequests = count > 0;
+  const label = count > 0 ? `Prośby o dołączenie (${count})` : 'Prośby o dołączenie';
+  if (hostRequestsToggle) {
+    hostRequestsToggle.textContent = label;
+    hostRequestsToggle.setAttribute('aria-label', label);
+  }
+
+  if (!hasRequests) {
+    hostRequestsPanel.hidden = true;
+    hostRequestsPanel.classList.remove('host-requests--pulse');
+    if (hostRequestsToggle) {
+      hostRequestsToggle.hidden = true;
+      hostRequestsToggle.classList.remove('host-requests__toggle--pulse');
+      hostRequestsToggle.setAttribute('aria-expanded', 'false');
+    }
+    return;
+  }
+
+  if (hostRequestsCollapsed) {
+    hostRequestsPanel.hidden = true;
+    hostRequestsPanel.classList.remove('host-requests--pulse');
+    if (hostRequestsToggle) {
+      hostRequestsToggle.hidden = false;
+      hostRequestsToggle.setAttribute('aria-expanded', 'false');
+    }
+  } else {
+    hostRequestsPanel.hidden = false;
+    if (hostRequestsToggle) {
+      hostRequestsToggle.hidden = true;
+      hostRequestsToggle.setAttribute('aria-expanded', 'true');
+      hostRequestsToggle.classList.remove('host-requests__toggle--pulse');
+    }
+  }
+}
+
+function getPulseTarget() {
+  if (hostRequestsCollapsed && hostRequestsToggle && !hostRequestsToggle.hidden) {
+    return { element: hostRequestsToggle, className: 'host-requests__toggle--pulse' };
+  }
+  if (hostRequestsPanel && !hostRequestsPanel.hidden) {
+    return { element: hostRequestsPanel, className: 'host-requests--pulse' };
+  }
+  if (hostRequestsToggle && !hostRequestsToggle.hidden) {
+    return { element: hostRequestsToggle, className: 'host-requests__toggle--pulse' };
+  }
+  return { element: null, className: '' };
 }
 
 function updateQuestionHighlight(reactions) {
