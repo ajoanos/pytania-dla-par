@@ -39,6 +39,13 @@ const shareQrModal = document.getElementById('share-qr-modal');
 const shareQrImage = document.getElementById('share-qr-image');
 const shareQrUrl = document.getElementById('share-qr-url');
 const shareQrClose = document.getElementById('share-qr-close');
+const videoPreview = document.getElementById('video-preview');
+const remoteVideoWrapper = document.getElementById('remote-video-wrapper');
+const remoteVideo = document.getElementById('remote-video');
+const remotePlaceholder = document.getElementById('remote-placeholder');
+const localVideoWrapper = document.getElementById('local-video-wrapper');
+const localVideo = document.getElementById('local-video');
+const videoStatus = document.getElementById('video-status');
 
 const defaultTitle = document.title;
 let selfInfo = null;
@@ -49,6 +56,9 @@ let pulseClass = '';
 let lastKnownStatus = '';
 let hasRedirectedToWaiting = false;
 let shareFeedbackTimer = null;
+let videoStatusHideTimer = null;
+let localStream = null;
+let remoteStream = null;
 
 const waitingRoomPath = 'room-waiting.html';
 const shareLinkUrl = buildShareUrl();
@@ -66,6 +76,24 @@ function isActiveParticipant() {
 roomLabel.textContent = roomKey;
 
 setupCategoryOptions();
+startVideoPreview();
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (!isStreamActive(localStream)) {
+      startVideoPreview(true);
+    } else {
+      attachLocalStream(localStream);
+    }
+    if (remoteStream) {
+      if (isStreamActive(remoteStream)) {
+        attachRemoteStream(remoteStream);
+      } else {
+        clearRemoteStream();
+      }
+    }
+  }
+});
 
 nextQuestionButton?.addEventListener('click', async () => {
   try {
@@ -179,6 +207,143 @@ document.addEventListener('keydown', (event) => {
     closeQrModal();
   }
 });
+
+function setVideoStatus(message, { persist = true, hideAfter = 4000 } = {}) {
+  if (!videoStatus) {
+    return;
+  }
+  clearTimeout(videoStatusHideTimer);
+  if (!message) {
+    videoStatus.hidden = true;
+    videoStatus.textContent = '';
+    return;
+  }
+  videoStatus.textContent = message;
+  videoStatus.hidden = false;
+  if (!persist) {
+    videoStatusHideTimer = window.setTimeout(() => {
+      setVideoStatus('');
+    }, hideAfter);
+  }
+}
+
+function ensureVideoPlays(video) {
+  if (!video || !video.srcObject) {
+    return;
+  }
+  if (video.paused) {
+    const playPromise = video.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {});
+    }
+  }
+}
+
+function isStreamActive(stream) {
+  return !!stream && stream.getTracks().some((track) => track.readyState === 'live');
+}
+
+function stopLocalStream() {
+  if (!localStream) {
+    return;
+  }
+  localStream.getTracks().forEach((track) => {
+    try {
+      track.stop();
+    } catch (error) {
+      console.warn('Nie udało się zatrzymać toru lokalnego podglądu.', error);
+    }
+  });
+  localStream = null;
+}
+
+function showRemotePlaceholder(show) {
+  if (remotePlaceholder) {
+    remotePlaceholder.hidden = !show;
+  }
+}
+
+function attachLocalStream(stream) {
+  if (!localVideo) {
+    return;
+  }
+  localVideo.srcObject = stream;
+  localVideo.muted = true;
+  ensureVideoPlays(localVideo);
+  if (localVideoWrapper) {
+    localVideoWrapper.hidden = true;
+    localVideoWrapper.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function attachRemoteStream(stream) {
+  const isMediaStream =
+    (typeof MediaStream !== 'undefined' && stream instanceof MediaStream) ||
+    (!!stream && typeof stream === 'object' && typeof stream.getTracks === 'function');
+  if (!isMediaStream || !remoteVideo) {
+    return;
+  }
+  remoteStream = stream;
+  remoteVideo.srcObject = stream;
+  ensureVideoPlays(remoteVideo);
+  if (remoteVideoWrapper) {
+    remoteVideoWrapper.hidden = false;
+  }
+  showRemotePlaceholder(false);
+  setVideoStatus('Połączono z kamerą partnera.', { persist: false, hideAfter: 6000 });
+}
+
+function clearRemoteStream() {
+  if (remoteVideo) {
+    remoteVideo.srcObject = null;
+  }
+  remoteStream = null;
+  showRemotePlaceholder(true);
+  setVideoStatus('Czekamy na połączenie kamery partnera…', { persist: true });
+}
+
+async function startVideoPreview(forceRestart = false) {
+  if (!videoPreview) {
+    return;
+  }
+  const canUseMedia = !!navigator.mediaDevices?.getUserMedia;
+  videoPreview.hidden = false;
+  showRemotePlaceholder(true);
+  if (!canUseMedia) {
+    setVideoStatus('Twoja przeglądarka nie obsługuje podglądu wideo.', { persist: true });
+    return;
+  }
+  if (!forceRestart && isStreamActive(localStream)) {
+    attachLocalStream(localStream);
+    setVideoStatus('Twoja kamera działa. Czekamy na obraz partnera…', { persist: true });
+    return;
+  }
+  if (forceRestart) {
+    stopLocalStream();
+  }
+  try {
+    setVideoStatus('Łączenie z kamerą…', { persist: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'user',
+        width: { ideal: 640 },
+        height: { ideal: 360 },
+      },
+      audio: true,
+    });
+    localStream = stream;
+    attachLocalStream(stream);
+    setVideoStatus('Twoja kamera działa. Czekamy na obraz partnera…', { persist: true });
+  } catch (error) {
+    console.error('Nie udało się włączyć podglądu wideo:', error);
+    setVideoStatus('Nie udało się uruchomić kamery. Sprawdź uprawnienia.', { persist: true });
+  }
+}
+
+window.pdpVideo = {
+  setRemoteStream: attachRemoteStream,
+  clearRemoteStream,
+};
 
 async function refreshState() {
   try {
