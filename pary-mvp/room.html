@@ -37,6 +37,17 @@
 
       <section class="card card--question">
         <div id="question-empty" class="question__empty">
+          <div id="video-preview" class="question__video" hidden>
+            <div class="question__video-stream">
+              <video id="local-video" class="question__video-item" autoplay playsinline muted></video>
+              <span class="question__video-label">Ty</span>
+            </div>
+            <div class="question__video-stream" id="remote-video-wrapper" hidden>
+              <video id="remote-video" class="question__video-item" autoplay playsinline></video>
+              <span class="question__video-label">Partner</span>
+            </div>
+            <p id="video-status" class="question__video-status" role="status" aria-live="polite" hidden></p>
+          </div>
           <p id="question-empty-text" class="question__empty-text">Wylosuj pytanie, aby rozpocząć rozmowę.</p>
           <button type="button" class="btn btn--primary btn--question" id="next-question">Losuj pytanie</button>
         </div>

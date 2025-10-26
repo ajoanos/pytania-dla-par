@@ -39,6 +39,9 @@ const shareQrModal = document.getElementById('share-qr-modal');
 const shareQrImage = document.getElementById('share-qr-image');
 const shareQrUrl = document.getElementById('share-qr-url');
 const shareQrClose = document.getElementById('share-qr-close');
+const videoPreview = document.getElementById('video-preview');
+const localVideo = document.getElementById('local-video');
+const videoStatus = document.getElementById('video-status');
 
 const defaultTitle = document.title;
 let selfInfo = null;
@@ -49,6 +52,7 @@ let pulseClass = '';
 let lastKnownStatus = '';
 let hasRedirectedToWaiting = false;
 let shareFeedbackTimer = null;
+let videoStatusHideTimer = null;
 
 const waitingRoomPath = 'room-waiting.html';
 const shareLinkUrl = buildShareUrl();
@@ -66,6 +70,7 @@ function isActiveParticipant() {
 roomLabel.textContent = roomKey;
 
 setupCategoryOptions();
+startVideoPreview();
 
 nextQuestionButton?.addEventListener('click', async () => {
   try {
@@ -179,6 +184,54 @@ document.addEventListener('keydown', (event) => {
     closeQrModal();
   }
 });
+
+async function startVideoPreview() {
+  if (!videoPreview || !localVideo) {
+    return;
+  }
+  const canUseMedia = !!navigator.mediaDevices?.getUserMedia;
+  videoPreview.hidden = false;
+  if (!canUseMedia) {
+    if (videoStatus) {
+      videoStatus.textContent = 'Twoja przeglądarka nie obsługuje podglądu wideo.';
+      videoStatus.hidden = false;
+    }
+    return;
+  }
+  try {
+    if (videoStatus) {
+      videoStatus.textContent = 'Łączenie z kamerą…';
+      videoStatus.hidden = false;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'user',
+        width: { ideal: 640 },
+        height: { ideal: 360 },
+      },
+      audio: true,
+    });
+    localVideo.srcObject = stream;
+    localVideo.muted = true;
+    await localVideo.play().catch(() => {});
+    if (videoStatus) {
+      videoStatus.textContent = 'Podgląd z kamery jest aktywny.';
+      videoStatus.hidden = false;
+      clearTimeout(videoStatusHideTimer);
+      videoStatusHideTimer = window.setTimeout(() => {
+        if (videoStatus) {
+          videoStatus.hidden = true;
+        }
+      }, 4000);
+    }
+  } catch (error) {
+    console.error('Nie udało się włączyć podglądu wideo:', error);
+    if (videoStatus) {
+      videoStatus.textContent = 'Nie udało się uruchomić kamery. Sprawdź uprawnienia.';
+      videoStatus.hidden = false;
+    }
+  }
+}
 
 async function refreshState() {
   try {
