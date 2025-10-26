@@ -56,6 +56,8 @@ function initializeDatabase(PDO $pdo): void
         room_id INTEGER NOT NULL,
         display_name TEXT NOT NULL,
         last_seen DATETIME NOT NULL,
+        status TEXT NOT NULL DEFAULT \'pending\',
+        is_host INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
     )');
 
@@ -79,6 +81,36 @@ function initializeDatabase(PDO $pdo): void
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
         FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
     )');
+
+    $statusAdded = addColumnIfMissing($pdo, 'participants', 'status', "TEXT NOT NULL DEFAULT 'pending'");
+    $isHostAdded = addColumnIfMissing($pdo, 'participants', 'is_host', 'INTEGER NOT NULL DEFAULT 0');
+
+    if ($statusAdded) {
+        $pdo->exec("UPDATE participants SET status = 'active'");
+    } else {
+        $pdo->exec("UPDATE participants SET status = 'active' WHERE status IS NULL OR status = ''");
+    }
+
+    if ($isHostAdded) {
+        $pdo->exec('UPDATE participants SET is_host = 0 WHERE is_host IS NULL');
+    }
+}
+
+function addColumnIfMissing(PDO $pdo, string $table, string $column, string $definition): bool
+{
+    if (!preg_match('/^[A-Za-z0-9_]+$/', $table) || !preg_match('/^[A-Za-z0-9_]+$/', $column)) {
+        return false;
+    }
+
+    $stmt = $pdo->query('PRAGMA table_info(' . $table . ')');
+    while ($info = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        if (($info['name'] ?? '') === $column) {
+            return false;
+        }
+    }
+
+    $pdo->exec(sprintf('ALTER TABLE %s ADD COLUMN %s %s', $table, $column, $definition));
+    return true;
 }
 
 function respond(array $data): void
@@ -166,7 +198,7 @@ function createRoom(string $roomKey): ?array
     return getRoomByKey($roomKey);
 }
 
-function ensureParticipant(int $roomId, string $displayName): array
+function ensureParticipant(int $roomId, string $displayName, bool $isHost = false): array
 {
     $stmt = db()->prepare('SELECT * FROM participants WHERE room_id = :room_id AND display_name = :display_name');
     $stmt->execute([
@@ -175,13 +207,31 @@ function ensureParticipant(int $roomId, string $displayName): array
     ]);
     $participant = $stmt->fetch();
     if ($participant) {
+        if ($isHost && (int)($participant['is_host'] ?? 0) !== 1) {
+            $update = db()->prepare('UPDATE participants SET is_host = 1, status = :status WHERE id = :id');
+            $update->execute([
+                'status' => 'active',
+                'id' => $participant['id'],
+            ]);
+            $participant['is_host'] = 1;
+            $participant['status'] = 'active';
+        } elseif (!$isHost && ($participant['status'] ?? '') === 'rejected') {
+            $update = db()->prepare('UPDATE participants SET status = :status WHERE id = :id');
+            $update->execute([
+                'status' => 'pending',
+                'id' => $participant['id'],
+            ]);
+            $participant['status'] = 'pending';
+        }
         return $participant;
     }
-    $stmt = db()->prepare('INSERT INTO participants (room_id, display_name, last_seen) VALUES (:room_id, :display_name, :last_seen)');
+    $stmt = db()->prepare('INSERT INTO participants (room_id, display_name, last_seen, status, is_host) VALUES (:room_id, :display_name, :last_seen, :status, :is_host)');
     $stmt->execute([
         'room_id' => $roomId,
         'display_name' => $displayName,
         'last_seen' => gmdate('c'),
+        'status' => $isHost ? 'active' : 'pending',
+        'is_host' => $isHost ? 1 : 0,
     ]);
     $participantId = (int)db()->lastInsertId();
     $stmt = db()->prepare('SELECT * FROM participants WHERE id = :id');
@@ -204,9 +254,43 @@ function requireJsonInput(): array
 
 function getRoomParticipants(int $roomId): array
 {
-    $stmt = db()->prepare('SELECT id, display_name, last_seen FROM participants WHERE room_id = :room_id ORDER BY display_name');
-    $stmt->execute(['room_id' => $roomId]);
+    $stmt = db()->prepare('SELECT id, display_name, last_seen FROM participants WHERE room_id = :room_id AND status = :status ORDER BY display_name');
+    $stmt->execute([
+        'room_id' => $roomId,
+        'status' => 'active',
+    ]);
     return $stmt->fetchAll();
+}
+
+function getPendingParticipants(int $roomId): array
+{
+    $stmt = db()->prepare('SELECT id, display_name, last_seen FROM participants WHERE room_id = :room_id AND status = :status ORDER BY id');
+    $stmt->execute([
+        'room_id' => $roomId,
+        'status' => 'pending',
+    ]);
+    return $stmt->fetchAll();
+}
+
+function getParticipantById(int $participantId, int $roomId): ?array
+{
+    $stmt = db()->prepare('SELECT * FROM participants WHERE id = :id AND room_id = :room_id');
+    $stmt->execute([
+        'id' => $participantId,
+        'room_id' => $roomId,
+    ]);
+    $participant = $stmt->fetch();
+    return $participant ?: null;
+}
+
+function updateParticipantStatus(int $participantId, int $roomId, string $status): void
+{
+    $stmt = db()->prepare('UPDATE participants SET status = :status WHERE id = :id AND room_id = :room_id');
+    $stmt->execute([
+        'status' => $status,
+        'id' => $participantId,
+        'room_id' => $roomId,
+    ]);
 }
 
 function getLatestQuestion(int $roomId): ?array

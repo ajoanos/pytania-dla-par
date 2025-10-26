@@ -25,6 +25,18 @@ const catalogQuestions = document.getElementById('catalog-questions');
 const catalogCategoryTitle = document.getElementById('catalog-category-title');
 const catalogList = document.getElementById('catalog-list');
 const catalogEmpty = document.getElementById('catalog-empty');
+const accessBanner = document.getElementById('access-banner');
+const accessMessage = document.getElementById('access-message');
+const accessLeave = document.getElementById('access-leave');
+const roomContent = document.getElementById('room-content');
+const requestsCard = document.getElementById('requests-card');
+const requestsList = document.getElementById('requests-list');
+const requestsEmpty = document.getElementById('requests-empty');
+
+const defaultTitle = document.title;
+let selfInfo = null;
+let previousPendingCount = 0;
+let lastKnownStatus = '';
 
 let currentQuestion = null;
 let pollTimer;
@@ -32,12 +44,24 @@ let presenceTimer;
 let allQuestions = [];
 let activeCategory = '';
 
+function isActiveParticipant() {
+  return (selfInfo?.status || '') === 'active';
+}
+
 roomLabel.textContent = roomKey;
 
 setupCategoryOptions();
 
+accessLeave?.addEventListener('click', () => {
+  window.location.href = 'pytania-dla-par-room.html';
+});
+
 nextQuestionButton?.addEventListener('click', async () => {
   try {
+    if (!isActiveParticipant()) {
+      alert('Musisz poczekać na akceptację gospodarza.');
+      return;
+    }
     nextQuestionButton.disabled = true;
     const payload = await postJson('api/next_question.php', {
       room_key: roomKey,
@@ -70,6 +94,10 @@ catalogList?.addEventListener('click', async (event) => {
   if (!(target instanceof HTMLElement)) return;
   const button = target.closest('.catalog__question');
   if (!(button instanceof HTMLButtonElement)) return;
+  if (!isActiveParticipant()) {
+    alert('Musisz poczekać na akceptację gospodarza.');
+    return;
+  }
   const questionId = button.dataset.questionId;
   if (!questionId) return;
   await chooseQuestionById(questionId, button);
@@ -80,6 +108,10 @@ reactionButtons?.addEventListener('click', async (event) => {
   if (!(target instanceof HTMLElement)) return;
   const action = target.dataset.action;
   if (!action || !currentQuestion) return;
+  if (!isActiveParticipant()) {
+    alert('Musisz poczekać na akceptację gospodarza.');
+    return;
+  }
   try {
     target.disabled = true;
     const payload = await postJson('api/react.php', {
@@ -101,12 +133,28 @@ reactionButtons?.addEventListener('click', async (event) => {
   }
 });
 
+requestsList?.addEventListener('click', async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const button = target.closest('button[data-action]');
+  if (!(button instanceof HTMLButtonElement)) return;
+  const item = button.closest('.requests__item');
+  const requestId = item?.dataset.requestId;
+  const decision = button.dataset.action;
+  if (!requestId || !decision) return;
+  await respondToRequest(requestId, decision, button);
+});
+
 async function refreshState() {
   try {
-    const payload = await getJson(`api/state.php?room_key=${encodeURIComponent(roomKey)}`);
+    const payload = await getJson(
+      `api/state.php?room_key=${encodeURIComponent(roomKey)}&participant_id=${encodeURIComponent(participantId)}`,
+    );
     if (!payload.ok) {
       throw new Error(payload.error || 'Nie udało się pobrać stanu.');
     }
+    selfInfo = payload.self || null;
+    updateAccessState(selfInfo);
     renderParticipants(payload.participants || []);
     const reactions = payload.reactions || [];
     if (payload.current_question) {
@@ -116,6 +164,7 @@ async function refreshState() {
       clearQuestion();
     }
     renderReactions(reactions);
+    renderPendingRequests(payload.pending_requests || []);
   } catch (error) {
     console.error(error);
   }
@@ -150,6 +199,82 @@ function renderReactions(reactions) {
     li.textContent = `${reaction.display_name || 'Ktoś'} • ${label}`;
     reactionsList.appendChild(li);
   });
+}
+
+function renderPendingRequests(requests) {
+  if (!requestsCard) {
+    return;
+  }
+  if (!selfInfo || !selfInfo.is_host) {
+    requestsCard.hidden = true;
+    if (requestsList) {
+      requestsList.innerHTML = '';
+    }
+    if (requestsEmpty) {
+      requestsEmpty.hidden = false;
+    }
+    clearHostNotice();
+    document.title = defaultTitle;
+    previousPendingCount = 0;
+    return;
+  }
+
+  requestsCard.hidden = false;
+  if (requestsEmpty) {
+    requestsEmpty.hidden = requests.length !== 0;
+  }
+  if (requestsList) {
+    requestsList.innerHTML = '';
+  }
+
+  if (requests.length === 0) {
+    clearHostNotice();
+    document.title = defaultTitle;
+    previousPendingCount = 0;
+    return;
+  }
+
+  requests.forEach((request) => {
+    if (!requestsList) return;
+    const item = document.createElement('li');
+    item.className = 'requests__item';
+    item.dataset.requestId = String(request.id);
+    const name = document.createElement('span');
+    name.className = 'requests__name';
+    name.textContent = request.display_name;
+    const actions = document.createElement('div');
+    actions.className = 'requests__actions';
+
+    const approve = document.createElement('button');
+    approve.type = 'button';
+    approve.className = 'btn btn--primary';
+    approve.dataset.action = 'approve';
+    approve.textContent = 'Akceptuj';
+
+    const reject = document.createElement('button');
+    reject.type = 'button';
+    reject.className = 'btn btn--ghost';
+    reject.dataset.action = 'reject';
+    reject.textContent = 'Odrzuć';
+
+    actions.appendChild(approve);
+    actions.appendChild(reject);
+    item.appendChild(name);
+    item.appendChild(actions);
+    requestsList.appendChild(item);
+  });
+
+  if (requests.length > previousPendingCount) {
+    const lastRequest = requests[requests.length - 1];
+    const message =
+      requests.length === 1
+        ? `Nowa prośba o dołączenie od ${lastRequest.display_name}.`
+        : `Nowe prośby o dołączenie (${requests.length}).`;
+    showHostNotice(message);
+  }
+
+  document.title = `(${requests.length}) ${defaultTitle}`;
+  previousPendingCount = requests.length;
 }
 
 function updateQuestionHighlight(reactions) {
@@ -199,6 +324,116 @@ function clearQuestion() {
   }
   setQuestionHighlight(null);
   reactionButtons.hidden = true;
+}
+
+function updateAccessState(participant) {
+  const status = participant?.status || 'unknown';
+  const isActive = status === 'active';
+
+  if (isActive && lastKnownStatus !== 'active') {
+    sendPresence();
+  }
+
+  if (roomContent) {
+    roomContent.hidden = !isActive;
+  }
+
+  if (!isActive) {
+    if (accessBanner && accessMessage) {
+      let message = 'Trwa oczekiwanie na dostęp do pokoju.';
+      if (!participant) {
+        message = 'Nie znaleziono Twojego zgłoszenia w tym pokoju. Wróć do ekranu tworzenia pokoju.';
+      } else if (status === 'pending') {
+        message = 'Czekasz na akceptację gospodarza. Otrzymasz dostęp, gdy gospodarz zaakceptuje Twoją prośbę.';
+      } else if (status === 'rejected') {
+        message = 'Gospodarz odrzucił Twoją prośbę o dołączenie. Możesz spróbować ponownie później.';
+      }
+      accessMessage.textContent = message;
+      accessBanner.hidden = false;
+      accessBanner.dataset.mode = 'status';
+    }
+    if (accessLeave) {
+      accessLeave.hidden = false;
+    }
+  } else if (accessBanner && accessBanner.dataset.mode === 'status') {
+    accessBanner.hidden = true;
+    accessBanner.dataset.mode = '';
+    if (accessMessage) {
+      accessMessage.textContent = '';
+    }
+    if (accessLeave) {
+      accessLeave.hidden = true;
+    }
+  }
+
+  setInteractionEnabled(isActive);
+
+  lastKnownStatus = status;
+}
+
+function showHostNotice(message) {
+  if (!accessBanner || !accessMessage) {
+    return;
+  }
+  accessBanner.hidden = false;
+  accessBanner.dataset.mode = 'host';
+  accessMessage.textContent = message;
+  if (accessLeave) {
+    accessLeave.hidden = true;
+  }
+}
+
+function clearHostNotice() {
+  if (!accessBanner || accessBanner.dataset.mode !== 'host') {
+    return;
+  }
+  accessBanner.hidden = true;
+  accessBanner.dataset.mode = '';
+  if (accessMessage) {
+    accessMessage.textContent = '';
+  }
+}
+
+function setInteractionEnabled(enabled) {
+  if (nextQuestionButton) {
+    nextQuestionButton.disabled = !enabled;
+  }
+  if (categorySelect) {
+    categorySelect.disabled = !enabled;
+  }
+  if (reactionButtons) {
+    reactionButtons.querySelectorAll('button').forEach((button) => {
+      button.disabled = !enabled;
+    });
+  }
+}
+
+async function respondToRequest(requestId, decision, triggerButton) {
+  if (!selfInfo || !selfInfo.is_host) {
+    return;
+  }
+  try {
+    if (triggerButton) {
+      triggerButton.disabled = true;
+    }
+    const payload = await postJson('api/respond_request.php', {
+      room_key: roomKey,
+      participant_id: participantId,
+      request_id: Number(requestId),
+      decision,
+    });
+    if (!payload.ok) {
+      throw new Error(payload.error || 'Nie udało się zaktualizować zgłoszenia.');
+    }
+    await refreshState();
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  } finally {
+    if (triggerButton) {
+      triggerButton.disabled = false;
+    }
+  }
 }
 
 function formatCategoryLabel(category) {
@@ -321,6 +556,9 @@ async function chooseQuestionById(questionId, triggerButton) {
 }
 
 async function sendPresence() {
+  if (selfInfo && selfInfo.status !== 'active') {
+    return;
+  }
   try {
     await postJson('api/presence.php', {
       room_key: roomKey,
