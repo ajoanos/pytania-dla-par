@@ -30,6 +30,7 @@ const accessBanner = document.getElementById('access-banner');
 const accessMessage = document.getElementById('access-message');
 const accessLeave = document.getElementById('access-leave');
 const roomContent = document.getElementById('room-content');
+const waitingRoom = document.getElementById('waiting-room');
 const requestsCard = document.getElementById('requests-card');
 const requestsList = document.getElementById('requests-list');
 const requestsEmpty = document.getElementById('requests-empty');
