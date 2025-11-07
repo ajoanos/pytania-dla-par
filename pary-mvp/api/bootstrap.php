@@ -2,7 +2,13 @@
 
 declare(strict_types=1);
 
-header('Content-Type: application/json; charset=utf-8');
+if (!defined('BOOTSTRAP_EMIT_JSON')) {
+    define('BOOTSTRAP_EMIT_JSON', true);
+}
+
+if (BOOTSTRAP_EMIT_JSON) {
+    header('Content-Type: application/json; charset=utf-8');
+}
 
 define('DB_FILE', __DIR__ . '/../db/data.sqlite');
 const ROOM_LIFETIME_SECONDS = 6 * 60 * 60;
@@ -98,6 +104,28 @@ function initializeDatabase(PDO $pdo): void
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_video_signals_room_target ON video_signals (room_id, target_id, id)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_video_signals_room_created ON video_signals (room_id, created_at)');
 
+    $pdo->exec('CREATE TABLE IF NOT EXISTS plan_invites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL,
+        sender_id INTEGER,
+        token TEXT NOT NULL UNIQUE,
+        sender_email TEXT NOT NULL,
+        sender_name TEXT,
+        partner_email TEXT NOT NULL,
+        mood TEXT,
+        closeness TEXT,
+        extras_json TEXT,
+        energy TEXT,
+        energy_context TEXT,
+        plan_link TEXT,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        accepted_at DATETIME,
+        FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+        FOREIGN KEY (sender_id) REFERENCES participants(id) ON DELETE SET NULL
+    )');
+
+    addColumnIfMissing($pdo, 'plan_invites', 'plan_link', 'TEXT');
+
     $statusAdded = addColumnIfMissing($pdo, 'participants', 'status', "TEXT NOT NULL DEFAULT 'pending'");
     $isHostAdded = addColumnIfMissing($pdo, 'participants', 'is_host', 'INTEGER NOT NULL DEFAULT 0');
 
@@ -110,6 +138,87 @@ function initializeDatabase(PDO $pdo): void
     if ($isHostAdded) {
         $pdo->exec('UPDATE participants SET is_host = 0 WHERE is_host IS NULL');
     }
+}
+
+function createPlanInvite(
+    int $roomId,
+    ?int $senderId,
+    string $token,
+    string $senderEmail,
+    string $partnerEmail,
+    string $senderName,
+    string $mood,
+    string $closeness,
+    string $extrasJson,
+    string $energy,
+    string $energyContext,
+    string $planLink
+): array {
+    $stmt = db()->prepare('INSERT INTO plan_invites (
+        room_id,
+        sender_id,
+        token,
+        sender_email,
+        sender_name,
+        partner_email,
+        mood,
+        closeness,
+        extras_json,
+        energy,
+        energy_context,
+        plan_link
+    ) VALUES (
+        :room_id,
+        :sender_id,
+        :token,
+        :sender_email,
+        :sender_name,
+        :partner_email,
+        :mood,
+        :closeness,
+        :extras_json,
+        :energy,
+        :energy_context,
+        :plan_link
+    )');
+
+    $stmt->execute([
+        'room_id' => $roomId,
+        'sender_id' => $senderId,
+        'token' => $token,
+        'sender_email' => $senderEmail,
+        'sender_name' => $senderName,
+        'partner_email' => $partnerEmail,
+        'mood' => $mood,
+        'closeness' => $closeness,
+        'extras_json' => $extrasJson,
+        'energy' => $energy,
+        'energy_context' => $energyContext,
+        'plan_link' => $planLink,
+    ]);
+
+    $id = (int)db()->lastInsertId();
+
+    $fetch = db()->prepare('SELECT * FROM plan_invites WHERE id = :id');
+    $fetch->execute(['id' => $id]);
+    return $fetch->fetch() ?: [];
+}
+
+function getPlanInviteByToken(string $token): ?array
+{
+    $stmt = db()->prepare('SELECT * FROM plan_invites WHERE token = :token');
+    $stmt->execute(['token' => $token]);
+    $invite = $stmt->fetch();
+    return $invite ?: null;
+}
+
+function markPlanInviteAccepted(int $inviteId): void
+{
+    $stmt = db()->prepare('UPDATE plan_invites SET accepted_at = :accepted_at WHERE id = :id AND accepted_at IS NULL');
+    $stmt->execute([
+        'accepted_at' => gmdate('c'),
+        'id' => $inviteId,
+    ]);
 }
 
 function addColumnIfMissing(PDO $pdo, string $table, string $column, string $definition): bool

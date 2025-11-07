@@ -120,10 +120,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const joinForm = document.getElementById('join-form');
   if (joinForm) {
-    if (sessionStorage.getItem(ACCESS_STORAGE_KEY) !== 'true') {
-      window.location.replace('pytania-dla-par.html');
+    const requiredAccessKey = joinForm.dataset.storageKey || ACCESS_STORAGE_KEY;
+    const accessRedirect = joinForm.dataset.accessRedirect || 'pytania-dla-par.html';
+    if (sessionStorage.getItem(requiredAccessKey) !== 'true') {
+      window.location.replace(accessRedirect);
       return;
     }
+
+    const successActive = joinForm.dataset.successActive || 'room.html';
+    const successPending = joinForm.dataset.successPending || 'room-waiting.html';
+    const autoApprove = joinForm.dataset.autoApprove === 'true';
 
     const firstInput = joinForm.querySelector('input');
     focusElement(firstInput);
@@ -133,7 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const submitButton = joinForm.querySelector('button[type="submit"]');
       const roomKey = joinForm.room_key.value.trim().toUpperCase();
       const displayName = joinForm.display_name.value.trim();
-      const mode = joinForm.mode?.value || 'create';
+      const selectedMode = joinForm.mode?.value || 'create';
+      const mode = autoApprove && selectedMode === 'join' ? 'invite' : selectedMode;
       if (!roomKey || !displayName) {
         alert('Uzupełnij wszystkie pola.');
         return;
@@ -153,8 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams({
           room_key: payload.room_key,
           pid: payload.participant_id,
+          name: displayName,
         });
-        const target = payload.requires_approval ? 'room-waiting.html' : 'room.html';
+        const target = payload.requires_approval ? successPending : successActive;
         window.location.href = `${target}?${params.toString()}`;
       } catch (error) {
         console.error(error);

@@ -3,17 +3,11 @@
 declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
+require __DIR__ . '/mail_helpers.php';
 
-$input = file_get_contents('php://input');
-$data = json_decode($input ?? '', true);
-if (!is_array($data)) {
-    respond([
-        'ok' => false,
-        'error' => 'Niepoprawne dane wejściowe.',
-    ]);
-}
+$data = requireJsonInput();
 
-$partnerEmail = filter_var($data['email'] ?? '', FILTER_VALIDATE_EMAIL);
+$partnerEmail = filter_var($data['partner_email'] ?? $data['email'] ?? '', FILTER_VALIDATE_EMAIL);
 if ($partnerEmail === false) {
     respond([
         'ok' => false,
@@ -21,17 +15,47 @@ if ($partnerEmail === false) {
     ]);
 }
 
+$senderEmail = filter_var($data['sender_email'] ?? '', FILTER_VALIDATE_EMAIL);
+if ($senderEmail === false) {
+    respond([
+        'ok' => false,
+        'error' => 'Podaj poprawny adres e-mail, na który mamy wysłać potwierdzenie.',
+    ]);
+}
+
+$roomKey = strtoupper(trim((string)($data['room_key'] ?? '')));
+$participantId = (int)($data['participant_id'] ?? 0);
+if ($roomKey === '' || $participantId <= 0) {
+    respond([
+        'ok' => false,
+        'error' => 'Nie udało się zidentyfikować pokoju.',
+    ]);
+}
+
+$room = getRoomByKey($roomKey);
+if ($room === null) {
+    respond([
+        'ok' => false,
+        'error' => 'Pokój wygasł lub nie istnieje. Wróć do ekranu startowego.',
+    ]);
+}
+
+$participant = getParticipantById($participantId, (int)$room['id']);
+if (!$participant || ($participant['status'] ?? '') !== 'active') {
+    respond([
+        'ok' => false,
+        'error' => 'Twoje połączenie z pokojem wygasło. Spróbuj ponownie.',
+    ]);
+}
+
+$senderName = sanitizeLine($data['sender_name'] ?? '');
 $mood = sanitizeLine($data['mood'] ?? '');
 $closeness = sanitizeLine($data['closeness'] ?? '');
 $energy = sanitizeLine($data['energy'] ?? '');
 $energyContext = sanitizeParagraph($data['energyContext'] ?? '');
-$subject = trim((string)($data['subject'] ?? 'Wieczór we dwoje – krótki plan 💛'));
+$subject = sanitizeLine($data['subject'] ?? 'Wieczór we dwoje – krótki plan 💛');
 if ($subject === '') {
     $subject = 'Wieczór we dwoje – krótki plan 💛';
-}
-$link = trim((string)($data['link'] ?? ''));
-if ($link === '') {
-    $link = 'https://momenty.pl/';
 }
 
 $extras = $data['extras'] ?? [];
@@ -40,6 +64,56 @@ if (!is_array($extras)) {
 }
 $extras = array_values(array_filter(array_map('sanitizeLine', $extras), static fn (string $value): bool => $value !== ''));
 $extrasText = $extras ? implode(', ', $extras) : 'Brak dodatków';
+$extrasJson = json_encode($extras, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+if (!is_string($extrasJson)) {
+    $extrasJson = '[]';
+}
+
+$originUrl = trim((string)($data['origin'] ?? ''));
+if ($originUrl !== '' && filter_var($originUrl, FILTER_VALIDATE_URL) === false) {
+    $originUrl = '';
+}
+$baseUrl = trim((string)($data['base_url'] ?? ''));
+if ($baseUrl !== '' && filter_var($baseUrl, FILTER_VALIDATE_URL) === false) {
+    $baseUrl = '';
+}
+if ($baseUrl !== '' && substr($baseUrl, -1) !== '/') {
+    $baseUrl .= '/';
+}
+
+$link = trim((string)($data['link'] ?? ''));
+if ($link !== '' && filter_var($link, FILTER_VALIDATE_URL) === false) {
+    $link = '';
+}
+if ($link === '') {
+    if ($baseUrl !== '') {
+        $link = $baseUrl . 'plan-wieczoru.html';
+    } elseif ($originUrl !== '') {
+        $link = rtrim($originUrl, '/') . '/pary-mvp/plan-wieczoru.html';
+    } else {
+        $link = 'https://momenty.pl/';
+    }
+}
+
+$token = generateUniqueToken();
+
+$acceptBase = $baseUrl !== '' ? $baseUrl : ($originUrl !== '' ? rtrim($originUrl, '/') . '/pary-mvp/' : 'https://momenty.pl/pary-mvp/');
+$acceptUrl = $acceptBase . 'plan-wieczoru-accept.php?token=' . urlencode($token);
+
+createPlanInvite(
+    (int)$room['id'],
+    (int)$participant['id'],
+    $token,
+    $senderEmail,
+    $partnerEmail,
+    $senderName,
+    $mood,
+    $closeness,
+    $extrasJson,
+    $energy,
+    $energyContext,
+    $link
+);
 
 $bodyLines = [
     'Twoja druga połówka zaprasza Cię dziś na wieczór pełen bliskości.',
@@ -56,17 +130,41 @@ if ($energyContext !== '') {
 }
 
 $bodyLines[] = '';
-$bodyLines[] = 'Kliknij, aby zobaczyć szczegóły.';
+$bodyLines[] = 'Kliknij, aby zobaczyć szczegóły planu:';
+$bodyLines[] = $link;
+$bodyLines[] = '';
+$bodyLines[] = 'Zgadzam się: ' . $acceptUrl;
+$bodyLines[] = '';
+$bodyLines[] = 'Masz pomysł na własny wieczór? Uruchom zabawę Plan Wieczoru:';
 $bodyLines[] = $link;
 
 $body = implode("\n", $bodyLines);
 
-if (!sendPlanEmailMessage($partnerEmail, $subject, $body)) {
+if (!sendEmailMessage($partnerEmail, $subject, $body, $senderEmail)) {
     respond([
         'ok' => false,
         'error' => 'Nie udało się wysłać wiadomości. Spróbuj ponownie później.',
     ]);
 }
+
+$confirmationSubject = 'Plan wysłany do partnera 💛';
+$confirmationLines = [
+    'Cześć' . ($senderName !== '' ? ' ' . $senderName : '') . '!',
+    'Wysłaliśmy Twój plan do: ' . $partnerEmail . '.',
+    '',
+    'Wiadomość zawierała podsumowanie:',
+];
+$confirmationLines[] = '– nastrój: ' . ($mood !== '' ? $mood : '—');
+$confirmationLines[] = '– bliskość: ' . ($closeness !== '' ? $closeness : '—');
+$confirmationLines[] = '– klimat: ' . $extrasText;
+$confirmationLines[] = '– energia: ' . ($energy !== '' ? $energy : '—');
+$confirmationLines[] = '';
+$confirmationLines[] = 'Gdy partner kliknie „Zgadzam się”, dostaniesz kolejną wiadomość z potwierdzeniem.';
+$confirmationLines[] = '';
+$confirmationLines[] = 'Twój link do zabawy: ' . $link;
+$confirmationBody = implode("\n", $confirmationLines);
+
+sendEmailMessage($senderEmail, $confirmationSubject, $confirmationBody);
 
 respond(['ok' => true]);
 
@@ -83,29 +181,11 @@ function sanitizeParagraph(mixed $value): string
     return $text;
 }
 
-function sendPlanEmailMessage(string $to, string $subject, string $body): bool
+function generateUniqueToken(): string
 {
-    $headers = [
-        'Content-Type: text/plain; charset=utf-8',
-        'From: Momenty <no-reply@momenty.pl>',
-    ];
+    do {
+        $token = bin2hex(random_bytes(16));
+    } while (getPlanInviteByToken($token) !== null);
 
-    $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
-
-    $sent = false;
-    if (function_exists('mail')) {
-        $sent = @mail($to, $encodedSubject, $body, implode("\r\n", $headers));
-    }
-
-    if ($sent) {
-        return true;
-    }
-
-    $logDir = __DIR__ . '/../db';
-    if (!is_dir($logDir)) {
-        @mkdir($logDir, 0775, true);
-    }
-
-    $logEntry = sprintf("[%s]\nTo: %s\nSubject: %s\n%s\n\n", date('c'), $to, $subject, $body);
-    return @file_put_contents($logDir . '/email.log', $logEntry, FILE_APPEND) !== false;
+    return $token;
 }

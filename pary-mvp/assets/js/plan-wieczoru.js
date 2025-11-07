@@ -9,6 +9,11 @@ const state = {
   currentStepIndex: 0,
   selections: new Map(),
   randomNotes: new Map(),
+  roomKey: '',
+  participantId: null,
+  displayName: '',
+  baseUrl: '',
+  origin: '',
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -22,6 +27,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (sessionStorage.getItem(ACCESS_KEY) !== 'true') {
     window.location.replace('plan-wieczoru.html');
     return;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const roomKeyParam = (params.get('room_key') || '').toUpperCase();
+  const participantParam = params.get('pid') || '';
+  const participantId = Number.parseInt(participantParam, 10);
+  if (!roomKeyParam || Number.isNaN(participantId) || participantId <= 0) {
+    window.location.replace('plan-wieczoru-room.html');
+    return;
+  }
+
+  state.roomKey = roomKeyParam;
+  state.participantId = participantId;
+  state.displayName = (params.get('name') || '').trim();
+
+  try {
+    const currentUrl = new URL(window.location.href);
+    const basePath = currentUrl.pathname.replace(/[^/]*$/, '');
+    state.baseUrl = `${currentUrl.origin}${basePath}`;
+    state.origin = currentUrl.origin;
+  } catch (error) {
+    state.baseUrl = '';
+    state.origin = '';
+  }
+
+  const roomLabel = document.getElementById('plan-room');
+  if (roomLabel) {
+    roomLabel.textContent = `Kod pokoju: ${state.roomKey}`;
+    roomLabel.hidden = false;
   }
 
   const loader = document.getElementById('plan-loader');
@@ -393,31 +427,53 @@ function buildSummaryData() {
 
 async function sendPlanEmail(form) {
   const emailInput = document.getElementById('plan-partner-email');
+  const yourEmailInput = document.getElementById('plan-your-email');
   const sendButton = document.getElementById('plan-send');
   const feedback = document.getElementById('plan-summary-feedback');
 
-  if (!emailInput || !sendButton || !feedback || !state.config) {
+  if (!emailInput || !yourEmailInput || !sendButton || !feedback || !state.config) {
     return;
   }
 
+  const yourEmail = yourEmailInput.value.trim();
   const email = emailInput.value.trim();
+
+  if (!yourEmail) {
+    feedback.textContent = 'Podaj adres e-mail, na który chcesz otrzymać potwierdzenie.';
+    return;
+  }
+
   if (!email) {
     feedback.textContent = 'Podaj adres e-mail partnera.';
+    return;
+  }
+
+  if (!state.roomKey || !state.participantId) {
+    feedback.textContent = 'Brakuje informacji o pokoju. Wróć do ekranu początkowego.';
     return;
   }
 
   sendButton.disabled = true;
   feedback.textContent = 'Wysyłamy wiadomość…';
 
+  const baseLink = state.baseUrl ? `${state.baseUrl}plan-wieczoru.html` : `${window.location.origin}/pary-mvp/plan-wieczoru.html`;
+  const origin = state.origin || window.location.origin;
+
   const payload = {
-    email,
+    partner_email: email,
+    sender_email: yourEmail,
+    sender_name: state.displayName,
+    room_key: state.roomKey,
+    participant_id: state.participantId,
     mood: state.selections.get('mood')?.label || '',
     closeness: state.selections.get('closeness')?.label || '',
     extras: (state.selections.get('extras') || []).map((item) => item.label),
     energy: state.selections.get('energy')?.label || '',
     energyContext: state.selections.get('energy')?.emailContext || '',
-    link: state.config.email?.link || `${window.location.origin}${window.location.pathname}`,
+    link: state.config.email?.link || baseLink,
     subject: state.config.email?.subject || 'Wieczór we dwoje – krótki plan 💛',
+    origin,
+    base_url: state.baseUrl,
   };
 
   try {
@@ -425,7 +481,7 @@ async function sendPlanEmail(form) {
     if (!response.ok) {
       throw new Error(response.error || 'Nie udało się wysłać wiadomości.');
     }
-    feedback.textContent = 'Plan wysłany! Za chwilę wrócisz do listy gier.';
+    feedback.textContent = 'Plan wysłany! Partner otrzyma link „Zgadzam się”, a Ty potwierdzenie na e-mail. Za chwilę wrócisz do listy gier.';
     sendButton.disabled = true;
     form.querySelectorAll('input, button').forEach((element) => {
       if (element instanceof HTMLButtonElement && element.id === 'plan-reset') {

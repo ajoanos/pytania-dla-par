@@ -4,14 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Plan Wieczoru – We Dwoje</title>
+  <title>Plan Wieczoru – Pokój</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
   <script type="module" src="assets/js/app.js"></script>
-  <script type="module" src="assets/js/plan-wieczoru.js"></script>
 </head>
 <body class="page page--game" data-theme="light">
   <main class="container">
@@ -24,49 +23,47 @@
         />
         <div class="hero__text">
           <h1>Plan Wieczoru – We Dwoje</h1>
-          <p>Przejdź przez kilka kroków i zaplanuj Wasz wspólny wieczór.</p>
+          <p>Stwórz pokój, aby zaprosić partnera do wspólnego planowania.</p>
         </div>
       </div>
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--game" id="plan-card">
+    <section class="card card--game" id="game-card">
       <header class="card__header">
-        <h2>Twój plan</h2>
-        <p id="plan-caption">Wybierz odpowiedzi w kolejnych krokach. Wszystko zapisujemy tylko dla Was.</p>
+        <h2>Stwórz lub dołącz do pokoju</h2>
+        <p class="form__hint">Ustal wspólny kod pokoju, aby móc razem tworzyć i akceptować plan wieczoru.</p>
       </header>
-
-      <div id="plan-loader" class="game-loader" role="status">Ładujemy zabawę…</div>
-      <p id="plan-error" class="game-error" role="alert" hidden></p>
-
-      <div id="plan-flow" class="game-flow" hidden>
-        <div class="game-progress" id="plan-progress"></div>
-        <article class="game-step" id="plan-step" aria-live="polite"></article>
-        <div class="game-actions">
-          <button type="button" class="btn btn--ghost" id="plan-back">Wstecz</button>
-          <button type="button" class="btn btn--primary" id="plan-next">Dalej</button>
-        </div>
-      </div>
-
-      <article id="plan-summary" class="game-summary" hidden>
-        <header class="game-summary__header">
-          <h2 id="plan-summary-title">Twój plan wieczoru jest gotowy!</h2>
-          <p id="plan-summary-subtitle">Sprawdź, czy wszystko się zgadza i wyślij plan do partnera.</p>
-        </header>
-        <dl class="game-summary__list" id="plan-summary-list"></dl>
-        <form id="plan-summary-form" class="form form--stack">
-          <label class="form__field">
-            <span>E-mail partnera</span>
-            <input type="email" id="plan-partner-email" name="partner_email" placeholder="np. partner@adres.pl" autocomplete="email" required />
+      <form
+        id="join-form"
+        class="form"
+        data-success-active="plan-wieczoru-play.html"
+        data-success-pending="plan-wieczoru-play.html"
+        data-auto-approve="true"
+        data-storage-key="momenty.planWieczoru.access"
+        data-access-redirect="plan-wieczoru.html"
+      >
+        <fieldset class="form__choices">
+          <legend>Co chcesz zrobić?</legend>
+          <label class="form__choice">
+            <input type="radio" name="mode" value="create" checked />
+            Stwórz nowy pokój
           </label>
-          <p class="form__hint" id="plan-email-hint">Adres e-mail nie jest nigdzie zapisywany – używamy go tylko do wysłania planu.</p>
-          <div class="form__actions">
-            <button type="submit" class="btn btn--primary" id="plan-send">Wyślij plan do partnera</button>
-            <button type="button" class="btn btn--ghost" id="plan-reset">Zacznij od nowa</button>
-          </div>
-        </form>
-        <p class="game-summary__feedback" id="plan-summary-feedback" role="status" aria-live="polite"></p>
-      </article>
+          <label class="form__choice">
+            <input type="radio" name="mode" value="join" />
+            Dołącz do istniejącego pokoju
+          </label>
+        </fieldset>
+        <label class="form__field">
+          <span>Kod pokoju</span>
+          <input type="text" id="room_key" name="room_key" placeholder="np. WIECZOR25" required maxlength="12" autocomplete="off" />
+        </label>
+        <label class="form__field">
+          <span>Twoje imię</span>
+          <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
+        </label>
+        <button type="submit" class="btn btn--primary">Wejdź do pokoju</button>
+      </form>
     </section>
 
     <footer class="footer">
