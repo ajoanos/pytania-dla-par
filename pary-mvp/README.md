@@ -1,6 +1,6 @@
 # Pytania dla par – MVP
 
-Lekki projekt webowy (PHP 8 + SQLite + Vanilla JS) do losowania pytań dla par i zapisywania reakcji w czasie rzeczywistym.
+Lekki projekt webowy (PHP 8 + SQLite + Vanilla JS) do losowania pytań dla par, zapisywania reakcji w czasie rzeczywistym oraz prowadzenia rytuałów bliskości w grze **Plan Wieczoru – We Dwoje**.
 
 ## Wymagania
 
