@@ -301,6 +301,7 @@ body {
 [data-theme="dark"] .game-option {
   background: rgba(47, 33, 52, 0.9);
   border-color: rgba(255, 143, 150, 0.22);
+  color: #ffffff;
 }
 
 .game-option:hover,
@@ -502,6 +503,11 @@ body {
   background: rgba(242, 109, 111, 0.12);
   color: var(--color-primary-dark);
   font-weight: 600;
+}
+
+.form__notice p {
+  margin: 0;
+  text-align: center;
 }
 
 [data-theme="dark"] .form__notice {
