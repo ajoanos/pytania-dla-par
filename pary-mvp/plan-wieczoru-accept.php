@@ -15,12 +15,16 @@ $decision = $decisionParam === 'decline' ? 'decline' : 'accept';
 $status = 'invalid';
 $headline = 'Ups!';
 $message = 'Link jest niepoprawny lub wygasł.';
-$ctaHref = DEFAULT_PLAN_BASE . 'plan-wieczoru-room.html';
+$ctaHref = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
 $ctaLabel = 'Zaproponuj własny plan wieczoru';
 
 if ($token !== '') {
     $invite = getPlanInviteByToken($token);
     if ($invite) {
+        $planLink = trim((string)($invite['plan_link'] ?? ''));
+        if ($planLink === '') {
+            $planLink = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
+        }
         $alreadyAccepted = isset($invite['accepted_at']) && $invite['accepted_at'] !== '';
         $alreadyDeclined = isset($invite['declined_at']) && $invite['declined_at'] !== '';
 
@@ -33,7 +37,7 @@ if ($token !== '') {
                 $senderName = trim((string)($invite['sender_name'] ?? ''));
                 $proposalLink = trim((string)($invite['proposal_link'] ?? ''));
                 if ($proposalLink === '') {
-                    $proposalLink = DEFAULT_PLAN_BASE . 'plan-wieczoru-room.html';
+                    $proposalLink = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
                 }
 
                 $summaryLines = buildSummaryLines($invite);
@@ -67,15 +71,17 @@ if ($token !== '') {
                 $status = 'declined';
                 $headline = 'Dzięki za odpowiedź!';
                 $message = 'Przekazaliśmy informację, że wolisz zaplanować ten wieczór inaczej. Partner dostanie e-mail z Twoją decyzją.';
-                $ctaHref = $proposalLink;
+                $ctaHref = $planLink;
             } elseif ($alreadyDeclined) {
                 $status = 'already';
                 $headline = 'Odpowiedź już wysłana';
                 $message = 'Wygląda na to, że wcześniej poprosiłeś o inny plan. Możesz zawsze zaproponować własną wersję.';
+                $ctaHref = $planLink;
             } else {
                 $status = 'already';
                 $headline = 'Plan już potwierdzony';
                 $message = 'Ten plan został już zaakceptowany. Jeśli chcesz zaproponować inny, rozpocznij nową zabawę.';
+                $ctaHref = $planLink;
             }
         } else {
             if (!$alreadyAccepted && !$alreadyDeclined) {
@@ -84,10 +90,6 @@ if ($token !== '') {
                 $senderName = trim((string)($invite['sender_name'] ?? ''));
                 $partnerEmail = trim((string)($invite['partner_email'] ?? ''));
                 $senderEmail = trim((string)($invite['sender_email'] ?? ''));
-                $planLink = trim((string)($invite['plan_link'] ?? ''));
-                if ($planLink === '') {
-                    $planLink = DEFAULT_PLAN_BASE . 'plan-wieczoru-room.html';
-                }
 
                 $summaryLines = buildSummaryLines($invite);
 
@@ -125,10 +127,12 @@ if ($token !== '') {
                 $status = 'already';
                 $headline = 'Plan już potwierdzony';
                 $message = 'Wygląda na to, że ten plan został już zaakceptowany wcześniej.';
+                $ctaHref = $planLink;
             } else {
                 $status = 'already';
                 $headline = 'Plan oczekuje na zmianę';
                 $message = 'Ten plan został wcześniej odrzucony i czeka na nową propozycję.';
+                $ctaHref = $planLink;
             }
         }
     }

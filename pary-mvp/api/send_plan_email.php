@@ -51,6 +51,10 @@ if (!$participant || ($participant['status'] ?? '') !== 'active') {
 }
 
 $senderName = sanitizeLine($data['sender_name'] ?? '');
+$participantDisplayName = trim((string)($participant['display_name'] ?? ''));
+if ($senderName === '' && $participantDisplayName !== '') {
+    $senderName = $participantDisplayName;
+}
 $mood = sanitizeLine($data['mood'] ?? '');
 $closeness = sanitizeLine($data['closeness'] ?? '');
 $energy = sanitizeLine($data['energy'] ?? '');
@@ -93,33 +97,85 @@ if ($proposalLink !== '' && filter_var($proposalLink, FILTER_VALIDATE_URL) === f
     $proposalLink = '';
 }
 
+$roomId = (int)$room['id'];
 $roomKeyValue = (string)($room['room_key'] ?? $roomKey);
-$senderDisplayName = trim((string)($participant['display_name'] ?? ''));
-$autoParams = http_build_query(array_filter([
-    'room_key' => $roomKeyValue,
-    'display_name' => $senderDisplayName,
-    'mode' => 'join',
-    'auto' => '1',
-], static fn ($value) => $value !== ''));
 
-if ($link === '') {
+$planBase = '';
+if ($link !== '') {
+    $planBase = preg_replace('/\?.*/', '', $link) ?: '';
+    if (!filter_var($planBase, FILTER_VALIDATE_URL)) {
+        $planBase = '';
+    }
+}
+if ($planBase === '') {
     if ($baseUrl !== '') {
-        $link = $baseUrl . 'plan-wieczoru-play.html';
+        $planBase = $baseUrl . 'plan-wieczoru-play.html';
     } elseif ($originUrl !== '') {
-        $link = rtrim($originUrl, '/') . '/pary-mvp/plan-wieczoru-play.html';
+        $planBase = rtrim($originUrl, '/') . '/pary-mvp/plan-wieczoru-play.html';
     } else {
-        $link = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
+        $planBase = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
     }
 }
 
-if ($proposalLink === '') {
-    $baseProposal = $baseUrl !== ''
-        ? $baseUrl . 'plan-wieczoru-room.html'
-        : ($originUrl !== ''
-            ? rtrim($originUrl, '/') . '/pary-mvp/plan-wieczoru-room.html'
-            : DEFAULT_PLAN_BASE . 'plan-wieczoru-room.html');
-    $proposalLink = $autoParams !== '' ? $baseProposal . '?' . $autoParams : $baseProposal;
+$hostDisplayName = limitLength($participantDisplayName !== '' ? $participantDisplayName : $senderName, 40);
+$hostParams = [
+    'room_key' => $roomKeyValue,
+    'pid' => (string)(int)$participant['id'],
+    'auto' => '1',
+    'via' => 'host',
+];
+if ($hostDisplayName !== '') {
+    $hostParams['name'] = $hostDisplayName;
 }
+
+$partnerName = sanitizeLine($data['partner_name'] ?? '');
+if ($partnerName === '') {
+    $emailLocal = strstr($partnerEmail, '@', true);
+    if ($emailLocal !== false && $emailLocal !== '') {
+        $emailLocal = preg_replace('/[^\p{L}0-9]+/u', ' ', $emailLocal) ?? $emailLocal;
+        $partnerName = sanitizeLine($emailLocal);
+    }
+}
+$partnerName = limitLength($partnerName, 40);
+if ($partnerName === '') {
+    $partnerName = 'Partner';
+}
+
+$partnerParticipant = ensureParticipant($roomId, $partnerName, false, true);
+if ((int)($partnerParticipant['id'] ?? 0) === (int)$participant['id']) {
+    $basePartner = $partnerName !== '' ? $partnerName : 'Partner';
+    $suffix = 2;
+    do {
+        $candidate = limitLength($basePartner . ' ' . $suffix, 40);
+        $partnerParticipant = ensureParticipant($roomId, $candidate, false, true);
+        if ((int)$partnerParticipant['id'] !== (int)$participant['id']) {
+            $partnerName = $candidate;
+            break;
+        }
+        $suffix++;
+    } while ($suffix < 10);
+}
+
+$partnerParticipantId = (int)($partnerParticipant['id'] ?? 0);
+if ($partnerParticipantId <= 0) {
+    respond([
+        'ok' => false,
+        'error' => 'Nie udało się przygotować zaproszenia. Odśwież stronę i spróbuj ponownie.',
+    ]);
+}
+
+$partnerDisplayName = sanitizeLine($partnerParticipant['display_name'] ?? '') ?: $partnerName;
+$partnerDisplayName = limitLength($partnerDisplayName, 40);
+
+$link = buildPlanUrl($planBase, [
+    'room_key' => $roomKeyValue,
+    'pid' => (string)$partnerParticipantId,
+    'name' => $partnerDisplayName,
+    'auto' => '1',
+    'via' => 'invite',
+]);
+
+$proposalLink = buildPlanUrl($planBase, $hostParams);
 
 $token = generateUniqueToken();
 
@@ -158,14 +214,11 @@ if ($energyContext !== '') {
 }
 
 $bodyLines[] = '';
-$bodyLines[] = 'Kliknij, aby zobaczyć szczegóły planu:';
+$bodyLines[] = 'Zaproponuj własny plan:';
 $bodyLines[] = $link;
 $bodyLines[] = '';
 $bodyLines[] = 'Zgadzam się: ' . $acceptUrl;
 $bodyLines[] = 'Nie zgadzam się: ' . $declineUrl;
-$bodyLines[] = '';
-$bodyLines[] = 'Masz pomysł na własny wieczór? Uruchom zabawę Plan Wieczoru:';
-$bodyLines[] = $proposalLink;
 
 $body = implode("\n", $bodyLines);
 
@@ -198,4 +251,50 @@ function generateUniqueToken(): string
     } while (getPlanInviteByToken($token) !== null);
 
     return $token;
+}
+
+function limitLength(string $text, int $maxLength): string
+{
+    if ($maxLength <= 0) {
+        return '';
+    }
+
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        if (mb_strlen($text) <= $maxLength) {
+            return $text;
+        }
+
+        return mb_substr($text, 0, $maxLength);
+    }
+
+    if (strlen($text) <= $maxLength) {
+        return $text;
+    }
+
+    return substr($text, 0, $maxLength);
+}
+
+function buildPlanUrl(string $base, array $params): string
+{
+    $filtered = [];
+    foreach ($params as $key => $value) {
+        if ($value === null) {
+            continue;
+        }
+
+        $stringValue = (string)$value;
+        if ($stringValue === '') {
+            continue;
+        }
+
+        $filtered[$key] = $stringValue;
+    }
+
+    if ($filtered === []) {
+        return $base;
+    }
+
+    $query = http_build_query($filtered, '', '&', PHP_QUERY_RFC3986);
+
+    return $query !== '' ? $base . '?' . $query : $base;
 }

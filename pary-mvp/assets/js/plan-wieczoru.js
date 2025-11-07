@@ -19,6 +19,12 @@ const state = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.has('auto')) {
+    sessionStorage.setItem(ACCESS_KEY, 'true');
+  }
+
   if (sessionStorage.getItem(ACCESS_KEY) !== 'true') {
     const legacyKey = 'pary.access.pdp';
     if (sessionStorage.getItem(legacyKey) === 'true') {
@@ -31,7 +37,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  const params = new URLSearchParams(window.location.search);
   const roomKeyParam = (params.get('room_key') || '').toUpperCase();
   const participantParam = params.get('pid') || '';
   const participantId = Number.parseInt(participantParam, 10);
@@ -43,6 +48,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   state.roomKey = roomKeyParam;
   state.participantId = participantId;
   state.displayName = (params.get('name') || '').trim();
+
+  if (params.has('auto') && window.history.replaceState) {
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('auto');
+    window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+  }
 
   try {
     const currentUrl = new URL(window.location.href);
