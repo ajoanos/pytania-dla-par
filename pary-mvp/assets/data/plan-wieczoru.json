@@ -64,10 +64,10 @@
     },
     {
       "id": "energy",
-      "title": "Jak się dziś czujesz z energią?",
+      "title": "Jak tam dziś Twoja forma?",
       "type": "single",
       "allowCustomInput": true,
-      "inputPlaceholder": "Opisz swój poziom energii…",
+      "inputPlaceholder": "Opisz swoją formę…",
       "options": [
         {
           "id": "energy-high",
@@ -93,7 +93,7 @@
     },
     {
       "id": "timing",
-      "title": "Kiedy chcesz, żeby ten plan się zaczął?",
+      "title": "Kiedy chcesz żebyśmy zaczęli?",
       "type": "single",
       "options": [
         { "id": "timing-21", "label": "21:00" },
