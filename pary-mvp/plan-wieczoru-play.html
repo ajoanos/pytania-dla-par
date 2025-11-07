@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Plan Wieczoru – We Dwoje</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="assets/js/plan-wieczoru.js"></script>
+</head>
+<body class="page page--game" data-theme="light">
+  <main class="container">
+    <header class="hero">
+      <div class="hero__branding">
+        <img
+          class="hero__logo"
+          src="https://sklep.allemedia.pl/momenty/logo.png"
+          alt="Momenty"
+        />
+        <div class="hero__text">
+          <h1>Plan Wieczoru – We Dwoje</h1>
+          <p>Przejdź przez kilka kroków i zaplanuj Wasz wspólny wieczór.</p>
+        </div>
+      </div>
+      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
+    </header>
+
+    <section class="card card--game" id="plan-card">
+      <header class="card__header">
+        <h2>Twój plan</h2>
+        <p id="plan-caption">Wybierz odpowiedzi w kolejnych krokach. Wszystko zapisujemy tylko dla Was.</p>
+        <p id="plan-room" class="form__hint" hidden></p>
+      </header>
+
+      <div id="plan-loader" class="game-loader" role="status">Ładujemy zabawę…</div>
+      <p id="plan-error" class="game-error" role="alert" hidden></p>
+
+      <div id="plan-flow" class="game-flow" hidden>
+        <div class="game-progress" id="plan-progress"></div>
+        <article class="game-step" id="plan-step" aria-live="polite"></article>
+        <div class="game-actions">
+          <button type="button" class="btn btn--ghost" id="plan-back">Wstecz</button>
+          <button type="button" class="btn btn--primary" id="plan-next">Dalej</button>
+        </div>
+      </div>
+
+      <article id="plan-summary" class="game-summary" hidden>
+        <header class="game-summary__header">
+          <h2 id="plan-summary-title">Twój plan wieczoru jest gotowy!</h2>
+          <p id="plan-summary-subtitle">Sprawdź, czy wszystko się zgadza i wyślij plan do partnera.</p>
+        </header>
+        <dl class="game-summary__list" id="plan-summary-list"></dl>
+        <form id="plan-summary-form" class="form form--stack">
+          <div class="form__notice" role="note">
+            <p>Adresy e-mail służą tylko do wysłania wiadomości i nie przechowujemy ich na serwerze.</p>
+            <p>Pokoje istnieją przez 6 godzin od utworzenia i kasują się automatycznie.</p>
+          </div>
+          <label class="form__field">
+            <span>Twój e-mail</span>
+            <input
+              type="email"
+              id="plan-your-email"
+              name="your_email"
+              placeholder="np. ja@adres.pl"
+              autocomplete="email"
+              required
+            />
+          </label>
+          <label class="form__field">
+            <span>E-mail partnera</span>
+            <input
+              type="email"
+              id="plan-partner-email"
+              name="partner_email"
+              placeholder="np. partner@adres.pl"
+              autocomplete="email"
+              required
+            />
+          </label>
+          <p class="form__hint" id="plan-email-hint">
+            Na Twój adres wyślemy informację, gdy partner kliknie „Zgadzam się” lub „Nie zgadzam się”. Możesz też odpisać na wiadomość prosto z e-maila.
+          </p>
+          <div class="form__actions">
+            <button type="submit" class="btn btn--primary" id="plan-send">Wyślij plan do partnera</button>
+            <button type="button" class="btn btn--ghost" id="plan-reset">Zacznij od nowa</button>
+          </div>
+        </form>
+        <p class="game-summary__feedback" id="plan-summary-feedback" role="status" aria-live="polite"></p>
+      </article>
+
+      <section class="plan-history" id="plan-history" hidden>
+        <header class="plan-history__header">
+          <h3>Historia propozycji</h3>
+          <p class="plan-history__hint">Zobacz wcześniejsze pomysły zgłoszone w tym pokoju.</p>
+        </header>
+        <p class="plan-history__empty" id="plan-history-empty" hidden>Jeszcze nikt nic nie zaproponował. Zacznij od wysłania pierwszego planu!</p>
+        <p class="plan-history__error" id="plan-history-error" hidden>Nie udało się pobrać historii. Spróbuj odświeżyć stronę.</p>
+        <ol class="plan-history__list" id="plan-history-list"></ol>
+      </section>
+    </section>
+
+    <footer class="footer">
+      <nav class="footer__nav">
+        <a href="index.html">Powrót do wyboru gier</a>
+      </nav>
+    </footer>
+  </main>
+</body>
+</html>
