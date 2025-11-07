@@ -276,7 +276,7 @@ body {
   gap: 0.75rem;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   align-items: stretch;
-  grid-auto-rows: 1fr;
+  grid-auto-rows: minmax(0, 1fr);
 }
 
 .game-option {
@@ -295,6 +295,7 @@ body {
   align-items: flex-start;
   gap: 0.25rem;
   line-height: 1.35;
+  width: 100%;
 }
 
 [data-theme="dark"] .game-option {
@@ -483,6 +484,12 @@ body {
 .form__hint {
   font-size: 0.85rem;
   color: var(--color-muted);
+}
+
+.form__footnote {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  text-align: center;
 }
 
 .form__notice {
