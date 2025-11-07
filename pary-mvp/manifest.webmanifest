@@ -1,10 +1,10 @@
 {
-  "name": "Pytania dla par",
-  "short_name": "Pary",
+  "name": "Momenty – Gry dla par",
+  "short_name": "Momenty",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#faf5ff",
   "theme_color": "#7c3aed",
-  "description": "Losuj pytania, by porozmawiać z partnerem i pogłębiać relację.",
+  "description": "Momenty: Pytania dla par oraz Plan Wieczoru – We Dwoje.",
   "icons": []
 }

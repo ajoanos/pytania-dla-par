@@ -1,0 +1,85 @@
+{
+  "id": "plan-wieczoru",
+  "name": "Plan Wieczoru – We Dwoje",
+  "password": "wedwoje25",
+  "storageKey": "momenty.planWieczoru.access",
+  "summary": {
+    "title": "Twój plan wieczoru jest gotowy!",
+    "subtitle": "Sprawdź podsumowanie i wyślij wiadomość do partnera.",
+    "buttonLabel": "Wyślij plan do partnera"
+  },
+  "email": {
+    "subject": "Wieczór we dwoje – krótki plan 💛",
+    "detailsLink": "https://sklep.allemedia.pl/momenty/plan-wieczoru-play.html",
+    "proposalLink": "https://sklep.allemedia.pl/momenty/plan-wieczoru-room.html"
+  },
+  "steps": [
+    {
+      "id": "mood",
+      "title": "Na jaki wieczór masz dziś ochotę?",
+      "type": "single",
+      "randomOptionId": "mood-random",
+      "options": [
+        { "id": "mood-calm", "label": "🌙 Spokojny i przytulny" },
+        { "id": "mood-tender", "label": "💛 Czułość i bliskość" },
+        { "id": "mood-romance", "label": "🔥 Trochę romantyki" },
+        { "id": "mood-exciting", "label": "😏 Coś bardziej ekscytującego" },
+        { "id": "mood-random", "label": "🎲 Zaskocz mnie — losuj", "isRandom": true }
+      ]
+    },
+    {
+      "id": "closeness",
+      "title": "Jakiej bliskości dziś potrzebujesz?",
+      "type": "single",
+      "options": [
+        { "id": "closeness-hug", "label": "🤗 Przytulanie" },
+        { "id": "closeness-massage", "label": "💆 Masaż pleców" },
+        { "id": "closeness-kiss", "label": "💋 Całowanie" },
+        { "id": "closeness-gentle", "label": "✨ Delikatna czułość" },
+        { "id": "closeness-soft", "label": "🔥 Intymność (soft)" },
+        { "id": "closeness-spicy", "label": "❤️‍🔥 Intymność (spicy)" },
+        { "id": "closeness-cozy", "label": "🚫 Tylko ciepło i obecność, bez presji" }
+      ]
+    },
+    {
+      "id": "extras",
+      "title": "Co stworzy idealny klimat?",
+      "type": "multi",
+      "options": [
+        { "id": "extras-candles", "label": "🕯️ Świeczki" },
+        { "id": "extras-wine", "label": "🍷 Wino" },
+        { "id": "extras-music", "label": "🎶 Muzyka" },
+        { "id": "extras-bath", "label": "🛁 Ciepła kąpiel" },
+        { "id": "extras-movie", "label": "🍿 Film / serial" },
+        { "id": "extras-talk", "label": "🌌 Rozmowa przy wygaszonym świetle" }
+      ]
+    },
+    {
+      "id": "energy",
+      "title": "Jak się dziś czujesz z energią?",
+      "type": "single",
+      "options": [
+        {
+          "id": "energy-high",
+          "label": "⚡ Mam dużo energii",
+          "emailContext": "Szykuj się na wieczór pełen działania i dobrej energii."
+        },
+        {
+          "id": "energy-ok",
+          "label": "🙂 Jest okej",
+          "emailContext": "Wieczór zapowiada się lekki i przyjemny – w sam raz na bliskość."
+        },
+        {
+          "id": "energy-low",
+          "label": "💤 Jestem zmęczony, chcę tylko lekko",
+          "emailContext": "Potrzebujemy spokoju i delikatności, więc plan jest łagodny."
+        },
+        {
+          "id": "energy-slow",
+          "label": "🌿 Idziemy powoli, zobaczymy",
+          "emailContext": "Zostawmy sobie przestrzeń i zobaczmy, co z tego wieczoru wyniknie."
+        }
+      ]
+    }
+  ]
+}
