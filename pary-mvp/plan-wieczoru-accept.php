@@ -155,11 +155,11 @@ function buildSummaryLines(array $invite): array
     }
 
     return [
-        '– nastrój: ' . formatValue($invite['mood'] ?? ''),
-        '– bliskość: ' . formatValue($invite['closeness'] ?? ''),
-        '– klimat: ' . ($extras !== [] ? implode(', ', $extras) : 'Brak dodatków'),
-        '– energia: ' . formatValue($invite['energy'] ?? ''),
-        '– początek: ' . formatValue($invite['start_time'] ?? ''),
+        'Na jaki wieczór masz dziś ochotę?: ' . formatValue($invite['mood'] ?? ''),
+        'Jakiej bliskości dziś potrzebujesz?: ' . formatValue($invite['closeness'] ?? ''),
+        'Co stworzy idealny klimat?: ' . ($extras !== [] ? implode(', ', $extras) : 'Brak dodatków'),
+        'Jak tam dziś Twoja forma?: ' . formatValue($invite['energy'] ?? ''),
+        'Kiedy chcesz żebyśmy zaczęli?: ' . formatValue($invite['start_time'] ?? ''),
     ];
 }
 ?>
@@ -175,21 +175,34 @@ function buildSummaryLines(array $invite): array
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <script type="module" src="assets/js/app.js"></script>
 </head>
 <body class="page page--game" data-theme="light">
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
-        <img
-          class="hero__logo"
-          src="https://sklep.allemedia.pl/momenty/logo.png"
-          alt="Momenty"
-        />
+        <a class="hero__logo-link" href="index.html">
+          <img
+            class="hero__logo"
+            src="https://sklep.allemedia.pl/momenty/logo.png"
+            alt="Momenty"
+          />
+        </a>
         <div class="hero__text">
           <h1><?= htmlspecialchars($headline, ENT_QUOTES, 'UTF-8') ?></h1>
           <p><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></p>
         </div>
+        <details class="game-switcher">
+          <summary class="game-switcher__toggle">Wybierz grę</summary>
+          <div class="game-switcher__panel">
+            <ul class="game-switcher__list">
+              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="plan-wieczoru.html" aria-current="page">Plan Wieczoru – We Dwoje</a></li>
+            </ul>
+          </div>
+        </details>
       </div>
+      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
     <section class="card card--game">
