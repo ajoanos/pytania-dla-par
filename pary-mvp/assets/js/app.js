@@ -186,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const presetName = (params.get('display_name') || '').trim();
     const presetMode = (params.get('mode') || '').trim().toLowerCase();
     const shouldAutoSubmit = params.has('auto');
+    let activeRoomKey = presetRoomKey;
 
     if (roomKeyField instanceof HTMLInputElement || roomKeyField instanceof HTMLTextAreaElement) {
       if (presetRoomKey) {
