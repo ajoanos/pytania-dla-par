@@ -17,6 +17,8 @@ $headline = 'Ups!';
 $message = 'Link jest niepoprawny lub wygasł.';
 $ctaHref = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
 $ctaLabel = 'Zaproponuj własny plan wieczoru';
+$showProposalForm = false;
+$proposalIntro = '';
 
 if ($token !== '') {
     $invite = getPlanInviteByToken($token);
@@ -72,6 +74,8 @@ if ($token !== '') {
                 $headline = 'Dzięki za odpowiedź!';
                 $message = 'Przekazaliśmy informację, że wolisz zaplanować ten wieczór inaczej. Partner dostanie e-mail z Twoją decyzją.';
                 $ctaHref = $planLink;
+                $showProposalForm = true;
+                $proposalIntro = 'Masz inny pomysł na spędzenie wieczoru? Podaj swoje imię i przygotuj własną propozycję.';
             } elseif ($alreadyDeclined) {
                 $status = 'already';
                 $headline = 'Odpowiedź już wysłana';
@@ -209,9 +213,28 @@ function buildSummaryLines(array $invite): array
       <header class="card__header">
         <h2>Co dalej?</h2>
       </header>
-      <p>
-        <a class="btn btn--primary" href="<?= htmlspecialchars($ctaHref, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($ctaLabel, ENT_QUOTES, 'UTF-8') ?></a>
-      </p>
+      <?php if ($showProposalForm): ?>
+        <p><?= htmlspecialchars($proposalIntro !== '' ? $proposalIntro : 'Przygotuj swoją wersję planu wieczoru.', ENT_QUOTES, 'UTF-8') ?></p>
+        <form
+          id="decline-proposal-form"
+          class="form form--stack"
+          data-success="plan-wieczoru-play.html"
+          data-storage-key="momenty.planWieczoru.access"
+        >
+          <label class="form__field">
+            <span>Twoje imię</span>
+            <input type="text" name="display_name" placeholder="np. Ola" maxlength="40" required autocomplete="off" />
+          </label>
+          <p class="form__hint" data-role="error" hidden></p>
+          <div class="form__actions">
+            <button type="submit" class="btn btn--primary">Zaproponuj własny plan</button>
+          </div>
+        </form>
+      <?php else: ?>
+        <p>
+          <a class="btn btn--primary" href="<?= htmlspecialchars($ctaHref, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($ctaLabel, ENT_QUOTES, 'UTF-8') ?></a>
+        </p>
+      <?php endif; ?>
       <p>
         <a class="btn btn--ghost" href="plan-wieczoru.html">Wróć do zabawy Plan Wieczoru</a>
       </p>

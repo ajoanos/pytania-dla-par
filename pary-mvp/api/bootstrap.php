@@ -332,6 +332,18 @@ function getRoomByKey(string $roomKey): ?array
     return $room;
 }
 
+function generateRoomKey(int $length = 6): string
+{
+    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $alphabetLength = strlen($alphabet);
+    $characters = [];
+    for ($i = 0; $i < $length; $i++) {
+        $index = random_int(0, $alphabetLength - 1);
+        $characters[] = $alphabet[$index];
+    }
+    return implode('', $characters);
+}
+
 function createRoom(string $roomKey): ?array
 {
     $roomKey = strtoupper($roomKey);
