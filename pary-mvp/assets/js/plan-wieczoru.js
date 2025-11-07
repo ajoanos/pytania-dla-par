@@ -616,9 +616,6 @@ async function sendPlanEmail(form) {
         element.disabled = true;
       }
     });
-    setTimeout(() => {
-      window.location.href = 'index.html';
-    }, 3000);
     loadPlanHistory();
   } catch (error) {
     console.error(error);

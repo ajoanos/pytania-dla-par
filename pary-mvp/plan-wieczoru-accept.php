@@ -155,11 +155,11 @@ function buildSummaryLines(array $invite): array
     }
 
     return [
-        '– nastrój: ' . formatValue($invite['mood'] ?? ''),
-        '– bliskość: ' . formatValue($invite['closeness'] ?? ''),
-        '– klimat: ' . ($extras !== [] ? implode(', ', $extras) : 'Brak dodatków'),
-        '– energia: ' . formatValue($invite['energy'] ?? ''),
-        '– początek: ' . formatValue($invite['start_time'] ?? ''),
+        'Na jaki wieczór masz dziś ochotę?: ' . formatValue($invite['mood'] ?? ''),
+        'Jakiej bliskości dziś potrzebujesz?: ' . formatValue($invite['closeness'] ?? ''),
+        'Co stworzy idealny klimat?: ' . ($extras !== [] ? implode(', ', $extras) : 'Brak dodatków'),
+        'Jak tam dziś Twoja forma?: ' . formatValue($invite['energy'] ?? ''),
+        'Kiedy chcesz żebyśmy zaczęli?: ' . formatValue($invite['start_time'] ?? ''),
     ];
 }
 ?>
