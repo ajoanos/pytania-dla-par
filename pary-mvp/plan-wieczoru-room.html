@@ -16,15 +16,26 @@
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
-        <img
-          class="hero__logo"
-          src="https://sklep.allemedia.pl/momenty/logo.png"
-          alt="Momenty"
-        />
+        <a class="hero__logo-link" href="index.html">
+          <img
+            class="hero__logo"
+            src="https://sklep.allemedia.pl/momenty/logo.png"
+            alt="Momenty"
+          />
+        </a>
         <div class="hero__text">
           <h1>Plan Wieczoru – We Dwoje</h1>
           <p>Stwórz pokój, aby zaprosić partnera do wspólnego planowania.</p>
         </div>
+        <details class="game-switcher">
+          <summary class="game-switcher__toggle">Wybierz grę</summary>
+          <div class="game-switcher__panel">
+            <ul class="game-switcher__list">
+              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="plan-wieczoru.html" aria-current="page">Plan Wieczoru – We Dwoje</a></li>
+            </ul>
+          </div>
+        </details>
       </div>
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
