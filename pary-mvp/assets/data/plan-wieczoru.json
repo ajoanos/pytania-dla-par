@@ -24,7 +24,7 @@
       "options": [
         { "id": "mood-calm", "label": "🌙 Spokojny i przytulny" },
         { "id": "mood-tender", "label": "💛 Czułość i bliskość" },
-        { "id": "mood-romance", "label": "🔥 Trochę romantyki" },
+        { "id": "mood-romance", "label": "🔥 Romantyczny wieczór" },
         { "id": "mood-exciting", "label": "😏 Coś bardziej ekscytującego" },
         { "id": "mood-random", "label": "🎲 Zaskocz mnie — losuj", "isRandom": true }
       ]
@@ -42,7 +42,7 @@
         { "id": "closeness-gentle", "label": "✨ Delikatna czułość" },
         { "id": "closeness-soft", "label": "🔥 Intymność (soft)" },
         { "id": "closeness-spicy", "label": "❤️‍🔥 Intymność (spicy)" },
-        { "id": "closeness-cozy", "label": "🚫 Tylko ciepło i obecność, bez presji" }
+        { "id": "closeness-cozy", "label": "🚫 Chcę tylko w spokoju posiedzieć razem." }
       ]
     },
     {
@@ -64,10 +64,10 @@
     },
     {
       "id": "energy",
-      "title": "Jak się dziś czujesz z energią?",
+      "title": "Jak tam dziś Twoja forma?",
       "type": "single",
       "allowCustomInput": true,
-      "inputPlaceholder": "Opisz swój poziom energii…",
+      "inputPlaceholder": "Opisz swoją formę…",
       "options": [
         {
           "id": "energy-high",
@@ -81,19 +81,19 @@
         },
         {
           "id": "energy-low",
-          "label": "💤 Jestem zmęczony, chcę tylko lekko",
+          "label": "💤 Czuję zmęczenie, chcę spokojnie.",
           "emailContext": "Potrzebujemy spokoju i delikatności, więc plan jest łagodny."
         },
         {
           "id": "energy-slow",
-          "label": "🌿 Idziemy powoli, zobaczymy",
+          "label": "🌿 Zacznijmy spokojnie zobaczymy co będzie.",
           "emailContext": "Zostawmy sobie przestrzeń i zobaczmy, co z tego wieczoru wyniknie."
         }
       ]
     },
     {
       "id": "timing",
-      "title": "Kiedy chcesz, żeby ten plan się zaczął?",
+      "title": "Kiedy chcesz żebyśmy zaczęli?",
       "type": "single",
       "options": [
         { "id": "timing-21", "label": "21:00" },
