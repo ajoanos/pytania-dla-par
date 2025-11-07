@@ -492,7 +492,12 @@ function showSummary() {
       element.disabled = false;
     });
   }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const scrollTarget = form || summary;
+  if (scrollTarget) {
+    requestAnimationFrame(() => {
+      scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 }
 
 function buildSummaryData() {
