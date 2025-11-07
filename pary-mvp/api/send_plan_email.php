@@ -59,6 +59,7 @@ $mood = sanitizeLine($data['mood'] ?? '');
 $closeness = sanitizeLine($data['closeness'] ?? '');
 $energy = sanitizeLine($data['energy'] ?? '');
 $energyContext = sanitizeParagraph($data['energyContext'] ?? '');
+$startTime = sanitizeLine($data['timing'] ?? '');
 $subject = sanitizeLine($data['subject'] ?? 'Wieczór we dwoje – krótki plan 💛');
 if ($subject === '') {
     $subject = 'Wieczór we dwoje – krótki plan 💛';
@@ -195,6 +196,7 @@ createPlanInvite(
     $extrasJson,
     $energy,
     $energyContext,
+    $startTime,
     $link,
     $proposalLink
 );
@@ -206,6 +208,7 @@ $bodyLines = [
     '– bliskość: ' . ($closeness !== '' ? $closeness : '—'),
     '– klimat: ' . $extrasText,
     '– energia: ' . ($energy !== '' ? $energy : '—'),
+    '– początek: ' . ($startTime !== '' ? $startTime : '—'),
 ];
 
 if ($energyContext !== '') {

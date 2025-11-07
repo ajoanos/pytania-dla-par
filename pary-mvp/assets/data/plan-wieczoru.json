@@ -80,6 +80,19 @@
           "emailContext": "Zostawmy sobie przestrzeń i zobaczmy, co z tego wieczoru wyniknie."
         }
       ]
+    },
+    {
+      "id": "timing",
+      "title": "Kiedy chcesz, żeby ten plan się zaczął?",
+      "type": "single",
+      "options": [
+        { "id": "timing-21", "label": "21:00" },
+        { "id": "timing-kids", "label": "Po położeniu dzieci" },
+        { "id": "timing-30", "label": "Za 30 minut" },
+        { "id": "timing-60", "label": "Za godzinę" }
+      ],
+      "allowCustomInput": true,
+      "inputPlaceholder": "Napisz swoją propozycję…"
     }
   ]
 }

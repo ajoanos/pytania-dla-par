@@ -117,6 +117,7 @@ function initializeDatabase(PDO $pdo): void
         extras_json TEXT,
         energy TEXT,
         energy_context TEXT,
+        start_time TEXT,
         plan_link TEXT,
         proposal_link TEXT,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -130,6 +131,7 @@ function initializeDatabase(PDO $pdo): void
     addColumnIfMissing($pdo, 'plan_invites', 'proposal_link', 'TEXT');
     addColumnIfMissing($pdo, 'plan_invites', 'declined_at', 'DATETIME');
     addColumnIfMissing($pdo, 'plan_invites', 'sender_id', 'INTEGER');
+    addColumnIfMissing($pdo, 'plan_invites', 'start_time', 'TEXT');
 
     $statusAdded = addColumnIfMissing($pdo, 'participants', 'status', "TEXT NOT NULL DEFAULT 'pending'");
     $isHostAdded = addColumnIfMissing($pdo, 'participants', 'is_host', 'INTEGER NOT NULL DEFAULT 0');
@@ -157,6 +159,7 @@ function createPlanInvite(
     string $extrasJson,
     string $energy,
     string $energyContext,
+    string $startTime,
     string $planLink,
     string $proposalLink
 ): array {
@@ -172,6 +175,7 @@ function createPlanInvite(
         extras_json,
         energy,
         energy_context,
+        start_time,
         plan_link,
         proposal_link
     ) VALUES (
@@ -186,6 +190,7 @@ function createPlanInvite(
         :extras_json,
         :energy,
         :energy_context,
+        :start_time,
         :plan_link,
         :proposal_link
     )');
@@ -202,6 +207,7 @@ function createPlanInvite(
         'extras_json' => $extrasJson,
         'energy' => $energy,
         'energy_context' => $energyContext,
+        'start_time' => $startTime,
         'plan_link' => $planLink,
         'proposal_link' => $proposalLink,
     ]);

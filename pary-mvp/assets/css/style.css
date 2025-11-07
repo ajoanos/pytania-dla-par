@@ -245,6 +245,32 @@ body {
   font-style: italic;
 }
 
+.game-step__custom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.game-step__custom-label {
+  font-weight: 600;
+}
+
+.game-step__input {
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.6);
+  color: inherit;
+}
+
+.game-step__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(242, 109, 111, 0.25);
+}
+
 .game-options {
   display: grid;
   gap: 0.75rem;

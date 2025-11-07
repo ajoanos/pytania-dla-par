@@ -238,6 +238,33 @@ function renderCurrentStep() {
 
   stepContainer.appendChild(optionsList);
 
+  if (step.allowCustomInput) {
+    const customWrapper = document.createElement('div');
+    customWrapper.className = 'game-step__custom';
+
+    const customLabel = document.createElement('label');
+    customLabel.className = 'game-step__custom-label';
+    customLabel.setAttribute('for', `plan-custom-${step.id}`);
+    customLabel.textContent = 'Masz inną propozycję?';
+
+    const customInput = document.createElement('input');
+    customInput.type = 'text';
+    customInput.id = `plan-custom-${step.id}`;
+    customInput.className = 'game-step__input';
+    customInput.placeholder = step.inputPlaceholder || 'Wpisz własną odpowiedź';
+    if (previouslySelected && previouslySelected.isCustom) {
+      customInput.value = previouslySelected.label || '';
+    }
+
+    customInput.addEventListener('input', () => {
+      handleCustomInput(step, customInput);
+    });
+
+    customWrapper.appendChild(customLabel);
+    customWrapper.appendChild(customInput);
+    stepContainer.appendChild(customWrapper);
+  }
+
   const noteElement = document.createElement('p');
   noteElement.className = 'game-step__note';
   noteElement.id = `plan-step-note-${step.id}`;
@@ -255,7 +282,11 @@ function updateNextButtonState(step, button) {
     const values = Array.isArray(selection) ? selection : [];
     button.disabled = values.length === 0;
   } else {
-    button.disabled = !selection;
+    if (selection && selection.isCustom) {
+      button.disabled = !selection.label;
+    } else {
+      button.disabled = !selection;
+    }
   }
   button.textContent = isOnLastStep() ? 'Zakończ' : 'Dalej';
 }
@@ -301,6 +332,12 @@ function handleOptionSelection(step, option) {
       emailContext: option.emailContext,
     });
     state.randomNotes.delete(step.id);
+    if (step.allowCustomInput) {
+      const customInput = document.getElementById(`plan-custom-${step.id}`);
+      if (customInput instanceof HTMLInputElement) {
+        customInput.value = '';
+      }
+    }
     if (noteElement) {
       noteElement.textContent = '';
       noteElement.hidden = true;
@@ -339,6 +376,29 @@ function updateOptionButtons(step) {
     button.classList.toggle('game-option--selected', Boolean(isSelected));
     button.setAttribute('aria-pressed', String(Boolean(isSelected)));
   });
+}
+
+function handleCustomInput(step, input) {
+  const value = input.value.trim();
+  if (value !== '') {
+    state.selections.set(step.id, {
+      id: `${step.id}-custom`,
+      label: value,
+      isCustom: true,
+    });
+    state.randomNotes.delete(step.id);
+  } else {
+    const current = state.selections.get(step.id);
+    if (current && current.isCustom) {
+      state.selections.delete(step.id);
+    }
+  }
+
+  updateOptionButtons(step);
+  const nextButton = document.getElementById('plan-next');
+  if (nextButton) {
+    updateNextButtonState(step, nextButton);
+  }
 }
 
 function isOptionSelected(step, option, selection) {
@@ -417,6 +477,7 @@ function buildSummaryData() {
     closeness: 'Bliskość',
     extras: 'Dodatki',
     energy: 'Energia',
+    timing: 'Początek planu',
   };
 
   const summary = [];
@@ -439,6 +500,11 @@ function buildSummaryData() {
   const energy = state.selections.get('energy');
   if (energy) {
     summary.push({ term: labels.energy, description: energy.label });
+  }
+
+  const timing = state.selections.get('timing');
+  if (timing) {
+    summary.push({ term: labels.timing, description: timing.label });
   }
 
   return summary;
@@ -494,6 +560,7 @@ async function sendPlanEmail(form) {
     extras: (state.selections.get('extras') || []).map((item) => item.label),
     energy: state.selections.get('energy')?.label || '',
     energyContext: state.selections.get('energy')?.emailContext || '',
+    timing: state.selections.get('timing')?.label || '',
     link: state.config.email?.detailsLink || state.config.email?.link || baseDetailsLink,
     proposal_link: state.config.email?.proposalLink || baseProposalLink,
     subject: state.config.email?.subject || 'Wieczór we dwoje – krótki plan 💛',
@@ -609,6 +676,7 @@ function renderPlanHistory(invites, elements) {
     summary.appendChild(buildSummaryRow('Bliskość', invite.closeness));
     summary.appendChild(buildSummaryRow('Dodatki', formatExtras(invite.extras)));
     summary.appendChild(buildSummaryRow('Energia', invite.energy));
+    summary.appendChild(buildSummaryRow('Początek', invite.start_time));
 
     item.appendChild(summary);
 

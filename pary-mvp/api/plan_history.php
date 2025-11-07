@@ -68,6 +68,7 @@ respond([
             'extras' => $extras,
             'energy' => (string)($invite['energy'] ?? ''),
             'energy_context' => (string)($invite['energy_context'] ?? ''),
+            'start_time' => (string)($invite['start_time'] ?? ''),
             'status' => $status,
             'created_at' => (string)($invite['created_at'] ?? ''),
             'accepted_at' => (string)($invite['accepted_at'] ?? ''),

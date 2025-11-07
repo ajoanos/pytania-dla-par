@@ -159,6 +159,7 @@ function buildSummaryLines(array $invite): array
         '– bliskość: ' . formatValue($invite['closeness'] ?? ''),
         '– klimat: ' . ($extras !== [] ? implode(', ', $extras) : 'Brak dodatków'),
         '– energia: ' . formatValue($invite['energy'] ?? ''),
+        '– początek: ' . formatValue($invite['start_time'] ?? ''),
     ];
 }
 ?>
