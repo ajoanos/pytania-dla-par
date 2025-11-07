@@ -380,7 +380,31 @@ function updateOptionButtons(step) {
 
 function handleCustomInput(step, input) {
   const value = input.value.trim();
-  if (value !== '') {
+
+  if (step.type === 'multi') {
+    const current = state.selections.get(step.id);
+    const list = Array.isArray(current) ? [...current] : [];
+    const existingIndex = list.findIndex((item) => item.isCustom);
+
+    if (value !== '') {
+      const customItem = {
+        id: `${step.id}-custom`,
+        label: value,
+        isCustom: true,
+      };
+      if (existingIndex >= 0) {
+        list[existingIndex] = customItem;
+      } else {
+        list.push(customItem);
+      }
+      state.selections.set(step.id, list);
+    } else if (existingIndex >= 0) {
+      list.splice(existingIndex, 1);
+      state.selections.set(step.id, list);
+    } else if (Array.isArray(current)) {
+      state.selections.set(step.id, list);
+    }
+  } else if (value !== '') {
     state.selections.set(step.id, {
       id: `${step.id}-custom`,
       label: value,

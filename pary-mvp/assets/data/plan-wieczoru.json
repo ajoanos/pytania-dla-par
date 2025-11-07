@@ -19,6 +19,8 @@
       "title": "Na jaki wieczór masz dziś ochotę?",
       "type": "single",
       "randomOptionId": "mood-random",
+      "allowCustomInput": true,
+      "inputPlaceholder": "Opisz swój nastrój…",
       "options": [
         { "id": "mood-calm", "label": "🌙 Spokojny i przytulny" },
         { "id": "mood-tender", "label": "💛 Czułość i bliskość" },
@@ -31,6 +33,8 @@
       "id": "closeness",
       "title": "Jakiej bliskości dziś potrzebujesz?",
       "type": "single",
+      "allowCustomInput": true,
+      "inputPlaceholder": "Opisz jakiej bliskości potrzebujesz…",
       "options": [
         { "id": "closeness-hug", "label": "🤗 Przytulanie" },
         { "id": "closeness-massage", "label": "💆 Masaż pleców" },
@@ -45,11 +49,15 @@
       "id": "extras",
       "title": "Co stworzy idealny klimat?",
       "type": "multi",
+      "allowCustomInput": true,
+      "inputPlaceholder": "Dodaj własny pomysł na klimat…",
       "options": [
         { "id": "extras-candles", "label": "🕯️ Świeczki" },
         { "id": "extras-wine", "label": "🍷 Wino" },
         { "id": "extras-music", "label": "🎶 Muzyka" },
         { "id": "extras-bath", "label": "🛁 Ciepła kąpiel" },
+        { "id": "extras-blanket", "label": "🛌 Kocyk" },
+        { "id": "extras-tea", "label": "🍵 Herbatka" },
         { "id": "extras-movie", "label": "🍿 Film / serial" },
         { "id": "extras-talk", "label": "🌌 Rozmowa przy wygaszonym świetle" }
       ]
@@ -58,6 +66,8 @@
       "id": "energy",
       "title": "Jak się dziś czujesz z energią?",
       "type": "single",
+      "allowCustomInput": true,
+      "inputPlaceholder": "Opisz swój poziom energii…",
       "options": [
         {
           "id": "energy-high",
