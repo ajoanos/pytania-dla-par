@@ -13,6 +13,13 @@ const state = {
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (sessionStorage.getItem(ACCESS_KEY) !== 'true') {
+    const legacyKey = 'pary.access.pdp';
+    if (sessionStorage.getItem(legacyKey) === 'true') {
+      sessionStorage.setItem(ACCESS_KEY, 'true');
+    }
+  }
+
+  if (sessionStorage.getItem(ACCESS_KEY) !== 'true') {
     window.location.replace('plan-wieczoru.html');
     return;
   }

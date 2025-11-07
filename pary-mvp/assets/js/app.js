@@ -1,5 +1,5 @@
 const STORAGE_KEY_THEME = 'pary.theme';
-const ACCESS_PASSWORD = 'test2';
+const ACCESS_PASSWORD = 'wedwoje25';
 const ACCESS_STORAGE_KEY = 'pary.access.pdp';
 
 export async function postJson(url, data) {
