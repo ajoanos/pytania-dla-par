@@ -118,13 +118,17 @@ function initializeDatabase(PDO $pdo): void
         energy TEXT,
         energy_context TEXT,
         plan_link TEXT,
+        proposal_link TEXT,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         accepted_at DATETIME,
+        declined_at DATETIME,
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
         FOREIGN KEY (sender_id) REFERENCES participants(id) ON DELETE SET NULL
     )');
 
     addColumnIfMissing($pdo, 'plan_invites', 'plan_link', 'TEXT');
+    addColumnIfMissing($pdo, 'plan_invites', 'proposal_link', 'TEXT');
+    addColumnIfMissing($pdo, 'plan_invites', 'declined_at', 'DATETIME');
 
     $statusAdded = addColumnIfMissing($pdo, 'participants', 'status', "TEXT NOT NULL DEFAULT 'pending'");
     $isHostAdded = addColumnIfMissing($pdo, 'participants', 'is_host', 'INTEGER NOT NULL DEFAULT 0');
@@ -152,7 +156,8 @@ function createPlanInvite(
     string $extrasJson,
     string $energy,
     string $energyContext,
-    string $planLink
+    string $planLink,
+    string $proposalLink
 ): array {
     $stmt = db()->prepare('INSERT INTO plan_invites (
         room_id,
@@ -166,7 +171,8 @@ function createPlanInvite(
         extras_json,
         energy,
         energy_context,
-        plan_link
+        plan_link,
+        proposal_link
     ) VALUES (
         :room_id,
         :sender_id,
@@ -179,7 +185,8 @@ function createPlanInvite(
         :extras_json,
         :energy,
         :energy_context,
-        :plan_link
+        :plan_link,
+        :proposal_link
     )');
 
     $stmt->execute([
@@ -195,6 +202,7 @@ function createPlanInvite(
         'energy' => $energy,
         'energy_context' => $energyContext,
         'plan_link' => $planLink,
+        'proposal_link' => $proposalLink,
     ]);
 
     $id = (int)db()->lastInsertId();
@@ -214,9 +222,18 @@ function getPlanInviteByToken(string $token): ?array
 
 function markPlanInviteAccepted(int $inviteId): void
 {
-    $stmt = db()->prepare('UPDATE plan_invites SET accepted_at = :accepted_at WHERE id = :id AND accepted_at IS NULL');
+    $stmt = db()->prepare('UPDATE plan_invites SET accepted_at = :accepted_at WHERE id = :id AND accepted_at IS NULL AND declined_at IS NULL');
     $stmt->execute([
         'accepted_at' => gmdate('c'),
+        'id' => $inviteId,
+    ]);
+}
+
+function markPlanInviteDeclined(int $inviteId): void
+{
+    $stmt = db()->prepare('UPDATE plan_invites SET declined_at = :declined_at WHERE id = :id AND declined_at IS NULL AND accepted_at IS NULL');
+    $stmt->execute([
+        'declined_at' => gmdate('c'),
         'id' => $inviteId,
     ]);
 }

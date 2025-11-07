@@ -439,7 +439,7 @@ async function sendPlanEmail(form) {
   const email = emailInput.value.trim();
 
   if (!yourEmail) {
-    feedback.textContent = 'Podaj adres e-mail, na który chcesz otrzymać potwierdzenie.';
+    feedback.textContent = 'Podaj adres e-mail, na który chcesz otrzymywać odpowiedź partnera.';
     return;
   }
 
@@ -456,7 +456,12 @@ async function sendPlanEmail(form) {
   sendButton.disabled = true;
   feedback.textContent = 'Wysyłamy wiadomość…';
 
-  const baseLink = state.baseUrl ? `${state.baseUrl}plan-wieczoru.html` : `${window.location.origin}/pary-mvp/plan-wieczoru.html`;
+  const baseDetailsLink = state.baseUrl
+    ? `${state.baseUrl}plan-wieczoru-play.html`
+    : `${window.location.origin}/pary-mvp/plan-wieczoru-play.html`;
+  const baseProposalLink = state.baseUrl
+    ? `${state.baseUrl}plan-wieczoru-room.html`
+    : `${window.location.origin}/pary-mvp/plan-wieczoru-room.html`;
   const origin = state.origin || window.location.origin;
 
   const payload = {
@@ -470,7 +475,8 @@ async function sendPlanEmail(form) {
     extras: (state.selections.get('extras') || []).map((item) => item.label),
     energy: state.selections.get('energy')?.label || '',
     energyContext: state.selections.get('energy')?.emailContext || '',
-    link: state.config.email?.link || baseLink,
+    link: state.config.email?.detailsLink || state.config.email?.link || baseDetailsLink,
+    proposal_link: state.config.email?.proposalLink || baseProposalLink,
     subject: state.config.email?.subject || 'Wieczór we dwoje – krótki plan 💛',
     origin,
     base_url: state.baseUrl,
@@ -481,7 +487,7 @@ async function sendPlanEmail(form) {
     if (!response.ok) {
       throw new Error(response.error || 'Nie udało się wysłać wiadomości.');
     }
-    feedback.textContent = 'Plan wysłany! Partner otrzyma link „Zgadzam się”, a Ty potwierdzenie na e-mail. Za chwilę wrócisz do listy gier.';
+    feedback.textContent = 'Plan wysłany! Partner otrzyma linki „Zgadzam się” i „Nie zgadzam się”. Powiadomimy Cię e-mailem, gdy odpowie.';
     sendButton.disabled = true;
     form.querySelectorAll('input, button').forEach((element) => {
       if (element instanceof HTMLButtonElement && element.id === 'plan-reset') {

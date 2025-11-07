@@ -6,7 +6,7 @@ function sendEmailMessage(string $to, string $subject, string $body, ?string $re
 {
     $headers = [
         'Content-Type: text/plain; charset=utf-8',
-        'From: Momenty <no-reply@momenty.pl>',
+        'From: Momenty <no-reply@allemedia.pl>',
     ];
 
     if ($replyTo) {

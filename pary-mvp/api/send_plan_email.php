@@ -19,7 +19,7 @@ $senderEmail = filter_var($data['sender_email'] ?? '', FILTER_VALIDATE_EMAIL);
 if ($senderEmail === false) {
     respond([
         'ok' => false,
-        'error' => 'Podaj poprawny adres e-mail, na który mamy wysłać potwierdzenie.',
+        'error' => 'Podaj poprawny adres e-mail, na który mamy wysyłać odpowiedzi partnera.',
     ]);
 }
 
@@ -85,13 +85,29 @@ $link = trim((string)($data['link'] ?? ''));
 if ($link !== '' && filter_var($link, FILTER_VALIDATE_URL) === false) {
     $link = '';
 }
+
+$proposalLink = trim((string)($data['proposal_link'] ?? ''));
+if ($proposalLink !== '' && filter_var($proposalLink, FILTER_VALIDATE_URL) === false) {
+    $proposalLink = '';
+}
+
 if ($link === '') {
     if ($baseUrl !== '') {
-        $link = $baseUrl . 'plan-wieczoru.html';
+        $link = $baseUrl . 'plan-wieczoru-play.html';
     } elseif ($originUrl !== '') {
-        $link = rtrim($originUrl, '/') . '/pary-mvp/plan-wieczoru.html';
+        $link = rtrim($originUrl, '/') . '/pary-mvp/plan-wieczoru-play.html';
     } else {
-        $link = 'https://momenty.pl/';
+        $link = 'https://momenty.pl/pary-mvp/plan-wieczoru-play.html';
+    }
+}
+
+if ($proposalLink === '') {
+    if ($baseUrl !== '') {
+        $proposalLink = $baseUrl . 'plan-wieczoru-room.html';
+    } elseif ($originUrl !== '') {
+        $proposalLink = rtrim($originUrl, '/') . '/pary-mvp/plan-wieczoru-room.html';
+    } else {
+        $proposalLink = 'https://momenty.pl/pary-mvp/plan-wieczoru-room.html';
     }
 }
 
@@ -99,6 +115,7 @@ $token = generateUniqueToken();
 
 $acceptBase = $baseUrl !== '' ? $baseUrl : ($originUrl !== '' ? rtrim($originUrl, '/') . '/pary-mvp/' : 'https://momenty.pl/pary-mvp/');
 $acceptUrl = $acceptBase . 'plan-wieczoru-accept.php?token=' . urlencode($token);
+$declineUrl = $acceptUrl . '&decision=decline';
 
 createPlanInvite(
     (int)$room['id'],
@@ -112,7 +129,8 @@ createPlanInvite(
     $extrasJson,
     $energy,
     $energyContext,
-    $link
+    $link,
+    $proposalLink
 );
 
 $bodyLines = [
@@ -134,9 +152,10 @@ $bodyLines[] = 'Kliknij, aby zobaczyć szczegóły planu:';
 $bodyLines[] = $link;
 $bodyLines[] = '';
 $bodyLines[] = 'Zgadzam się: ' . $acceptUrl;
+$bodyLines[] = 'Nie zgadzam się: ' . $declineUrl;
 $bodyLines[] = '';
 $bodyLines[] = 'Masz pomysł na własny wieczór? Uruchom zabawę Plan Wieczoru:';
-$bodyLines[] = $link;
+$bodyLines[] = $proposalLink;
 
 $body = implode("\n", $bodyLines);
 
@@ -146,25 +165,6 @@ if (!sendEmailMessage($partnerEmail, $subject, $body, $senderEmail)) {
         'error' => 'Nie udało się wysłać wiadomości. Spróbuj ponownie później.',
     ]);
 }
-
-$confirmationSubject = 'Plan wysłany do partnera 💛';
-$confirmationLines = [
-    'Cześć' . ($senderName !== '' ? ' ' . $senderName : '') . '!',
-    'Wysłaliśmy Twój plan do: ' . $partnerEmail . '.',
-    '',
-    'Wiadomość zawierała podsumowanie:',
-];
-$confirmationLines[] = '– nastrój: ' . ($mood !== '' ? $mood : '—');
-$confirmationLines[] = '– bliskość: ' . ($closeness !== '' ? $closeness : '—');
-$confirmationLines[] = '– klimat: ' . $extrasText;
-$confirmationLines[] = '– energia: ' . ($energy !== '' ? $energy : '—');
-$confirmationLines[] = '';
-$confirmationLines[] = 'Gdy partner kliknie „Zgadzam się”, dostaniesz kolejną wiadomość z potwierdzeniem.';
-$confirmationLines[] = '';
-$confirmationLines[] = 'Twój link do zabawy: ' . $link;
-$confirmationBody = implode("\n", $confirmationLines);
-
-sendEmailMessage($senderEmail, $confirmationSubject, $confirmationBody);
 
 respond(['ok' => true]);
 
