@@ -176,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const successPending = joinForm.dataset.successPending || 'room-waiting.html';
     const autoApprove = joinForm.dataset.autoApprove === 'true';
     const requireRoomKey = joinForm.dataset.requireRoomKey === 'true';
-    const showRoomKey = joinForm.dataset.showRoomKey === 'true';
 
     const focusCandidate = Array.from(joinForm.querySelectorAll('input, select, textarea')).find(
       (element) => element instanceof HTMLElement && element.type !== 'hidden' && !element.disabled,
@@ -195,29 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (joinForm.dataset.roomKey) {
         roomKeyField.value = joinForm.dataset.roomKey.trim().toUpperCase();
       }
-      if (roomKeyField.value) {
-        roomKeyField.value = roomKeyField.value.trim().toUpperCase();
-        activeRoomKey = roomKeyField.value;
-      }
-    } else if (!activeRoomKey && joinForm.dataset.roomKey) {
-      activeRoomKey = joinForm.dataset.roomKey.trim().toUpperCase();
     }
-
-    if (showRoomKey) {
-      const roomNotice = joinForm.querySelector('[data-role="room-ready"]');
-      const roomDisplay = roomNotice?.querySelector('[data-role="generated-room-key"]');
-      if (roomNotice instanceof HTMLElement) {
-        if (roomDisplay instanceof HTMLElement && activeRoomKey) {
-          roomDisplay.textContent = activeRoomKey;
-          roomNotice.hidden = false;
-        } else {
-          roomNotice.hidden = true;
-        }
-      }
-    }
-
     if (requireRoomKey) {
-      const currentKey = activeRoomKey || roomKeyField?.value?.trim().toUpperCase() || presetRoomKey;
+      const currentKey = roomKeyField?.value?.trim().toUpperCase() || presetRoomKey;
       if (!currentKey) {
         window.location.replace(accessRedirect);
         return;
