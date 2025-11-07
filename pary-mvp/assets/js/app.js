@@ -1,5 +1,5 @@
 const STORAGE_KEY_THEME = 'pary.theme';
-const ACCESS_PASSWORD = 'test2';
+const ACCESS_PASSWORD = 'wedwoje25';
 const ACCESS_STORAGE_KEY = 'pary.access.pdp';
 
 export async function postJson(url, data) {
@@ -79,6 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordCancel = document.getElementById('password-cancel');
 
   if (passwordForm) {
+    const formPassword = passwordForm.dataset.password || ACCESS_PASSWORD;
+    const storageKey = passwordForm.dataset.storageKey || ACCESS_STORAGE_KEY;
     const successTarget = passwordForm.dataset.success || 'pytania-dla-par-room.html';
 
     if (passwordInput) {
@@ -107,8 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return;
       }
-      if (value === ACCESS_PASSWORD) {
-        sessionStorage.setItem(ACCESS_STORAGE_KEY, 'true');
+      if (value === formPassword) {
+        sessionStorage.setItem(storageKey, 'true');
         window.location.href = successTarget;
       } else if (passwordError) {
         passwordError.hidden = false;
