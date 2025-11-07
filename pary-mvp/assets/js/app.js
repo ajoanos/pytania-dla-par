@@ -122,6 +122,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (joinForm) {
     const requiredAccessKey = joinForm.dataset.storageKey || ACCESS_STORAGE_KEY;
     const accessRedirect = joinForm.dataset.accessRedirect || 'pytania-dla-par.html';
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.has('auto')) {
+      sessionStorage.setItem(requiredAccessKey, 'true');
+    }
+
     if (sessionStorage.getItem(requiredAccessKey) !== 'true') {
       window.location.replace(accessRedirect);
       return;
@@ -133,6 +139,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const firstInput = joinForm.querySelector('input');
     focusElement(firstInput);
+
+    const presetRoomKey = (params.get('room_key') || '').trim().toUpperCase();
+    const presetName = (params.get('display_name') || '').trim();
+    const presetMode = (params.get('mode') || '').trim().toLowerCase();
+    const shouldAutoSubmit = params.has('auto');
+
+    if (presetRoomKey) {
+      joinForm.room_key.value = presetRoomKey;
+    }
+    if (presetName) {
+      joinForm.display_name.value = presetName;
+    }
+    if (presetMode) {
+      const modeField = joinForm.elements.namedItem('mode');
+      let modeInputs = [];
+      if (typeof RadioNodeList !== 'undefined' && modeField instanceof RadioNodeList) {
+        modeInputs = Array.from(modeField);
+      } else if (modeField) {
+        modeInputs = [modeField];
+      }
+      const targetMode = modeInputs.find((input) => input.value === presetMode);
+      if (targetMode) {
+        targetMode.checked = true;
+      }
+    }
 
     joinForm.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -157,13 +188,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!payload.ok) {
           throw new Error(payload.error || 'Nie udało się dołączyć do pokoju.');
         }
-        const params = new URLSearchParams({
+        const nextParams = new URLSearchParams({
           room_key: payload.room_key,
           pid: payload.participant_id,
           name: displayName,
         });
         const target = payload.requires_approval ? successPending : successActive;
-        window.location.href = `${target}?${params.toString()}`;
+        window.location.href = `${target}?${nextParams.toString()}`;
       } catch (error) {
         console.error(error);
         alert(error.message);
@@ -173,6 +204,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
+
+    if (shouldAutoSubmit && joinForm.room_key.value && joinForm.display_name.value) {
+      setTimeout(() => {
+        if (typeof joinForm.requestSubmit === 'function') {
+          joinForm.requestSubmit();
+        } else {
+          joinForm.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+      }, 150);
+
+      if (window.history.replaceState) {
+        const cleanUrl = new URL(window.location.href);
+        ['room_key', 'display_name', 'mode', 'auto'].forEach((key) => cleanUrl.searchParams.delete(key));
+        const nextSearch = cleanUrl.searchParams.toString();
+        window.history.replaceState({}, '', `${cleanUrl.pathname}${nextSearch ? `?${nextSearch}` : ''}`);
+      }
+    }
   }
 });
 

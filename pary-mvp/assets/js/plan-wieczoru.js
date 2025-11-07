@@ -3,6 +3,7 @@ import { postJson } from './app.js';
 const CONFIG_URL = 'assets/data/plan-wieczoru.json';
 const ACCESS_KEY = 'momenty.planWieczoru.access';
 const MAIL_ENDPOINT = 'api/send_plan_email.php';
+const HISTORY_ENDPOINT = 'api/plan_history.php';
 
 const state = {
   config: null,
@@ -14,6 +15,7 @@ const state = {
   displayName: '',
   baseUrl: '',
   origin: '',
+  history: [],
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -73,6 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.config = config;
     loader?.setAttribute('hidden', '');
     initializePlan(config);
+    loadPlanHistory();
   } catch (error) {
     console.error(error);
     loader?.setAttribute('hidden', '');
@@ -147,6 +150,11 @@ function initializePlan(config) {
     state.currentStepIndex = 0;
     state.selections.clear();
     state.randomNotes.clear();
+    const historyError = document.getElementById('plan-history-error');
+    if (historyError) {
+      historyError.hidden = true;
+    }
+    loadPlanHistory();
     const feedback = document.getElementById('plan-summary-feedback');
     if (feedback) {
       feedback.textContent = '';
@@ -504,9 +512,156 @@ async function sendPlanEmail(form) {
     setTimeout(() => {
       window.location.href = 'index.html';
     }, 3000);
+    loadPlanHistory();
   } catch (error) {
     console.error(error);
     feedback.textContent = error.message || 'Nie udało się wysłać wiadomości.';
     sendButton.disabled = false;
+  }
+}
+
+async function loadPlanHistory() {
+  if (!state.roomKey || !state.participantId) {
+    return;
+  }
+
+  const section = document.getElementById('plan-history');
+  const list = document.getElementById('plan-history-list');
+  const emptyState = document.getElementById('plan-history-empty');
+  const errorState = document.getElementById('plan-history-error');
+
+  if (!section || !list || !emptyState || !errorState) {
+    return;
+  }
+
+  errorState.hidden = true;
+
+  try {
+    const response = await postJson(HISTORY_ENDPOINT, {
+      room_key: state.roomKey,
+      participant_id: state.participantId,
+    });
+
+    if (!response.ok) {
+      throw new Error(response.error || 'Nie udało się pobrać historii.');
+    }
+
+    const invites = Array.isArray(response.invites) ? response.invites : [];
+    state.history = invites;
+    renderPlanHistory(invites, { section, list, emptyState });
+  } catch (error) {
+    console.error(error);
+    list.innerHTML = '';
+    emptyState.hidden = true;
+    errorState.hidden = false;
+    section.hidden = false;
+  }
+}
+
+function renderPlanHistory(invites, elements) {
+  const { section, list, emptyState } = elements;
+  list.innerHTML = '';
+
+  if (!invites.length) {
+    emptyState.hidden = false;
+    section.hidden = false;
+    return;
+  }
+
+  emptyState.hidden = true;
+
+  invites.forEach((invite) => {
+    const item = document.createElement('li');
+    item.className = 'plan-history__item';
+
+    const status = document.createElement('div');
+    status.className = `plan-history__status plan-history__status--${invite.status || 'pending'}`;
+    status.textContent = historyStatusLabel(invite.status);
+
+    const meta = document.createElement('div');
+    meta.className = 'plan-history__meta';
+    const sender = document.createElement('span');
+    sender.textContent = invite.sender || 'Nieznana osoba';
+    const createdAt = document.createElement('span');
+    createdAt.textContent = formatHistoryDate(invite.created_at);
+    meta.appendChild(sender);
+    if (invite.created_at) {
+      meta.appendChild(createdAt);
+    }
+
+    item.appendChild(status);
+    item.appendChild(meta);
+
+    const summary = document.createElement('ul');
+    summary.className = 'plan-history__summary';
+    summary.appendChild(buildSummaryRow('Nastrój', invite.mood));
+    summary.appendChild(buildSummaryRow('Bliskość', invite.closeness));
+    summary.appendChild(buildSummaryRow('Dodatki', formatExtras(invite.extras)));
+    summary.appendChild(buildSummaryRow('Energia', invite.energy));
+
+    item.appendChild(summary);
+
+    if (invite.energy_context) {
+      const note = document.createElement('p');
+      note.className = 'plan-history__note';
+      note.textContent = invite.energy_context;
+      item.appendChild(note);
+    }
+
+    list.appendChild(item);
+  });
+
+  section.hidden = false;
+}
+
+function buildSummaryRow(label, value) {
+  const row = document.createElement('li');
+  const labelEl = document.createElement('span');
+  labelEl.className = 'plan-history__label';
+  labelEl.textContent = `${label}:`;
+  const valueEl = document.createElement('span');
+  valueEl.textContent = value && value.length ? value : '—';
+  row.appendChild(labelEl);
+  row.appendChild(valueEl);
+  return row;
+}
+
+function historyStatusLabel(status) {
+  switch (status) {
+    case 'accepted':
+      return 'Plan zaakceptowany';
+    case 'declined':
+      return 'Plan do poprawy';
+    default:
+      return 'Oczekuje na odpowiedź';
+  }
+}
+
+function formatExtras(extras) {
+  if (Array.isArray(extras) && extras.length) {
+    return extras.join(', ');
+  }
+  return 'Brak dodatków';
+}
+
+function formatHistoryDate(value) {
+  if (!value) {
+    return '';
+  }
+  try {
+    const isoCandidate = value.includes('T') ? value : value.replace(' ', 'T');
+    const hasOffset = /([zZ]|[+-]\d{2}:?\d{2})$/.test(isoCandidate);
+    const normalized = hasOffset ? isoCandidate : `${isoCandidate}Z`;
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    return new Intl.DateTimeFormat('pl-PL', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date);
+  } catch (error) {
+    console.error(error);
+    return '';
   }
 }

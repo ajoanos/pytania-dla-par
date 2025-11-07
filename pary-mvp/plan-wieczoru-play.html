@@ -88,6 +88,16 @@
         </form>
         <p class="game-summary__feedback" id="plan-summary-feedback" role="status" aria-live="polite"></p>
       </article>
+
+      <section class="plan-history" id="plan-history" hidden>
+        <header class="plan-history__header">
+          <h3>Historia propozycji</h3>
+          <p class="plan-history__hint">Zobacz wcześniejsze pomysły zgłoszone w tym pokoju.</p>
+        </header>
+        <p class="plan-history__empty" id="plan-history-empty" hidden>Jeszcze nikt nic nie zaproponował. Zacznij od wysłania pierwszego planu!</p>
+        <p class="plan-history__error" id="plan-history-error" hidden>Nie udało się pobrać historii. Spróbuj odświeżyć stronę.</p>
+        <ol class="plan-history__list" id="plan-history-list"></ol>
+      </section>
     </section>
 
     <footer class="footer">

@@ -5,6 +5,8 @@ declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/mail_helpers.php';
 
+const DEFAULT_PLAN_BASE = 'https://sklep.allemedia.pl/momenty/';
+
 $data = requireJsonInput();
 
 $partnerEmail = filter_var($data['partner_email'] ?? $data['email'] ?? '', FILTER_VALIDATE_EMAIL);
@@ -91,29 +93,37 @@ if ($proposalLink !== '' && filter_var($proposalLink, FILTER_VALIDATE_URL) === f
     $proposalLink = '';
 }
 
+$roomKeyValue = (string)($room['room_key'] ?? $roomKey);
+$senderDisplayName = trim((string)($participant['display_name'] ?? ''));
+$autoParams = http_build_query(array_filter([
+    'room_key' => $roomKeyValue,
+    'display_name' => $senderDisplayName,
+    'mode' => 'join',
+    'auto' => '1',
+], static fn ($value) => $value !== ''));
+
 if ($link === '') {
     if ($baseUrl !== '') {
         $link = $baseUrl . 'plan-wieczoru-play.html';
     } elseif ($originUrl !== '') {
         $link = rtrim($originUrl, '/') . '/pary-mvp/plan-wieczoru-play.html';
     } else {
-        $link = 'https://momenty.pl/pary-mvp/plan-wieczoru-play.html';
+        $link = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
     }
 }
 
 if ($proposalLink === '') {
-    if ($baseUrl !== '') {
-        $proposalLink = $baseUrl . 'plan-wieczoru-room.html';
-    } elseif ($originUrl !== '') {
-        $proposalLink = rtrim($originUrl, '/') . '/pary-mvp/plan-wieczoru-room.html';
-    } else {
-        $proposalLink = 'https://momenty.pl/pary-mvp/plan-wieczoru-room.html';
-    }
+    $baseProposal = $baseUrl !== ''
+        ? $baseUrl . 'plan-wieczoru-room.html'
+        : ($originUrl !== ''
+            ? rtrim($originUrl, '/') . '/pary-mvp/plan-wieczoru-room.html'
+            : DEFAULT_PLAN_BASE . 'plan-wieczoru-room.html');
+    $proposalLink = $autoParams !== '' ? $baseProposal . '?' . $autoParams : $baseProposal;
 }
 
 $token = generateUniqueToken();
 
-$acceptBase = $baseUrl !== '' ? $baseUrl : ($originUrl !== '' ? rtrim($originUrl, '/') . '/pary-mvp/' : 'https://momenty.pl/pary-mvp/');
+$acceptBase = $baseUrl !== '' ? $baseUrl : ($originUrl !== '' ? rtrim($originUrl, '/') . '/pary-mvp/' : DEFAULT_PLAN_BASE);
 $acceptUrl = $acceptBase . 'plan-wieczoru-accept.php?token=' . urlencode($token);
 $declineUrl = $acceptUrl . '&decision=decline';
 

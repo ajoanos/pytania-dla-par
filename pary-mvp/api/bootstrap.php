@@ -129,6 +129,7 @@ function initializeDatabase(PDO $pdo): void
     addColumnIfMissing($pdo, 'plan_invites', 'plan_link', 'TEXT');
     addColumnIfMissing($pdo, 'plan_invites', 'proposal_link', 'TEXT');
     addColumnIfMissing($pdo, 'plan_invites', 'declined_at', 'DATETIME');
+    addColumnIfMissing($pdo, 'plan_invites', 'sender_id', 'INTEGER');
 
     $statusAdded = addColumnIfMissing($pdo, 'participants', 'status', "TEXT NOT NULL DEFAULT 'pending'");
     $isHostAdded = addColumnIfMissing($pdo, 'participants', 'is_host', 'INTEGER NOT NULL DEFAULT 0');
@@ -218,6 +219,21 @@ function getPlanInviteByToken(string $token): ?array
     $stmt->execute(['token' => $token]);
     $invite = $stmt->fetch();
     return $invite ?: null;
+}
+
+function getPlanInvitesForRoom(int $roomId): array
+{
+    $stmt = db()->prepare('SELECT pi.*, p.display_name AS sender_display_name FROM plan_invites pi LEFT JOIN participants p ON p.id = pi.sender_id WHERE pi.room_id = :room_id ORDER BY pi.created_at DESC, pi.id DESC');
+    $stmt->execute(['room_id' => $roomId]);
+    return $stmt->fetchAll();
+}
+
+function getRoomById(int $roomId): ?array
+{
+    $stmt = db()->prepare('SELECT * FROM rooms WHERE id = :id');
+    $stmt->execute(['id' => $roomId]);
+    $room = $stmt->fetch();
+    return $room ?: null;
 }
 
 function markPlanInviteAccepted(int $inviteId): void

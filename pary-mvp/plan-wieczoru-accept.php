@@ -7,13 +7,15 @@ define('BOOTSTRAP_EMIT_JSON', false);
 require __DIR__ . '/api/bootstrap.php';
 require __DIR__ . '/api/mail_helpers.php';
 
+const DEFAULT_PLAN_BASE = 'https://sklep.allemedia.pl/momenty/';
+
 $token = trim((string)($_GET['token'] ?? ''));
 $decisionParam = strtolower(trim((string)($_GET['decision'] ?? 'accept')));
 $decision = $decisionParam === 'decline' ? 'decline' : 'accept';
 $status = 'invalid';
 $headline = 'Ups!';
 $message = 'Link jest niepoprawny lub wygasł.';
-$ctaHref = 'plan-wieczoru-room.html';
+$ctaHref = DEFAULT_PLAN_BASE . 'plan-wieczoru-room.html';
 $ctaLabel = 'Zaproponuj własny plan wieczoru';
 
 if ($token !== '') {
@@ -31,7 +33,7 @@ if ($token !== '') {
                 $senderName = trim((string)($invite['sender_name'] ?? ''));
                 $proposalLink = trim((string)($invite['proposal_link'] ?? ''));
                 if ($proposalLink === '') {
-                    $proposalLink = 'https://momenty.pl/pary-mvp/plan-wieczoru-room.html';
+                    $proposalLink = DEFAULT_PLAN_BASE . 'plan-wieczoru-room.html';
                 }
 
                 $summaryLines = buildSummaryLines($invite);
@@ -65,6 +67,7 @@ if ($token !== '') {
                 $status = 'declined';
                 $headline = 'Dzięki za odpowiedź!';
                 $message = 'Przekazaliśmy informację, że wolisz zaplanować ten wieczór inaczej. Partner dostanie e-mail z Twoją decyzją.';
+                $ctaHref = $proposalLink;
             } elseif ($alreadyDeclined) {
                 $status = 'already';
                 $headline = 'Odpowiedź już wysłana';
@@ -83,7 +86,7 @@ if ($token !== '') {
                 $senderEmail = trim((string)($invite['sender_email'] ?? ''));
                 $planLink = trim((string)($invite['plan_link'] ?? ''));
                 if ($planLink === '') {
-                    $planLink = 'https://momenty.pl/pary-mvp/plan-wieczoru-room.html';
+                    $planLink = DEFAULT_PLAN_BASE . 'plan-wieczoru-room.html';
                 }
 
                 $summaryLines = buildSummaryLines($invite);
@@ -117,6 +120,7 @@ if ($token !== '') {
                 $status = 'accepted';
                 $headline = 'Zgoda zapisana!';
                 $message = 'Dziękujemy za potwierdzenie. Twój partner otrzymał wiadomość z informacją, że się zgadzasz.';
+                $ctaHref = $planLink;
             } elseif ($alreadyAccepted) {
                 $status = 'already';
                 $headline = 'Plan już potwierdzony';
