@@ -1,5 +1,5 @@
 const STORAGE_KEY_THEME = 'pary.theme';
-const ACCESS_PASSWORD = 'test2';
+const ACCESS_PASSWORD = 'wedwoje25';
 const ACCESS_STORAGE_KEY = 'pary.access.pdp';
 
 export async function postJson(url, data) {
@@ -79,6 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordCancel = document.getElementById('password-cancel');
 
   if (passwordForm) {
+    const formPassword = passwordForm.dataset.password || ACCESS_PASSWORD;
+    const storageKey = passwordForm.dataset.storageKey || ACCESS_STORAGE_KEY;
     const successTarget = passwordForm.dataset.success || 'pytania-dla-par-room.html';
 
     if (passwordInput) {
@@ -107,8 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return;
       }
-      if (value === ACCESS_PASSWORD) {
-        sessionStorage.setItem(ACCESS_STORAGE_KEY, 'true');
+      if (value === formPassword) {
+        sessionStorage.setItem(storageKey, 'true');
         window.location.href = successTarget;
       } else if (passwordError) {
         passwordError.hidden = false;
@@ -118,10 +120,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const joinForm = document.getElementById('join-form');
   if (joinForm) {
-    if (sessionStorage.getItem(ACCESS_STORAGE_KEY) !== 'true') {
-      window.location.replace('pytania-dla-par.html');
+    const requiredAccessKey = joinForm.dataset.storageKey || ACCESS_STORAGE_KEY;
+    const accessRedirect = joinForm.dataset.accessRedirect || 'pytania-dla-par.html';
+    if (sessionStorage.getItem(requiredAccessKey) !== 'true') {
+      window.location.replace(accessRedirect);
       return;
     }
+
+    const successActive = joinForm.dataset.successActive || 'room.html';
+    const successPending = joinForm.dataset.successPending || 'room-waiting.html';
+    const autoApprove = joinForm.dataset.autoApprove === 'true';
 
     const firstInput = joinForm.querySelector('input');
     focusElement(firstInput);
@@ -131,7 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const submitButton = joinForm.querySelector('button[type="submit"]');
       const roomKey = joinForm.room_key.value.trim().toUpperCase();
       const displayName = joinForm.display_name.value.trim();
-      const mode = joinForm.mode?.value || 'create';
+      const selectedMode = joinForm.mode?.value || 'create';
+      const mode = autoApprove && selectedMode === 'join' ? 'invite' : selectedMode;
       if (!roomKey || !displayName) {
         alert('Uzupełnij wszystkie pola.');
         return;
@@ -151,8 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams({
           room_key: payload.room_key,
           pid: payload.participant_id,
+          name: displayName,
         });
-        const target = payload.requires_approval ? 'room-waiting.html' : 'room.html';
+        const target = payload.requires_approval ? successPending : successActive;
         window.location.href = `${target}?${params.toString()}`;
       } catch (error) {
         console.error(error);
