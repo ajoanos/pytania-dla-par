@@ -17,7 +17,8 @@ if ($roomKey === '' || $displayName === '') {
 }
 
 $isCreating = $mode === 'create';
-$autoActivate = $mode === 'invite';
+$isClaimingHost = $mode === 'host';
+$autoActivate = $mode === 'invite' || $isClaimingHost;
 
 if ($isCreating) {
     $room = createRoom($roomKey);
@@ -31,7 +32,7 @@ if ($isCreating) {
     }
 }
 
-$participant = ensureParticipant((int)$room['id'], $displayName, $isCreating, $autoActivate);
+$participant = ensureParticipant((int)$room['id'], $displayName, $isCreating || $isClaimingHost, $autoActivate);
 
 $stmt = db()->prepare('UPDATE participants SET last_seen = :last_seen WHERE id = :id');
 $stmt->execute([

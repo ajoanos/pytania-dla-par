@@ -65,12 +65,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.origin = '';
   }
 
-  const roomLabel = document.getElementById('plan-room');
-  if (roomLabel) {
-    roomLabel.textContent = `Kod pokoju: ${state.roomKey}`;
-    roomLabel.hidden = false;
-  }
-
   const loader = document.getElementById('plan-loader');
   const errorBox = document.getElementById('plan-error');
 
@@ -492,16 +486,21 @@ function showSummary() {
       element.disabled = false;
     });
   }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const scrollTarget = form || summary;
+  if (scrollTarget) {
+    requestAnimationFrame(() => {
+      scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 }
 
 function buildSummaryData() {
   const labels = {
-    mood: 'Nastrój',
-    closeness: 'Bliskość',
-    extras: 'Dodatki',
-    energy: 'Energia',
-    timing: 'Początek planu',
+    mood: 'Na jaki wieczór masz dziś ochotę?',
+    closeness: 'Jakiej bliskości dziś potrzebujesz?',
+    extras: 'Co stworzy idealny klimat?',
+    energy: 'Jak tam dziś Twoja forma?',
+    timing: 'Kiedy chcesz żebyśmy zaczęli?',
   };
 
   const summary = [];
@@ -611,9 +610,6 @@ async function sendPlanEmail(form) {
         element.disabled = true;
       }
     });
-    setTimeout(() => {
-      window.location.href = 'index.html';
-    }, 3000);
     loadPlanHistory();
   } catch (error) {
     console.error(error);
@@ -696,11 +692,11 @@ function renderPlanHistory(invites, elements) {
 
     const summary = document.createElement('ul');
     summary.className = 'plan-history__summary';
-    summary.appendChild(buildSummaryRow('Nastrój', invite.mood));
-    summary.appendChild(buildSummaryRow('Bliskość', invite.closeness));
-    summary.appendChild(buildSummaryRow('Dodatki', formatExtras(invite.extras)));
-    summary.appendChild(buildSummaryRow('Energia', invite.energy));
-    summary.appendChild(buildSummaryRow('Początek', invite.start_time));
+    summary.appendChild(buildSummaryRow('Na jaki wieczór masz dziś ochotę?', invite.mood));
+    summary.appendChild(buildSummaryRow('Jakiej bliskości dziś potrzebujesz?', invite.closeness));
+    summary.appendChild(buildSummaryRow('Co stworzy idealny klimat?', formatExtras(invite.extras)));
+    summary.appendChild(buildSummaryRow('Jak tam dziś Twoja forma?', invite.energy));
+    summary.appendChild(buildSummaryRow('Kiedy chcesz żebyśmy zaczęli?', invite.start_time));
 
     item.appendChild(summary);
 
