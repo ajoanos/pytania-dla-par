@@ -217,11 +217,11 @@ if ($energyContext !== '') {
 }
 
 $bodyLines[] = '';
-$bodyLines[] = 'Zaproponuj własny plan:';
-$bodyLines[] = $link;
-$bodyLines[] = '';
 $bodyLines[] = 'Zgadzam się: ' . $acceptUrl;
 $bodyLines[] = 'Nie zgadzam się: ' . $declineUrl;
+$bodyLines[] = '';
+$bodyLines[] = 'Zaproponuj własny plan:';
+$bodyLines[] = $link;
 
 $body = implode("\n", $bodyLines);
 

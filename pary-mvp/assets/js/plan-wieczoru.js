@@ -65,12 +65,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.origin = '';
   }
 
-  const roomLabel = document.getElementById('plan-room');
-  if (roomLabel) {
-    roomLabel.textContent = `Kod pokoju: ${state.roomKey}`;
-    roomLabel.hidden = false;
-  }
-
   const loader = document.getElementById('plan-loader');
   const errorBox = document.getElementById('plan-error');
 

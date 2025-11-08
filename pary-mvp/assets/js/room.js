@@ -8,7 +8,6 @@ if (!roomKey || !participantId) {
   window.location.replace('index.html');
 }
 
-const roomLabel = document.getElementById('room-label');
 const participantsList = document.getElementById('participants-list');
 const questionCard = document.getElementById('question-card');
 const questionEmpty = document.getElementById('question-empty');
@@ -62,8 +61,6 @@ let activeCategory = '';
 function isActiveParticipant() {
   return (selfInfo?.status || '') === 'active';
 }
-
-roomLabel.textContent = roomKey;
 
 setupCategoryOptions();
 
