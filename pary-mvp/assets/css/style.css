@@ -1556,18 +1556,27 @@ body {
 @media (max-width: 640px) {
   .hero {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 1.5rem;
   }
 
   .hero__branding {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.6rem;
   }
 
   .hero__logo {
     width: min(100%, 150px);
+  }
+
+  .game-switcher {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #theme-toggle {
+    align-self: flex-end;
   }
 }
 
