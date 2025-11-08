@@ -42,8 +42,7 @@
 
     <section class="card card--game" id="game-card">
       <header class="card__header">
-        <h2>Podaj swoje imię</h2>
-        <p class="form__hint">Pokój został już przygotowany. Wpisz imię, aby wejść i zaprosić partnera linkiem lub kodem QR.</p>
+        <h2>Pytania dla par</h2>
       </header>
       <form
         id="join-form"
@@ -53,14 +52,12 @@
         data-storage-key="pary.access.pdp"
         data-access-redirect="pytania-dla-par.html"
         data-require-room-key="true"
-        data-show-room-key="true"
         data-submit-mode="host"
       >
         <input type="hidden" id="room_key" name="room_key" autocomplete="off" />
         <aside class="form__notice" data-role="room-ready" hidden>
           <p>
-            Wasz pokój <strong data-role="generated-room-key"></strong> jest już gotowy.
-            Wejdź do środka, aby udostępnić link lub kod QR partnerowi. Pokój wygaśnie po 6 godzinach.
+            Wasz pokój jest już gotowy. Wejdź do środka, aby zaprosić partnera linkiem lub kodem QR. Pokój wygaśnie po 6 godzinach.
           </p>
         </aside>
         <label class="form__field">

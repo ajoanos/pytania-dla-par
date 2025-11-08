@@ -42,8 +42,7 @@
 
     <section class="card card--game" id="game-card">
       <header class="card__header">
-        <h2>Podaj swoje imię</h2>
-        <p class="form__hint">Pokój czeka na Ciebie. Po wejściu przejdziesz przez kroki, by przygotować plan wieczoru.</p>
+        <h2>Plan Wieczoru – We Dwoje</h2>
       </header>
       <form
         id="join-form"
@@ -57,6 +56,11 @@
         data-submit-mode="host"
       >
         <input type="hidden" id="room_key" name="room_key" autocomplete="off" />
+        <aside class="form__notice" data-role="room-ready" hidden>
+          <p>
+            Wasz pokój jest już gotowy. Wejdź do środka, aby zaprosić partnera linkiem lub kodem QR. Pokój wygaśnie po 6 godzinach.
+          </p>
+        </aside>
         <label class="form__field">
           <span>Twoje imię</span>
           <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
