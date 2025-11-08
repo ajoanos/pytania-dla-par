@@ -8,7 +8,6 @@ if (!roomKey || !participantId) {
   window.location.replace('index.html');
 }
 
-const roomLabel = document.getElementById('room-label');
 const participantsList = document.getElementById('participants-list');
 const questionCard = document.getElementById('question-card');
 const questionEmpty = document.getElementById('question-empty');
@@ -39,16 +38,12 @@ const shareQrModal = document.getElementById('share-qr-modal');
 const shareQrImage = document.getElementById('share-qr-image');
 const shareQrUrl = document.getElementById('share-qr-url');
 const shareQrClose = document.getElementById('share-qr-close');
-const videoPreview = document.getElementById('video-preview');
-const remoteVideoWrapper = document.getElementById('remote-video-wrapper');
-const remoteVideo = document.getElementById('remote-video');
-const remotePlaceholder = document.getElementById('remote-placeholder');
-const localVideoWrapper = document.getElementById('local-video-wrapper');
-const localVideo = document.getElementById('local-video');
-const videoStatus = document.getElementById('video-status');
-
-const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
-const VIDEO_SIGNAL_POLL_INTERVAL = 1500;
+const chatMessagesList = document.getElementById('chat-messages');
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const chatSendButton = chatForm?.querySelector('.chat__send');
+const emojiToggle = document.getElementById('chat-emoji-toggle');
+const emojiPanel = document.getElementById('chat-emoji-panel');
 
 const defaultTitle = document.title;
 let selfInfo = null;
@@ -59,11 +54,8 @@ let pulseClass = '';
 let lastKnownStatus = '';
 let hasRedirectedToWaiting = false;
 let shareFeedbackTimer = null;
-let videoStatusHideTimer = null;
-let localStream = null;
-let remoteStream = null;
-let videoSession = null;
-let activeVideoPeerId = null;
+let chatMessagesState = [];
+let emojiPanelOpen = false;
 
 const waitingRoomPath = 'room-waiting.html';
 const shareLinkUrl = buildShareUrl();
@@ -78,27 +70,14 @@ function isActiveParticipant() {
   return (selfInfo?.status || '') === 'active';
 }
 
-roomLabel.textContent = roomKey;
+function hasChatAccess() {
+  if (!selfInfo) {
+    return false;
+  }
+  return Boolean(selfInfo.is_host) || selfInfo.status === 'active';
+}
 
 setupCategoryOptions();
-startVideoPreview();
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    if (!isStreamActive(localStream)) {
-      startVideoPreview(true);
-    } else {
-      attachLocalStream(localStream);
-    }
-    if (remoteStream) {
-      if (isStreamActive(remoteStream)) {
-        attachRemoteStream(remoteStream);
-      } else {
-        clearRemoteStream();
-      }
-    }
-  }
-});
 
 nextQuestionButton?.addEventListener('click', async () => {
   try {
@@ -213,546 +192,91 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-function setVideoStatus(message, { persist = true, hideAfter = 4000 } = {}) {
-  if (!videoStatus) {
+chatForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!hasChatAccess()) {
+    alert('Musisz poczekać, aż gospodarz przyzna dostęp do pokoju.');
     return;
   }
-  clearTimeout(videoStatusHideTimer);
-  if (!message) {
-    videoStatus.hidden = true;
-    videoStatus.textContent = '';
+  const value = chatInput?.value.trim();
+  if (!value) {
     return;
-  }
-  videoStatus.textContent = message;
-  videoStatus.hidden = false;
-  if (!persist) {
-    videoStatusHideTimer = window.setTimeout(() => {
-      setVideoStatus('');
-    }, hideAfter);
-  }
-}
-
-function ensureVideoPlays(video) {
-  if (!video || !video.srcObject) {
-    return;
-  }
-  if (video.paused) {
-    const playPromise = video.play();
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {});
-    }
-  }
-}
-
-function isStreamActive(stream) {
-  return !!stream && stream.getTracks().some((track) => track.readyState === 'live');
-}
-
-function stopLocalStream() {
-  if (localStream) {
-    localStream.getTracks().forEach((track) => {
-      try {
-        track.stop();
-      } catch (error) {
-        console.warn('Nie udało się zatrzymać toru lokalnego podglądu.', error);
-      }
-    });
-    localStream = null;
-  }
-  if (videoSession) {
-    videoSession.setLocalStream(null);
-  }
-}
-
-function showRemotePlaceholder(show) {
-  if (remotePlaceholder) {
-    remotePlaceholder.hidden = !show;
-  }
-}
-
-function attachLocalStream(stream) {
-  if (!localVideo) {
-    return;
-  }
-  localVideo.srcObject = stream;
-  localVideo.muted = true;
-  ensureVideoPlays(localVideo);
-  if (localVideoWrapper) {
-    localVideoWrapper.hidden = true;
-    localVideoWrapper.setAttribute('aria-hidden', 'true');
-  }
-  if (videoSession) {
-    videoSession.setLocalStream(stream);
-  }
-}
-
-function attachRemoteStream(stream) {
-  const isMediaStream =
-    (typeof MediaStream !== 'undefined' && stream instanceof MediaStream) ||
-    (!!stream && typeof stream === 'object' && typeof stream.getTracks === 'function');
-  if (!isMediaStream || !remoteVideo) {
-    return;
-  }
-  remoteStream = stream;
-  remoteVideo.srcObject = stream;
-  ensureVideoPlays(remoteVideo);
-  if (remoteVideoWrapper) {
-    remoteVideoWrapper.hidden = false;
-  }
-  showRemotePlaceholder(false);
-  setVideoStatus('Połączono z kamerą partnera.', { persist: false, hideAfter: 6000 });
-}
-
-function clearRemoteStream() {
-  if (remoteVideo) {
-    remoteVideo.srcObject = null;
-  }
-  remoteStream = null;
-  showRemotePlaceholder(true);
-  setVideoStatus('Czekamy na obraz partnera. Może mieć wyłączoną kamerę.', { persist: true });
-}
-
-class VideoSession {
-  constructor({ roomKey: rk, participantId: pid, targetId, polite }) {
-    this.roomKey = rk;
-    this.participantId = pid;
-    this.targetId = targetId;
-    this.polite = polite;
-    this.pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-    this.lastSignalId = 0;
-    this.pollTimer = null;
-    this.isClosed = false;
-    this.makingOffer = false;
-    this.ignoreOffer = false;
-    this.isSettingRemoteAnswerPending = false;
-    this.videoTransceiver = this.pc.addTransceiver('video', { direction: 'recvonly' });
-    this.audioTransceiver = this.pc.addTransceiver('audio', { direction: 'recvonly' });
-
-    setVideoStatus('Łączenie z kamerą partnera…', { persist: true });
-    showRemotePlaceholder(true);
-
-    this.pc.onnegotiationneeded = () => {
-      this.handleNegotiationNeeded().catch((error) => {
-        console.warn('Błąd negocjacji WebRTC', error);
-      });
-    };
-    this.pc.onicecandidate = (event) => {
-      this.handleIceCandidate(event);
-    };
-    this.pc.ontrack = (event) => {
-      this.handleRemoteTrack(event);
-    };
-    this.pc.onconnectionstatechange = () => {
-      this.handleConnectionStateChange();
-    };
-
-    this.startPolling();
-  }
-
-  setLocalStream(stream) {
-    if (this.isClosed) {
-      return;
-    }
-    const videoTrack = stream?.getVideoTracks?.()[0] || null;
-    const audioTrack = stream?.getAudioTracks?.()[0] || null;
-    this.updateTransceiver(this.videoTransceiver, videoTrack, videoTrack ? 'sendrecv' : 'recvonly', 'wideo');
-    this.updateTransceiver(this.audioTransceiver, audioTrack, audioTrack ? 'sendrecv' : 'recvonly', 'audio');
-  }
-
-  updateTransceiver(transceiver, track, direction, kind) {
-    if (!transceiver) {
-      return;
-    }
-    try {
-      if (typeof transceiver.setDirection === 'function') {
-        transceiver.setDirection(direction);
-      } else {
-        transceiver.direction = direction;
-      }
-    } catch (error) {
-      // Ignoruj, gdy przeglądarka nie pozwala na zmianę kierunku w tym stanie.
-    }
-    const sender = transceiver.sender;
-    if (!sender) {
-      return;
-    }
-    sender
-      .replaceTrack(track || null)
-      .catch((error) => console.warn(`Nie udało się podmienić toru ${kind}`, error));
-  }
-
-  normalizeDescription(description) {
-    if (!description) {
-      return null;
-    }
-    const { type, sdp } = description;
-    if (!type || !sdp) {
-      return null;
-    }
-    return { type, sdp };
-  }
-
-  async handleNegotiationNeeded() {
-    if (this.isClosed) {
-      return;
-    }
-    try {
-      this.makingOffer = true;
-      const offer = await this.pc.createOffer();
-      if (this.isClosed) {
-        return;
-      }
-      await this.pc.setLocalDescription(offer);
-      const serialized = this.normalizeDescription(this.pc.localDescription);
-      if (serialized) {
-        await this.sendSignal('offer', serialized);
-      }
-    } catch (error) {
-      console.warn('Nie udało się wygenerować oferty WebRTC', error);
-    } finally {
-      this.makingOffer = false;
-    }
-  }
-
-  async handleOffer(description) {
-    if (this.isClosed || !description) {
-      return;
-    }
-    const offerCollision = this.makingOffer || this.pc.signalingState !== 'stable';
-    this.ignoreOffer = !this.polite && offerCollision;
-    if (this.ignoreOffer) {
-      console.warn('Ignoruję ofertę WebRTC ze względu na kolizję.');
-      return;
-    }
-    try {
-      this.isSettingRemoteAnswerPending = true;
-      if (offerCollision) {
-        try {
-          await this.pc.setLocalDescription({ type: 'rollback' });
-        } catch (rollbackError) {
-          console.warn('Nie udało się wycofać lokalnej oferty przed ustawieniem zdalnej.', rollbackError);
-        }
-      }
-      const normalized = this.normalizeDescription(description);
-      if (!normalized) {
-        this.isSettingRemoteAnswerPending = false;
-        return;
-      }
-      await this.pc.setRemoteDescription(normalized);
-      this.isSettingRemoteAnswerPending = false;
-      const answer = await this.pc.createAnswer();
-      await this.pc.setLocalDescription(answer);
-      const serialized = this.normalizeDescription(this.pc.localDescription);
-      if (serialized) {
-        await this.sendSignal('answer', serialized);
-      }
-    } catch (error) {
-      this.isSettingRemoteAnswerPending = false;
-      console.warn('Nie udało się przetworzyć oferty WebRTC', error);
-    }
-  }
-
-  async handleAnswer(description) {
-    if (this.isClosed || !description) {
-      return;
-    }
-    try {
-      const state = this.pc.signalingState;
-      if (state !== 'have-local-offer' && state !== 'have-local-pranswer') {
-        return;
-      }
-      const normalized = this.normalizeDescription(description);
-      if (!normalized) {
-        return;
-      }
-      await this.pc.setRemoteDescription(normalized);
-    } catch (error) {
-      console.warn('Nie udało się zastosować odpowiedzi WebRTC', error);
-    }
-  }
-
-  async handleCandidate(candidate) {
-    if (this.isClosed || !candidate) {
-      return;
-    }
-    try {
-      await this.pc.addIceCandidate(candidate);
-    } catch (error) {
-      if (!this.ignoreOffer) {
-        console.warn('Nie udało się dodać kandydata ICE', error);
-      }
-    }
-  }
-
-  handleRemoteBye() {
-    showRemotePlaceholder(true);
-    if (!this.isClosed) {
-      setVideoStatus('Partner wyłączył kamerę.', { persist: true });
-    }
-    if (remoteVideo) {
-      remoteVideo.srcObject = null;
-    }
-    remoteStream = null;
-  }
-
-  handleRemoteTrack(event) {
-    if (!event.streams || !event.streams[0]) {
-      return;
-    }
-    const [stream] = event.streams;
-    attachRemoteStream(stream);
-    stream.addEventListener('removetrack', () => {
-      if (stream.getTracks().length === 0) {
-        clearRemoteStream();
-      }
-    });
-  }
-
-  handleConnectionStateChange() {
-    if (this.isClosed) {
-      return;
-    }
-    const { connectionState } = this.pc;
-    if (connectionState === 'connected') {
-      setVideoStatus('Połączono z kamerą partnera.', { persist: false, hideAfter: 5000 });
-    } else if (connectionState === 'failed' || connectionState === 'disconnected') {
-      setVideoStatus('Połączenie z kamerą zostało przerwane. Ponawiam próbę…', { persist: true });
-    }
-  }
-
-  handleIceCandidate(event) {
-    const { candidate } = event;
-    if (!candidate || this.isClosed) {
-      return;
-    }
-    this.sendSignal('candidate', {
-      candidate: candidate.candidate,
-      sdpMid: candidate.sdpMid,
-      sdpMLineIndex: candidate.sdpMLineIndex,
-    });
-  }
-
-  startPolling() {
-    this.pollSignals();
-    this.pollTimer = window.setInterval(() => {
-      this.pollSignals();
-    }, VIDEO_SIGNAL_POLL_INTERVAL);
-  }
-
-  async pollSignals() {
-    if (this.isClosed) {
-      return;
-    }
-    try {
-      const params = new URLSearchParams({
-        room_key: this.roomKey,
-        participant_id: String(this.participantId),
-        after_id: String(this.lastSignalId),
-        peer_id: String(this.targetId),
-      });
-      const payload = await getJson(`api/video_signal.php?${params.toString()}`);
-      if (!payload.ok) {
-        throw new Error(payload.error || 'Nie udało się pobrać sygnałów.');
-      }
-      const signals = Array.isArray(payload.signals) ? payload.signals : [];
-      signals.forEach((signal) => {
-        if (!signal || Number(signal.sender_id) !== this.targetId) {
-          this.lastSignalId = Math.max(this.lastSignalId, Number(signal?.id) || this.lastSignalId);
-          return;
-        }
-        this.lastSignalId = Math.max(this.lastSignalId, Number(signal.id) || this.lastSignalId);
-        this.routeSignal(signal);
-      });
-      if (typeof payload.last_id === 'number' && payload.last_id > this.lastSignalId) {
-        this.lastSignalId = payload.last_id;
-      }
-    } catch (error) {
-      if (!this.isClosed) {
-        console.warn('Nie udało się pobrać sygnałów WebRTC', error);
-      }
-    }
-  }
-
-  routeSignal(signal) {
-    const type = signal.type;
-    const data = signal.data;
-    if (!type) {
-      return;
-    }
-    if (type === 'offer') {
-      Promise.resolve(this.handleOffer(data)).catch((error) => {
-        console.warn('Błąd podczas obsługi oferty WebRTC', error);
-      });
-    } else if (type === 'answer') {
-      Promise.resolve(this.handleAnswer(data)).catch((error) => {
-        console.warn('Błąd podczas obsługi odpowiedzi WebRTC', error);
-      });
-    } else if (type === 'candidate') {
-      Promise.resolve(this.handleCandidate(data)).catch((error) => {
-        console.warn('Błąd podczas obsługi kandydata ICE', error);
-      });
-    } else if (type === 'bye') {
-      this.handleRemoteBye();
-    }
-  }
-
-  async sendSignal(type, data) {
-    if (this.isClosed) {
-      return;
-    }
-    try {
-      await postJson('api/video_signal.php', {
-        room_key: this.roomKey,
-        participant_id: this.participantId,
-        target_id: this.targetId,
-        type,
-        data,
-      });
-    } catch (error) {
-      if (!this.isClosed) {
-        console.warn('Nie udało się wysłać sygnału WebRTC', error);
-      }
-    }
-  }
-
-  close({ silent = false } = {}) {
-    if (this.isClosed) {
-      return;
-    }
-    if (!silent) {
-      Promise.resolve(this.sendSignal('bye', { reason: 'closed' })).catch(() => {});
-    }
-    this.isClosed = true;
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
-    }
-    this.pc.getSenders().forEach((sender) => {
-      try {
-        sender.replaceTrack(null);
-      } catch (error) {
-        console.warn('Nie udało się wyczyścić nadajnika', error);
-      }
-    });
-    this.pc.close();
-  }
-}
-
-function maybeUpdateVideoTarget(participants) {
-  if (!selfInfo || (selfInfo.status || '') !== 'active') {
-    teardownVideoSession();
-    return;
-  }
-  const selfId = Number(selfInfo.id || 0);
-  if (!selfId) {
-    teardownVideoSession();
-    return;
-  }
-  const others = Array.isArray(participants)
-    ? participants
-        .map((participant) => Number(participant.id || 0))
-        .filter((id) => id && id !== selfId)
-    : [];
-  const nextTarget = others[0] || null;
-  if (!nextTarget) {
-    teardownVideoSession();
-    return;
-  }
-  if (videoSession && nextTarget === activeVideoPeerId) {
-    return;
-  }
-  teardownVideoSession({ preservePlaceholder: true });
-  activeVideoPeerId = nextTarget;
-  try {
-    videoSession = new VideoSession({
-      roomKey,
-      participantId: Number(participantId),
-      targetId: nextTarget,
-      polite: selfId > nextTarget,
-    });
-    videoSession.setLocalStream(localStream);
-  } catch (error) {
-    console.error('Nie udało się zainicjować sesji wideo', error);
-    setVideoStatus('Nie udało się nawiązać połączenia wideo.', { persist: true });
-  }
-}
-
-function teardownVideoSession({ silent = false, preservePlaceholder = false } = {}) {
-  if (videoSession) {
-    videoSession.close({ silent });
-    videoSession = null;
-  }
-  activeVideoPeerId = null;
-  if (preservePlaceholder) {
-    if (remoteVideo) {
-      remoteVideo.srcObject = null;
-    }
-    remoteStream = null;
-    showRemotePlaceholder(true);
-  } else {
-    clearRemoteStream();
-  }
-}
-
-async function startVideoPreview(forceRestart = false) {
-  if (!videoPreview) {
-    return;
-  }
-  const canUseMedia = !!navigator.mediaDevices?.getUserMedia;
-  videoPreview.hidden = false;
-  showRemotePlaceholder(true);
-  if (!canUseMedia) {
-    setVideoStatus('Twoja przeglądarka nie obsługuje kamery. Nadal możesz zobaczyć partnera.', {
-      persist: true,
-    });
-    if (videoSession) {
-      videoSession.setLocalStream(null);
-    }
-    return;
-  }
-  if (!forceRestart && isStreamActive(localStream)) {
-    attachLocalStream(localStream);
-    setVideoStatus('Twoja kamera działa. Jeśli partner ją włączy, zobaczysz go tutaj.', {
-      persist: true,
-    });
-    return;
-  }
-  if (forceRestart) {
-    stopLocalStream();
   }
   try {
-    setVideoStatus('Łączenie z kamerą…', { persist: true });
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'user',
-        width: { ideal: 640 },
-        height: { ideal: 360 },
-      },
-      audio: true,
-    });
-    localStream = stream;
-    attachLocalStream(stream);
-    if (videoSession) {
-      videoSession.setLocalStream(stream);
+    if (chatSendButton instanceof HTMLButtonElement) {
+      chatSendButton.disabled = true;
     }
-    setVideoStatus('Twoja kamera działa. Jeśli partner ją włączy, zobaczysz go tutaj.', {
-      persist: true,
+    await postJson('api/chat_send.php', {
+      room_key: roomKey,
+      participant_id: participantId,
+      message: value,
     });
+    if (chatInput instanceof HTMLTextAreaElement) {
+      chatInput.value = '';
+      adjustChatInputHeight();
+    }
+    closeEmojiPanel();
   } catch (error) {
-    console.error('Nie udało się włączyć podglądu wideo:', error);
-    setVideoStatus('Nie udało się uruchomić kamery. Sprawdź uprawnienia lub kontynuuj bez niej.', {
-      persist: true,
-    });
-    if (videoSession) {
-      videoSession.setLocalStream(null);
+    console.error(error);
+    alert('Nie udało się wysłać wiadomości. Spróbuj ponownie.');
+  } finally {
+    if (chatSendButton instanceof HTMLButtonElement) {
+      chatSendButton.disabled = false;
     }
   }
-}
+});
 
-window.pdpVideo = {
-  setRemoteStream: attachRemoteStream,
-  clearRemoteStream,
-};
+chatInput?.addEventListener('input', () => {
+  adjustChatInputHeight();
+});
+
+chatInput?.addEventListener('focus', () => {
+  adjustChatInputHeight();
+});
+
+chatInput?.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey && !event.altKey && !event.ctrlKey) {
+    event.preventDefault();
+    chatForm?.requestSubmit();
+  }
+});
+
+emojiToggle?.addEventListener('click', (event) => {
+  event.preventDefault();
+  toggleEmojiPanel(!emojiPanelOpen);
+});
+
+emojiPanel?.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const button = target.closest('.chat__emoji-option');
+  if (!(button instanceof HTMLButtonElement)) return;
+  const emoji = button.dataset.emoji || button.textContent || '';
+  if (!emoji || !(chatInput instanceof HTMLTextAreaElement)) return;
+  const start = chatInput.selectionStart ?? chatInput.value.length;
+  const end = chatInput.selectionEnd ?? chatInput.value.length;
+  const before = chatInput.value.slice(0, start);
+  const after = chatInput.value.slice(end);
+  chatInput.value = `${before}${emoji}${after}`;
+  const cursor = start + emoji.length;
+  chatInput.setSelectionRange(cursor, cursor);
+  chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+  chatInput.focus();
+});
+
+document.addEventListener('click', (event) => {
+  if (!emojiPanelOpen) {
+    return;
+  }
+  const target = event.target;
+  if (!(target instanceof Node)) {
+    return;
+  }
+  if (emojiPanel?.contains(target) || emojiToggle?.contains(target)) {
+    return;
+  }
+  closeEmojiPanel();
+});
 
 async function refreshState() {
   try {
@@ -769,7 +293,6 @@ async function refreshState() {
     updateAccessState(selfInfo);
     const participants = Array.isArray(payload.participants) ? payload.participants : [];
     renderParticipants(participants);
-    maybeUpdateVideoTarget(participants);
     const reactions = payload.reactions || [];
     if (payload.current_question) {
       applyQuestion(payload.current_question);
@@ -778,6 +301,7 @@ async function refreshState() {
       clearQuestion();
     }
     renderReactions(reactions);
+    renderChatMessages(payload.messages || []);
     renderHostRequests(payload.pending_requests || []);
   } catch (error) {
     console.error(error);
@@ -857,6 +381,166 @@ function renderReactions(reactions) {
 
     reactionsList.appendChild(li);
   });
+}
+
+function renderChatMessages(messages) {
+  if (!chatMessagesList) {
+    chatMessagesState = [];
+    return;
+  }
+
+  const normalized = Array.isArray(messages) ? [...messages] : [];
+  normalized.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+
+  const existingElements = new Map();
+  chatMessagesList.querySelectorAll('.chat__message').forEach((element) => {
+    if (!(element instanceof HTMLElement)) return;
+    const id = Number(element.dataset.id || '');
+    if (!Number.isNaN(id)) {
+      existingElements.set(id, element);
+    }
+  });
+
+  const shouldStick = isScrolledToBottom(chatMessagesList);
+
+  normalized.forEach((message) => {
+    const messageId = Number(message.id || 0);
+    if (!messageId) {
+      return;
+    }
+    const existing = existingElements.get(messageId);
+    if (existing) {
+      updateChatMessageElement(existing, message);
+      existingElements.delete(messageId);
+      return;
+    }
+    const element = createChatMessageElement(message);
+    if (!element) {
+      return;
+    }
+    element.dataset.id = String(messageId);
+    element.classList.add('chat__message--appear');
+    chatMessagesList.appendChild(element);
+    requestAnimationFrame(() => {
+      element.classList.remove('chat__message--appear');
+    });
+  });
+
+  existingElements.forEach((element) => {
+    element.remove();
+  });
+
+  chatMessagesState = normalized;
+
+  if (normalized.length > 0 && shouldStick) {
+    scrollChatToBottom();
+  }
+}
+
+function createChatMessageElement(message) {
+  const item = document.createElement('li');
+  item.className = 'chat__message';
+  applyChatAuthorState(item, message);
+
+  const meta = document.createElement('div');
+  meta.className = 'chat__meta';
+
+  const author = document.createElement('span');
+  author.className = 'chat__author';
+  author.textContent = message.display_name || 'Gość';
+
+  const time = document.createElement('time');
+  time.className = 'chat__time';
+  time.dateTime = message.created_at || '';
+  time.textContent = formatMessageTime(message.created_at);
+
+  meta.appendChild(author);
+  meta.appendChild(time);
+  item.appendChild(meta);
+
+  const text = document.createElement('p');
+  text.className = 'chat__text';
+  text.textContent = message.text || '';
+  item.appendChild(text);
+
+  return item;
+}
+
+function updateChatMessageElement(element, message) {
+  applyChatAuthorState(element, message);
+  const author = element.querySelector('.chat__author');
+  if (author) {
+    author.textContent = message.display_name || 'Gość';
+  }
+  const time = element.querySelector('.chat__time');
+  if (time instanceof HTMLTimeElement) {
+    time.dateTime = message.created_at || '';
+    time.textContent = formatMessageTime(message.created_at);
+  }
+  const text = element.querySelector('.chat__text');
+  if (text) {
+    text.textContent = message.text || '';
+  }
+}
+
+function applyChatAuthorState(element, message) {
+  const participantId = Number(message.participant_id || 0);
+  const isSelf = selfInfo && Number(selfInfo.id) === participantId;
+  element.classList.toggle('chat__message--self', Boolean(isSelf));
+}
+
+function formatMessageTime(timestamp) {
+  if (!timestamp) {
+    return '';
+  }
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return date.toLocaleTimeString('pl-PL', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function isScrolledToBottom(element) {
+  if (!element) {
+    return true;
+  }
+  const threshold = 48;
+  return element.scrollHeight - element.scrollTop - element.clientHeight <= threshold;
+}
+
+function scrollChatToBottom() {
+  if (!chatMessagesList) {
+    return;
+  }
+  chatMessagesList.scrollTo({ top: chatMessagesList.scrollHeight, behavior: 'smooth' });
+}
+
+function adjustChatInputHeight() {
+  if (!(chatInput instanceof HTMLTextAreaElement)) {
+    return;
+  }
+  chatInput.style.height = 'auto';
+  const maxHeight = 160;
+  const nextHeight = Math.min(chatInput.scrollHeight, maxHeight);
+  chatInput.style.height = `${nextHeight}px`;
+}
+
+function toggleEmojiPanel(forceState) {
+  const nextState = typeof forceState === 'boolean' ? forceState : !emojiPanelOpen;
+  emojiPanelOpen = Boolean(nextState);
+  if (emojiPanel) {
+    emojiPanel.hidden = !emojiPanelOpen;
+  }
+  if (emojiToggle) {
+    emojiToggle.setAttribute('aria-expanded', emojiPanelOpen ? 'true' : 'false');
+  }
+}
+
+function closeEmojiPanel() {
+  toggleEmojiPanel(false);
 }
 
 function renderHostRequests(requests) {
@@ -1111,6 +795,24 @@ function updateAccessState(participant) {
   }
 
   setInteractionEnabled(hasFullAccess && isActive);
+
+  const allowChat = Boolean(participant) && (participant.is_host || status === 'active');
+  if (chatInput instanceof HTMLTextAreaElement) {
+    chatInput.disabled = !allowChat;
+    chatInput.placeholder = allowChat
+      ? 'Napisz wiadomość do partnera...'
+      : 'Czekaj na dostęp do pokoju...';
+    if (!allowChat) {
+      chatInput.value = '';
+      adjustChatInputHeight();
+    }
+  }
+  if (chatSendButton instanceof HTMLButtonElement) {
+    chatSendButton.disabled = !allowChat;
+  }
+  if (!allowChat) {
+    closeEmojiPanel();
+  }
 
   lastKnownStatus = status;
 }
@@ -1370,9 +1072,9 @@ refreshState();
 pollTimer = setInterval(refreshState, 2000);
 presenceTimer = setInterval(sendPresence, 15000);
 sendPresence();
+adjustChatInputHeight();
 
 window.addEventListener('beforeunload', () => {
   clearInterval(pollTimer);
   clearInterval(presenceTimer);
-  teardownVideoSession({ silent: false, preservePlaceholder: true });
 });
