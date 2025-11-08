@@ -935,8 +935,17 @@ async function respondToRequest(requestId, decision, triggerButton) {
   }
 }
 
+const CATEGORY_LABELS = {
+  LEKKIE_PYTANIA_NA_POCZATEK: 'Lekkie pytania na początek',
+  PYTANIA_NA_LUZIE: 'Pytania na luzie',
+  ROMANTYCZNE_PYTANIA: 'Romantyczne pytania',
+  GLEBOKIE_PYTANIA: 'Głębokie pytania',
+  PYTANIA_O_PRZYSZLOSC_MARZENIA: 'Pytania o przyszłość, marzenia',
+  SZCZEROSC: 'Szczerość',
+};
+
 function formatCategoryLabel(category) {
-  return category.replace(/_/g, ' ');
+  return CATEGORY_LABELS[category] || category.replace(/_/g, ' ');
 }
 
 async function setupCategoryOptions() {
