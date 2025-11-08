@@ -70,6 +70,7 @@ if ($hasFullAccess) {
 }
 
 $currentQuestion = $hasFullAccess ? getLatestQuestion((int)$room['id']) : null;
+$messages = $hasFullAccess ? fetchChatMessages((int)$room['id'], $roomKey, 60) : [];
 
 $self = null;
 if ($participant) {
@@ -87,5 +88,6 @@ respond([
     'current_question' => $currentQuestion,
     'reactions' => $reactions,
     'pending_requests' => $pendingRequests,
+    'messages' => $messages,
     'self' => $self,
 ]);
