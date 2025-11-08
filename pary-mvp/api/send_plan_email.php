@@ -204,11 +204,11 @@ createPlanInvite(
 $bodyLines = [
     'Twoja druga połówka zaprasza Cię dziś na wieczór pełen bliskości.',
     'Wybrała:',
-    '– nastrój: ' . ($mood !== '' ? $mood : '—'),
-    '– bliskość: ' . ($closeness !== '' ? $closeness : '—'),
-    '– klimat: ' . $extrasText,
-    '– energia: ' . ($energy !== '' ? $energy : '—'),
-    '– początek: ' . ($startTime !== '' ? $startTime : '—'),
+    'Na jaki wieczór masz dziś ochotę?: ' . ($mood !== '' ? $mood : '—'),
+    'Jakiej bliskości dziś potrzebujesz?: ' . ($closeness !== '' ? $closeness : '—'),
+    'Co stworzy idealny klimat?: ' . $extrasText,
+    'Jak tam dziś Twoja forma?: ' . ($energy !== '' ? $energy : '—'),
+    'Kiedy chcesz żebyśmy zaczęli?: ' . ($startTime !== '' ? $startTime : '—'),
 ];
 
 if ($energyContext !== '') {
@@ -217,11 +217,11 @@ if ($energyContext !== '') {
 }
 
 $bodyLines[] = '';
-$bodyLines[] = 'Zaproponuj własny plan:';
-$bodyLines[] = $link;
-$bodyLines[] = '';
 $bodyLines[] = 'Zgadzam się: ' . $acceptUrl;
 $bodyLines[] = 'Nie zgadzam się: ' . $declineUrl;
+$bodyLines[] = '';
+$bodyLines[] = 'Zaproponuj własny plan:';
+$bodyLines[] = $link;
 
 $body = implode("\n", $bodyLines);
 

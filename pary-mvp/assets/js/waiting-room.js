@@ -17,7 +17,7 @@ if (!roomKey || !participantId) {
   window.location.replace('pytania-dla-par-room.html');
 } else {
   waitingLeave?.addEventListener('click', () => {
-    window.location.href = 'pytania-dla-par-room.html';
+    window.location.href = 'pytania-dla-par.html';
   });
 
   let pollTimer = null;
