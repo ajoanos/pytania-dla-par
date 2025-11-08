@@ -17,15 +17,26 @@
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
-        <img
-          class="hero__logo"
-          src="https://sklep.allemedia.pl/momenty/logo.png"
-          alt="Momenty"
-        />
+        <a class="hero__logo-link" href="index.html">
+          <img
+            class="hero__logo"
+            src="https://sklep.allemedia.pl/momenty/logo.png"
+            alt="Momenty"
+          />
+        </a>
         <div class="hero__text">
           <h1>Dołącz do pokoju</h1>
           <p id="invite-room-label">Trwa pobieranie danych pokoju...</p>
         </div>
+        <details class="game-switcher">
+          <summary class="game-switcher__toggle">Wybierz grę</summary>
+          <div class="game-switcher__panel">
+            <ul class="game-switcher__list">
+              <li><a class="game-switcher__link" href="pytania-dla-par.html" aria-current="page">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
+            </ul>
+          </div>
+        </details>
       </div>
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
@@ -38,7 +49,7 @@
           <span>Twoje imię</span>
           <input type="text" id="invite-display-name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
         </label>
-        <button type="submit" class="btn btn--primary">Dołącz</button>
+        <button type="submit" class="btn btn--primary btn--enter-room">Wejdź do pokoju</button>
       </form>
       <p class="form__hint" id="invite-error" hidden></p>
     </section>
