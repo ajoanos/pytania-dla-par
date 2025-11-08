@@ -17,14 +17,25 @@
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
-        <img
-          class="hero__logo"
-          src="https://sklep.allemedia.pl/momenty/logo.png"
-          alt="Momenty"
-        />
+        <a class="hero__logo-link" href="index.html">
+          <img
+            class="hero__logo"
+            src="https://sklep.allemedia.pl/momenty/logo.png"
+            alt="Momenty"
+          />
+        </a>
         <div class="hero__text">
           <h1>Pokój <span id="room-label"></span></h1>
         </div>
+        <details class="game-switcher">
+          <summary class="game-switcher__toggle">Wybierz grę</summary>
+          <div class="game-switcher__panel">
+            <ul class="game-switcher__list">
+              <li><a class="game-switcher__link" href="pytania-dla-par.html" aria-current="page">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
+            </ul>
+          </div>
+        </details>
       </div>
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
@@ -36,43 +47,7 @@
       </section>
 
       <section class="card card--question">
-        <div id="video-preview" class="question__video" hidden>
-          <div id="remote-video-wrapper" class="question__video-surface">
-            <video id="remote-video" class="question__video-item" autoplay playsinline></video>
-            <div id="remote-placeholder" class="question__video-placeholder">Czekamy na obraz partnera. Może mieć wyłączoną kamerę.</div>
-            <span class="question__video-label">Partner</span>
-            <div id="local-video-wrapper" class="question__video-self" hidden>
-              <video
-                id="local-video"
-                class="question__video-item question__video-item--self"
-                autoplay
-                playsinline
-                muted
-              ></video>
-              <span class="question__video-label question__video-label--self">Ty</span>
-            </div>
-          </div>
-          <p id="video-status" class="question__video-status" role="status" aria-live="polite" hidden></p>
-        </div>
         <div id="question-empty" class="question__empty">
-          <div id="video-preview" class="question__video" hidden>
-            <div id="remote-video-wrapper" class="question__video-surface">
-              <video id="remote-video" class="question__video-item" autoplay playsinline></video>
-              <div id="remote-placeholder" class="question__video-placeholder">Czekam na obraz partnera…</div>
-              <span class="question__video-label">Partner</span>
-              <div id="local-video-wrapper" class="question__video-self" hidden>
-                <video
-                  id="local-video"
-                  class="question__video-item question__video-item--self"
-                  autoplay
-                  playsinline
-                  muted
-                ></video>
-                <span class="question__video-label question__video-label--self">Ty</span>
-              </div>
-            </div>
-            <p id="video-status" class="question__video-status" role="status" aria-live="polite" hidden></p>
-          </div>
           <p id="question-empty-text" class="question__empty-text">Wylosuj pytanie, aby rozpocząć rozmowę.</p>
           <button type="button" class="btn btn--primary btn--question" id="next-question">Losuj pytanie</button>
         </div>
@@ -154,6 +129,12 @@
         <button type="button" class="btn btn--ghost" id="share-qr-close">Zamknij</button>
       </div>
     </div>
+
+    <footer class="footer">
+      <nav class="footer__nav">
+        <a href="index.html">Powrót do wyboru gier</a>
+      </nav>
+    </footer>
   </main>
 </body>
 </html>
