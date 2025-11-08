@@ -85,25 +85,6 @@
           <ol id="chat-messages" class="chat__messages"></ol>
           <form id="chat-form" class="chat__form" autocomplete="off">
             <div class="chat__composer">
-              <div class="chat__emoji">
-                <button
-                  class="chat__emoji-toggle"
-                  id="chat-emoji-toggle"
-                  type="button"
-                  aria-haspopup="true"
-                  aria-expanded="false"
-                >😊</button>
-                <div class="chat__emoji-panel" id="chat-emoji-panel" hidden>
-                  <button type="button" class="chat__emoji-option" data-emoji="❤️" aria-label="Dodaj serce">❤️</button>
-                  <button type="button" class="chat__emoji-option" data-emoji="😘" aria-label="Dodaj buziaka">😘</button>
-                  <button type="button" class="chat__emoji-option" data-emoji="🥰" aria-label="Dodaj czułość">🥰</button>
-                  <button type="button" class="chat__emoji-option" data-emoji="😍" aria-label="Dodaj zachwyt">😍</button>
-                  <button type="button" class="chat__emoji-option" data-emoji="😉" aria-label="Dodaj mrugnięcie">😉</button>
-                  <button type="button" class="chat__emoji-option" data-emoji="😊" aria-label="Dodaj uśmiech">😊</button>
-                  <button type="button" class="chat__emoji-option" data-emoji="🎉" aria-label="Dodaj konfetti">🎉</button>
-                  <button type="button" class="chat__emoji-option" data-emoji="🔥" aria-label="Dodaj ogień">🔥</button>
-                </div>
-              </div>
               <label class="chat__input">
                 <span class="visually-hidden">Wpisz wiadomość</span>
                 <textarea
@@ -115,7 +96,28 @@
                   required
                 ></textarea>
               </label>
-              <button type="submit" class="btn btn--primary chat__send">Wyślij</button>
+              <div class="chat__actions">
+                <div class="chat__emoji">
+                  <button
+                    class="chat__emoji-toggle"
+                    id="chat-emoji-toggle"
+                    type="button"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                  >😊</button>
+                  <div class="chat__emoji-panel" id="chat-emoji-panel" hidden>
+                    <button type="button" class="chat__emoji-option" data-emoji="❤️" aria-label="Dodaj serce">❤️</button>
+                    <button type="button" class="chat__emoji-option" data-emoji="😘" aria-label="Dodaj buziaka">😘</button>
+                    <button type="button" class="chat__emoji-option" data-emoji="🥰" aria-label="Dodaj czułość">🥰</button>
+                    <button type="button" class="chat__emoji-option" data-emoji="😍" aria-label="Dodaj zachwyt">😍</button>
+                    <button type="button" class="chat__emoji-option" data-emoji="😉" aria-label="Dodaj mrugnięcie">😉</button>
+                    <button type="button" class="chat__emoji-option" data-emoji="😊" aria-label="Dodaj uśmiech">😊</button>
+                    <button type="button" class="chat__emoji-option" data-emoji="🎉" aria-label="Dodaj konfetti">🎉</button>
+                    <button type="button" class="chat__emoji-option" data-emoji="🔥" aria-label="Dodaj ogień">🔥</button>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn--primary chat__send">Wyślij</button>
+              </div>
             </div>
           </form>
         </div>
