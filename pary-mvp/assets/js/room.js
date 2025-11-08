@@ -38,6 +38,12 @@ const shareQrModal = document.getElementById('share-qr-modal');
 const shareQrImage = document.getElementById('share-qr-image');
 const shareQrUrl = document.getElementById('share-qr-url');
 const shareQrClose = document.getElementById('share-qr-close');
+const chatMessagesList = document.getElementById('chat-messages');
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const chatSendButton = chatForm?.querySelector('.chat__send');
+const emojiToggle = document.getElementById('chat-emoji-toggle');
+const emojiPanel = document.getElementById('chat-emoji-panel');
 
 const defaultTitle = document.title;
 let selfInfo = null;
@@ -48,6 +54,8 @@ let pulseClass = '';
 let lastKnownStatus = '';
 let hasRedirectedToWaiting = false;
 let shareFeedbackTimer = null;
+let chatMessagesState = [];
+let emojiPanelOpen = false;
 
 const waitingRoomPath = 'room-waiting.html';
 const shareLinkUrl = buildShareUrl();
@@ -60,6 +68,13 @@ let activeCategory = '';
 
 function isActiveParticipant() {
   return (selfInfo?.status || '') === 'active';
+}
+
+function hasChatAccess() {
+  if (!selfInfo) {
+    return false;
+  }
+  return Boolean(selfInfo.is_host) || selfInfo.status === 'active';
 }
 
 setupCategoryOptions();
@@ -177,6 +192,92 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+chatForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!hasChatAccess()) {
+    alert('Musisz poczekać, aż gospodarz przyzna dostęp do pokoju.');
+    return;
+  }
+  const value = chatInput?.value.trim();
+  if (!value) {
+    return;
+  }
+  try {
+    if (chatSendButton instanceof HTMLButtonElement) {
+      chatSendButton.disabled = true;
+    }
+    await postJson('api/chat_send.php', {
+      room_key: roomKey,
+      participant_id: participantId,
+      message: value,
+    });
+    if (chatInput instanceof HTMLTextAreaElement) {
+      chatInput.value = '';
+      adjustChatInputHeight();
+    }
+    closeEmojiPanel();
+  } catch (error) {
+    console.error(error);
+    alert('Nie udało się wysłać wiadomości. Spróbuj ponownie.');
+  } finally {
+    if (chatSendButton instanceof HTMLButtonElement) {
+      chatSendButton.disabled = false;
+    }
+  }
+});
+
+chatInput?.addEventListener('input', () => {
+  adjustChatInputHeight();
+});
+
+chatInput?.addEventListener('focus', () => {
+  adjustChatInputHeight();
+});
+
+chatInput?.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey && !event.altKey && !event.ctrlKey) {
+    event.preventDefault();
+    chatForm?.requestSubmit();
+  }
+});
+
+emojiToggle?.addEventListener('click', (event) => {
+  event.preventDefault();
+  toggleEmojiPanel(!emojiPanelOpen);
+});
+
+emojiPanel?.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const button = target.closest('.chat__emoji-option');
+  if (!(button instanceof HTMLButtonElement)) return;
+  const emoji = button.dataset.emoji || button.textContent || '';
+  if (!emoji || !(chatInput instanceof HTMLTextAreaElement)) return;
+  const start = chatInput.selectionStart ?? chatInput.value.length;
+  const end = chatInput.selectionEnd ?? chatInput.value.length;
+  const before = chatInput.value.slice(0, start);
+  const after = chatInput.value.slice(end);
+  chatInput.value = `${before}${emoji}${after}`;
+  const cursor = start + emoji.length;
+  chatInput.setSelectionRange(cursor, cursor);
+  chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+  chatInput.focus();
+});
+
+document.addEventListener('click', (event) => {
+  if (!emojiPanelOpen) {
+    return;
+  }
+  const target = event.target;
+  if (!(target instanceof Node)) {
+    return;
+  }
+  if (emojiPanel?.contains(target) || emojiToggle?.contains(target)) {
+    return;
+  }
+  closeEmojiPanel();
+});
+
 async function refreshState() {
   try {
     const payload = await getJson(
@@ -200,6 +301,7 @@ async function refreshState() {
       clearQuestion();
     }
     renderReactions(reactions);
+    renderChatMessages(payload.messages || []);
     renderHostRequests(payload.pending_requests || []);
   } catch (error) {
     console.error(error);
@@ -279,6 +381,166 @@ function renderReactions(reactions) {
 
     reactionsList.appendChild(li);
   });
+}
+
+function renderChatMessages(messages) {
+  if (!chatMessagesList) {
+    chatMessagesState = [];
+    return;
+  }
+
+  const normalized = Array.isArray(messages) ? [...messages] : [];
+  normalized.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+
+  const existingElements = new Map();
+  chatMessagesList.querySelectorAll('.chat__message').forEach((element) => {
+    if (!(element instanceof HTMLElement)) return;
+    const id = Number(element.dataset.id || '');
+    if (!Number.isNaN(id)) {
+      existingElements.set(id, element);
+    }
+  });
+
+  const shouldStick = isScrolledToBottom(chatMessagesList);
+
+  normalized.forEach((message) => {
+    const messageId = Number(message.id || 0);
+    if (!messageId) {
+      return;
+    }
+    const existing = existingElements.get(messageId);
+    if (existing) {
+      updateChatMessageElement(existing, message);
+      existingElements.delete(messageId);
+      return;
+    }
+    const element = createChatMessageElement(message);
+    if (!element) {
+      return;
+    }
+    element.dataset.id = String(messageId);
+    element.classList.add('chat__message--appear');
+    chatMessagesList.appendChild(element);
+    requestAnimationFrame(() => {
+      element.classList.remove('chat__message--appear');
+    });
+  });
+
+  existingElements.forEach((element) => {
+    element.remove();
+  });
+
+  chatMessagesState = normalized;
+
+  if (normalized.length > 0 && shouldStick) {
+    scrollChatToBottom();
+  }
+}
+
+function createChatMessageElement(message) {
+  const item = document.createElement('li');
+  item.className = 'chat__message';
+  applyChatAuthorState(item, message);
+
+  const meta = document.createElement('div');
+  meta.className = 'chat__meta';
+
+  const author = document.createElement('span');
+  author.className = 'chat__author';
+  author.textContent = message.display_name || 'Gość';
+
+  const time = document.createElement('time');
+  time.className = 'chat__time';
+  time.dateTime = message.created_at || '';
+  time.textContent = formatMessageTime(message.created_at);
+
+  meta.appendChild(author);
+  meta.appendChild(time);
+  item.appendChild(meta);
+
+  const text = document.createElement('p');
+  text.className = 'chat__text';
+  text.textContent = message.text || '';
+  item.appendChild(text);
+
+  return item;
+}
+
+function updateChatMessageElement(element, message) {
+  applyChatAuthorState(element, message);
+  const author = element.querySelector('.chat__author');
+  if (author) {
+    author.textContent = message.display_name || 'Gość';
+  }
+  const time = element.querySelector('.chat__time');
+  if (time instanceof HTMLTimeElement) {
+    time.dateTime = message.created_at || '';
+    time.textContent = formatMessageTime(message.created_at);
+  }
+  const text = element.querySelector('.chat__text');
+  if (text) {
+    text.textContent = message.text || '';
+  }
+}
+
+function applyChatAuthorState(element, message) {
+  const participantId = Number(message.participant_id || 0);
+  const isSelf = selfInfo && Number(selfInfo.id) === participantId;
+  element.classList.toggle('chat__message--self', Boolean(isSelf));
+}
+
+function formatMessageTime(timestamp) {
+  if (!timestamp) {
+    return '';
+  }
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return date.toLocaleTimeString('pl-PL', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function isScrolledToBottom(element) {
+  if (!element) {
+    return true;
+  }
+  const threshold = 48;
+  return element.scrollHeight - element.scrollTop - element.clientHeight <= threshold;
+}
+
+function scrollChatToBottom() {
+  if (!chatMessagesList) {
+    return;
+  }
+  chatMessagesList.scrollTo({ top: chatMessagesList.scrollHeight, behavior: 'smooth' });
+}
+
+function adjustChatInputHeight() {
+  if (!(chatInput instanceof HTMLTextAreaElement)) {
+    return;
+  }
+  chatInput.style.height = 'auto';
+  const maxHeight = 160;
+  const nextHeight = Math.min(chatInput.scrollHeight, maxHeight);
+  chatInput.style.height = `${nextHeight}px`;
+}
+
+function toggleEmojiPanel(forceState) {
+  const nextState = typeof forceState === 'boolean' ? forceState : !emojiPanelOpen;
+  emojiPanelOpen = Boolean(nextState);
+  if (emojiPanel) {
+    emojiPanel.hidden = !emojiPanelOpen;
+  }
+  if (emojiToggle) {
+    emojiToggle.setAttribute('aria-expanded', emojiPanelOpen ? 'true' : 'false');
+  }
+}
+
+function closeEmojiPanel() {
+  toggleEmojiPanel(false);
 }
 
 function renderHostRequests(requests) {
@@ -533,6 +795,24 @@ function updateAccessState(participant) {
   }
 
   setInteractionEnabled(hasFullAccess && isActive);
+
+  const allowChat = Boolean(participant) && (participant.is_host || status === 'active');
+  if (chatInput instanceof HTMLTextAreaElement) {
+    chatInput.disabled = !allowChat;
+    chatInput.placeholder = allowChat
+      ? 'Napisz wiadomość do partnera...'
+      : 'Czekaj na dostęp do pokoju...';
+    if (!allowChat) {
+      chatInput.value = '';
+      adjustChatInputHeight();
+    }
+  }
+  if (chatSendButton instanceof HTMLButtonElement) {
+    chatSendButton.disabled = !allowChat;
+  }
+  if (!allowChat) {
+    closeEmojiPanel();
+  }
 
   lastKnownStatus = status;
 }
@@ -792,6 +1072,7 @@ refreshState();
 pollTimer = setInterval(refreshState, 2000);
 presenceTimer = setInterval(sendPresence, 15000);
 sendPresence();
+adjustChatInputHeight();
 
 window.addEventListener('beforeunload', () => {
   clearInterval(pollTimer);

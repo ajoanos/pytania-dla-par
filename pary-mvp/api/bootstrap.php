@@ -88,6 +88,18 @@ function initializeDatabase(PDO $pdo): void
         FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
     )');
 
+    $pdo->exec('CREATE TABLE IF NOT EXISTS chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL,
+        participant_id INTEGER NOT NULL,
+        ciphertext TEXT NOT NULL,
+        iv TEXT NOT NULL,
+        tag TEXT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+        FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
+    )');
+
     $pdo->exec('CREATE TABLE IF NOT EXISTS plan_invites (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         room_id INTEGER NOT NULL,
@@ -330,6 +342,77 @@ function getRoomByKey(string $roomKey): ?array
         return null;
     }
     return $room;
+}
+
+function deriveChatKey(string $roomKey): string
+{
+    return hash('sha256', 'momenty-chat:' . strtoupper($roomKey), true);
+}
+
+function encryptChatMessage(string $message, string $roomKey): array
+{
+    $key = deriveChatKey($roomKey);
+    $iv = random_bytes(12);
+    $tag = '';
+    $ciphertext = openssl_encrypt($message, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
+    if ($ciphertext === false) {
+        throw new RuntimeException('Nie udało się zaszyfrować wiadomości.');
+    }
+    return [
+        'ciphertext' => base64_encode($ciphertext),
+        'iv' => base64_encode($iv),
+        'tag' => base64_encode($tag),
+    ];
+}
+
+function decryptChatMessage(string $ciphertext, string $iv, string $tag, string $roomKey): ?string
+{
+    $key = deriveChatKey($roomKey);
+    $cipherRaw = base64_decode($ciphertext, true);
+    $ivRaw = base64_decode($iv, true);
+    $tagRaw = base64_decode($tag, true);
+
+    if ($cipherRaw === false || $ivRaw === false || $tagRaw === false) {
+        return null;
+    }
+
+    $plain = openssl_decrypt($cipherRaw, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $ivRaw, $tagRaw);
+
+    return $plain === false ? null : $plain;
+}
+
+function fetchChatMessages(int $roomId, string $roomKey, int $limit = 50): array
+{
+    $stmt = db()->prepare('SELECT m.id, m.participant_id, m.ciphertext, m.iv, m.tag, m.created_at, p.display_name
+        FROM chat_messages m
+        JOIN participants p ON p.id = m.participant_id
+        WHERE m.room_id = :room_id
+        ORDER BY m.id DESC
+        LIMIT :limit');
+    $stmt->bindValue(':room_id', $roomId, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll();
+    if (!$rows) {
+        return [];
+    }
+
+    $messages = [];
+    foreach (array_reverse($rows) as $row) {
+        $text = decryptChatMessage((string)$row['ciphertext'], (string)$row['iv'], (string)$row['tag'], $roomKey);
+        if ($text === null) {
+            continue;
+        }
+        $messages[] = [
+            'id' => (int)($row['id'] ?? 0),
+            'participant_id' => (int)($row['participant_id'] ?? 0),
+            'display_name' => (string)($row['display_name'] ?? ''),
+            'text' => $text,
+            'created_at' => (string)($row['created_at'] ?? ''),
+        ];
+    }
+
+    return $messages;
 }
 
 function generateRoomKey(int $length = 6): string
