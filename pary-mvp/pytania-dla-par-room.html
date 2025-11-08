@@ -45,22 +45,24 @@
         <h2>Podaj swoje imię</h2>
         <p class="form__hint">Pokój został już przygotowany. Wpisz imię, aby wejść i zaprosić partnera linkiem lub kodem QR.</p>
       </header>
-      <form id="join-form" class="form">
-        <fieldset class="form__choices">
-          <legend>Co chcesz zrobić?</legend>
-          <label class="form__choice">
-            <input type="radio" name="mode" value="create" checked />
-            Stwórz nowy pokój
-          </label>
-          <label class="form__choice">
-            <input type="radio" name="mode" value="join" />
-            Dołącz do istniejącego pokoju
-          </label>
-        </fieldset>
-        <label class="form__field">
-          <span>Kod pokoju</span>
-          <input type="text" id="room_key" name="room_key" placeholder="np. WIECZOR25" required maxlength="12" autocomplete="off" />
-        </label>
+      <form
+        id="join-form"
+        class="form"
+        data-success-active="room.html"
+        data-success-pending="room-waiting.html"
+        data-storage-key="pary.access.pdp"
+        data-access-redirect="pytania-dla-par.html"
+        data-require-room-key="true"
+        data-show-room-key="true"
+        data-submit-mode="host"
+      >
+        <input type="hidden" id="room_key" name="room_key" autocomplete="off" />
+        <aside class="form__notice" data-role="room-ready" hidden>
+          <p>
+            Wasz pokój <strong data-role="generated-room-key"></strong> jest już gotowy.
+            Wejdź do środka, aby udostępnić link lub kod QR partnerowi. Pokój wygaśnie po 6 godzinach.
+          </p>
+        </aside>
         <label class="form__field">
           <span>Twoje imię</span>
           <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />

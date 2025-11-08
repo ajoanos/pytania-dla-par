@@ -176,6 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const successPending = joinForm.dataset.successPending || 'room-waiting.html';
     const autoApprove = joinForm.dataset.autoApprove === 'true';
     const requireRoomKey = joinForm.dataset.requireRoomKey === 'true';
+    const showRoomKey = joinForm.dataset.showRoomKey === 'true';
+    const submitMode = (joinForm.dataset.submitMode || (autoApprove ? 'invite' : 'host')).trim().toLowerCase();
 
     const focusCandidate = Array.from(joinForm.querySelectorAll('input, select, textarea')).find(
       (element) => element instanceof HTMLElement && element.type !== 'hidden' && !element.disabled,
@@ -184,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const presetRoomKey = (params.get('room_key') || '').trim().toUpperCase();
     const presetName = (params.get('display_name') || '').trim();
-    const presetMode = (params.get('mode') || '').trim().toLowerCase();
     const shouldAutoSubmit = params.has('auto');
     let activeRoomKey = presetRoomKey;
 
@@ -194,9 +195,29 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (joinForm.dataset.roomKey) {
         roomKeyField.value = joinForm.dataset.roomKey.trim().toUpperCase();
       }
+      if (roomKeyField.value) {
+        roomKeyField.value = roomKeyField.value.trim().toUpperCase();
+        activeRoomKey = roomKeyField.value;
+      }
+    } else if (!activeRoomKey && joinForm.dataset.roomKey) {
+      activeRoomKey = joinForm.dataset.roomKey.trim().toUpperCase();
     }
+
+    if (showRoomKey) {
+      const roomNotice = joinForm.querySelector('[data-role="room-ready"]');
+      const roomDisplay = roomNotice?.querySelector('[data-role="generated-room-key"]');
+      if (roomNotice instanceof HTMLElement) {
+        if (roomDisplay instanceof HTMLElement && activeRoomKey) {
+          roomDisplay.textContent = activeRoomKey;
+          roomNotice.hidden = false;
+        } else {
+          roomNotice.hidden = true;
+        }
+      }
+    }
+
     if (requireRoomKey) {
-      const currentKey = roomKeyField?.value?.trim().toUpperCase() || presetRoomKey;
+      const currentKey = activeRoomKey || roomKeyField?.value?.trim().toUpperCase() || presetRoomKey;
       if (!currentKey) {
         window.location.replace(accessRedirect);
         return;
@@ -207,27 +228,12 @@ document.addEventListener('DOMContentLoaded', () => {
         displayNameField.value = presetName;
       }
     }
-    if (presetMode) {
-      const modeField = joinForm.elements.namedItem('mode');
-      let modeInputs = [];
-      if (typeof RadioNodeList !== 'undefined' && modeField instanceof RadioNodeList) {
-        modeInputs = Array.from(modeField);
-      } else if (modeField) {
-        modeInputs = [modeField];
-      }
-      const targetMode = modeInputs.find((input) => input.value === presetMode);
-      if (targetMode) {
-        targetMode.checked = true;
-      }
-    }
-
     joinForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const submitButton = joinForm.querySelector('button[type="submit"]');
       const roomKey = (roomKeyField?.value || '').trim().toUpperCase();
       const displayName = (displayNameField?.value || '').trim();
-      const selectedMode = joinForm.mode?.value || 'create';
-      const mode = autoApprove && selectedMode === 'join' ? 'invite' : selectedMode;
+      const mode = submitMode;
       if (!roomKey || !displayName) {
         alert('Uzupełnij wszystkie pola.');
         return;
