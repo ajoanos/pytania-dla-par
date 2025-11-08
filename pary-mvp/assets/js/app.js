@@ -1,6 +1,7 @@
 const STORAGE_KEY_THEME = 'pary.theme';
 const ACCESS_PASSWORD = 'wedwoje25';
 const ACCESS_STORAGE_KEY = 'pary.access.pdp';
+const PLAN_ACCESS_STORAGE_KEY = 'momenty.planWieczoru.access';
 
 export async function postJson(url, data) {
   const response = await fetch(url, {
@@ -26,6 +27,14 @@ export async function getJson(url) {
     throw new Error(`Błąd sieci ${response.status}`);
   }
   return response.json();
+}
+
+async function requestNewRoomKey() {
+  const payload = await postJson('api/request_room.php', {});
+  if (!payload || !payload.ok || !payload.room_key) {
+    throw new Error(payload?.error || 'Nie udało się przygotować pokoju. Spróbuj ponownie.');
+  }
+  return payload.room_key;
 }
 
 export function initThemeToggle(button) {
@@ -82,12 +91,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const formPassword = passwordForm.dataset.password || ACCESS_PASSWORD;
     const storageKey = passwordForm.dataset.storageKey || ACCESS_STORAGE_KEY;
     const successTarget = passwordForm.dataset.success || 'pytania-dla-par-room.html';
+    const defaultErrorMessage = passwordError?.textContent || 'Niepoprawne hasło. Spróbuj ponownie.';
 
     if (passwordInput) {
       passwordInput.value = '';
       focusElement(passwordInput);
       passwordInput.addEventListener('input', () => {
         if (passwordError) {
+          passwordError.textContent = defaultErrorMessage;
           passwordError.hidden = true;
         }
       });
@@ -100,20 +111,46 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    passwordForm.addEventListener('submit', (event) => {
+    passwordForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const value = passwordInput?.value.trim() || '';
       if (!value) {
         if (passwordError) {
+          passwordError.textContent = defaultErrorMessage;
           passwordError.hidden = false;
         }
         return;
       }
-      if (value === formPassword) {
+      if (value !== formPassword) {
+        if (passwordError) {
+          passwordError.textContent = defaultErrorMessage;
+          passwordError.hidden = false;
+        }
+        return;
+      }
+
+      const submitButton = passwordForm.querySelector('button[type="submit"]');
+      try {
+        if (submitButton) {
+          submitButton.disabled = true;
+        }
+        const roomKey = await requestNewRoomKey();
         sessionStorage.setItem(storageKey, 'true');
-        window.location.href = successTarget;
-      } else if (passwordError) {
-        passwordError.hidden = false;
+        const targetUrl = new URL(successTarget, window.location.href);
+        targetUrl.searchParams.set('room_key', roomKey);
+        window.location.href = targetUrl.toString();
+      } catch (error) {
+        console.error(error);
+        if (passwordError) {
+          passwordError.textContent = error.message || 'Nie udało się przygotować pokoju. Spróbuj ponownie.';
+          passwordError.hidden = false;
+        } else {
+          alert(error.message || 'Nie udało się przygotować pokoju. Spróbuj ponownie.');
+        }
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+        }
       }
     });
   }
@@ -133,45 +170,69 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const roomKeyField = joinForm.elements.namedItem('room_key');
+    const displayNameField = joinForm.elements.namedItem('display_name');
     const successActive = joinForm.dataset.successActive || 'room.html';
     const successPending = joinForm.dataset.successPending || 'room-waiting.html';
     const autoApprove = joinForm.dataset.autoApprove === 'true';
+    const requireRoomKey = joinForm.dataset.requireRoomKey === 'true';
+    const submitMode = (joinForm.dataset.submitMode || (autoApprove ? 'invite' : 'host')).trim().toLowerCase();
 
-    const firstInput = joinForm.querySelector('input');
-    focusElement(firstInput);
+    const focusCandidate = Array.from(joinForm.querySelectorAll('input, select, textarea')).find(
+      (element) => element instanceof HTMLElement && element.type !== 'hidden' && !element.disabled,
+    );
+    focusElement(focusCandidate);
 
     const presetRoomKey = (params.get('room_key') || '').trim().toUpperCase();
     const presetName = (params.get('display_name') || '').trim();
-    const presetMode = (params.get('mode') || '').trim().toLowerCase();
     const shouldAutoSubmit = params.has('auto');
+    let activeRoomKey = presetRoomKey;
 
-    if (presetRoomKey) {
-      joinForm.room_key.value = presetRoomKey;
-    }
-    if (presetName) {
-      joinForm.display_name.value = presetName;
-    }
-    if (presetMode) {
-      const modeField = joinForm.elements.namedItem('mode');
-      let modeInputs = [];
-      if (typeof RadioNodeList !== 'undefined' && modeField instanceof RadioNodeList) {
-        modeInputs = Array.from(modeField);
-      } else if (modeField) {
-        modeInputs = [modeField];
+    if (roomKeyField instanceof HTMLInputElement || roomKeyField instanceof HTMLTextAreaElement) {
+      if (presetRoomKey) {
+        roomKeyField.value = presetRoomKey;
+      } else if (joinForm.dataset.roomKey) {
+        roomKeyField.value = joinForm.dataset.roomKey.trim().toUpperCase();
       }
-      const targetMode = modeInputs.find((input) => input.value === presetMode);
-      if (targetMode) {
-        targetMode.checked = true;
+      if (roomKeyField.value) {
+        roomKeyField.value = roomKeyField.value.trim().toUpperCase();
+        activeRoomKey = roomKeyField.value;
       }
+    } else if (!activeRoomKey && joinForm.dataset.roomKey) {
+      activeRoomKey = joinForm.dataset.roomKey.trim().toUpperCase();
     }
 
+    const roomNotice = joinForm.querySelector('[data-role="room-ready"]');
+    if (roomNotice instanceof HTMLElement) {
+      const roomDisplay = roomNotice.querySelector('[data-role="generated-room-key"]');
+      if (activeRoomKey) {
+        if (roomDisplay instanceof HTMLElement) {
+          roomDisplay.textContent = activeRoomKey;
+        }
+        roomNotice.hidden = false;
+      } else {
+        roomNotice.hidden = true;
+      }
+    }
+
+    if (requireRoomKey) {
+      const currentKey = activeRoomKey || roomKeyField?.value?.trim().toUpperCase() || presetRoomKey;
+      if (!currentKey) {
+        window.location.replace(accessRedirect);
+        return;
+      }
+    }
+    if (displayNameField instanceof HTMLInputElement || displayNameField instanceof HTMLTextAreaElement) {
+      if (presetName) {
+        displayNameField.value = presetName;
+      }
+    }
     joinForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const submitButton = joinForm.querySelector('button[type="submit"]');
-      const roomKey = joinForm.room_key.value.trim().toUpperCase();
-      const displayName = joinForm.display_name.value.trim();
-      const selectedMode = joinForm.mode?.value || 'create';
-      const mode = autoApprove && selectedMode === 'join' ? 'invite' : selectedMode;
+      const roomKey = (roomKeyField?.value || '').trim().toUpperCase();
+      const displayName = (displayNameField?.value || '').trim();
+      const mode = submitMode;
       if (!roomKey || !displayName) {
         alert('Uzupełnij wszystkie pola.');
         return;
@@ -205,7 +266,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    if (shouldAutoSubmit && joinForm.room_key.value && joinForm.display_name.value) {
+    if (
+      shouldAutoSubmit &&
+      roomKeyField &&
+      displayNameField &&
+      roomKeyField.value &&
+      displayNameField.value
+    ) {
       setTimeout(() => {
         if (typeof joinForm.requestSubmit === 'function') {
           joinForm.requestSubmit();
@@ -218,9 +285,75 @@ document.addEventListener('DOMContentLoaded', () => {
         const cleanUrl = new URL(window.location.href);
         ['room_key', 'display_name', 'mode', 'auto'].forEach((key) => cleanUrl.searchParams.delete(key));
         const nextSearch = cleanUrl.searchParams.toString();
-        window.history.replaceState({}, '', `${cleanUrl.pathname}${nextSearch ? `?${nextSearch}` : ''}`);
+        const nextUrl = `${cleanUrl.pathname}${nextSearch ? `?${nextSearch}` : ''}${cleanUrl.hash}`;
+        window.history.replaceState({}, '', nextUrl);
       }
     }
+  }
+
+  const declineForm = document.getElementById('decline-proposal-form');
+  if (declineForm) {
+    const nameInput = declineForm.querySelector('input[name="display_name"]');
+    const errorBox = declineForm.querySelector('[data-role="error"]');
+    const successTarget = declineForm.dataset.success || 'plan-wieczoru-play.html';
+    const storageKey = declineForm.dataset.storageKey || PLAN_ACCESS_STORAGE_KEY;
+
+    focusElement(nameInput);
+
+    declineForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!(nameInput instanceof HTMLInputElement)) {
+        return;
+      }
+      const submitButton = declineForm.querySelector('button[type="submit"]');
+      const displayName = nameInput.value.trim();
+      if (!displayName) {
+        if (errorBox) {
+          errorBox.textContent = 'Podaj swoje imię, aby kontynuować.';
+          errorBox.hidden = false;
+        }
+        nameInput.focus();
+        return;
+      }
+      try {
+        if (errorBox) {
+          errorBox.hidden = true;
+          errorBox.textContent = '';
+        }
+        if (submitButton) {
+          submitButton.disabled = true;
+        }
+        const roomKey = await requestNewRoomKey();
+        const joinPayload = await postJson('api/create_or_join.php', {
+          room_key: roomKey,
+          display_name: displayName,
+          mode: 'host',
+        });
+        if (!joinPayload || !joinPayload.ok) {
+          throw new Error(joinPayload?.error || 'Nie udało się dołączyć do pokoju. Spróbuj ponownie.');
+        }
+        sessionStorage.setItem(storageKey, 'true');
+        const params = new URLSearchParams({
+          room_key: joinPayload.room_key,
+          pid: joinPayload.participant_id,
+          name: displayName,
+          auto: '1',
+        });
+        window.location.href = `${successTarget}?${params.toString()}`;
+      } catch (error) {
+        console.error(error);
+        if (errorBox) {
+          errorBox.textContent = error.message || 'Nie udało się rozpocząć zabawy. Spróbuj ponownie.';
+          errorBox.hidden = false;
+        } else {
+          alert(error.message || 'Nie udało się rozpocząć zabawy. Spróbuj ponownie.');
+        }
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+        }
+      }
+    });
   }
 });
 

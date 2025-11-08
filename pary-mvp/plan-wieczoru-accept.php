@@ -17,6 +17,8 @@ $headline = 'Ups!';
 $message = 'Link jest niepoprawny lub wygasł.';
 $ctaHref = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
 $ctaLabel = 'Zaproponuj własny plan wieczoru';
+$showProposalForm = false;
+$proposalIntro = '';
 
 if ($token !== '') {
     $invite = getPlanInviteByToken($token);
@@ -72,6 +74,8 @@ if ($token !== '') {
                 $headline = 'Dzięki za odpowiedź!';
                 $message = 'Przekazaliśmy informację, że wolisz zaplanować ten wieczór inaczej. Partner dostanie e-mail z Twoją decyzją.';
                 $ctaHref = $planLink;
+                $showProposalForm = true;
+                $proposalIntro = 'Masz inny pomysł na spędzenie wieczoru? Podaj swoje imię i przygotuj własną propozycję.';
             } elseif ($alreadyDeclined) {
                 $status = 'already';
                 $headline = 'Odpowiedź już wysłana';
@@ -155,11 +159,11 @@ function buildSummaryLines(array $invite): array
     }
 
     return [
-        '– nastrój: ' . formatValue($invite['mood'] ?? ''),
-        '– bliskość: ' . formatValue($invite['closeness'] ?? ''),
-        '– klimat: ' . ($extras !== [] ? implode(', ', $extras) : 'Brak dodatków'),
-        '– energia: ' . formatValue($invite['energy'] ?? ''),
-        '– początek: ' . formatValue($invite['start_time'] ?? ''),
+        'Na jaki wieczór masz dziś ochotę?: ' . formatValue($invite['mood'] ?? ''),
+        'Jakiej bliskości dziś potrzebujesz?: ' . formatValue($invite['closeness'] ?? ''),
+        'Co stworzy idealny klimat?: ' . ($extras !== [] ? implode(', ', $extras) : 'Brak dodatków'),
+        'Jak tam dziś Twoja forma?: ' . formatValue($invite['energy'] ?? ''),
+        'Kiedy chcesz żebyśmy zaczęli?: ' . formatValue($invite['start_time'] ?? ''),
     ];
 }
 ?>
@@ -175,30 +179,62 @@ function buildSummaryLines(array $invite): array
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <script type="module" src="assets/js/app.js"></script>
 </head>
 <body class="page page--game" data-theme="light">
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
-        <img
-          class="hero__logo"
-          src="https://sklep.allemedia.pl/momenty/logo.png"
-          alt="Momenty"
-        />
+        <a class="hero__logo-link" href="index.html">
+          <img
+            class="hero__logo"
+            src="https://sklep.allemedia.pl/momenty/logo.png"
+            alt="Momenty"
+          />
+        </a>
         <div class="hero__text">
           <h1><?= htmlspecialchars($headline, ENT_QUOTES, 'UTF-8') ?></h1>
           <p><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></p>
         </div>
+        <details class="game-switcher">
+          <summary class="game-switcher__toggle">Wybierz grę</summary>
+          <div class="game-switcher__panel">
+            <ul class="game-switcher__list">
+              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="plan-wieczoru.html" aria-current="page">Plan Wieczoru – We Dwoje</a></li>
+            </ul>
+          </div>
+        </details>
       </div>
+      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
     <section class="card card--game">
       <header class="card__header">
         <h2>Co dalej?</h2>
       </header>
-      <p>
-        <a class="btn btn--primary" href="<?= htmlspecialchars($ctaHref, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($ctaLabel, ENT_QUOTES, 'UTF-8') ?></a>
-      </p>
+      <?php if ($showProposalForm): ?>
+        <p><?= htmlspecialchars($proposalIntro !== '' ? $proposalIntro : 'Przygotuj swoją wersję planu wieczoru.', ENT_QUOTES, 'UTF-8') ?></p>
+        <form
+          id="decline-proposal-form"
+          class="form form--stack"
+          data-success="plan-wieczoru-play.html"
+          data-storage-key="momenty.planWieczoru.access"
+        >
+          <label class="form__field">
+            <span>Twoje imię</span>
+            <input type="text" name="display_name" placeholder="np. Ola" maxlength="40" required autocomplete="off" />
+          </label>
+          <p class="form__hint" data-role="error" hidden></p>
+          <div class="form__actions">
+            <button type="submit" class="btn btn--primary">Zaproponuj własny plan</button>
+          </div>
+        </form>
+      <?php else: ?>
+        <p>
+          <a class="btn btn--primary" href="<?= htmlspecialchars($ctaHref, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($ctaLabel, ENT_QUOTES, 'UTF-8') ?></a>
+        </p>
+      <?php endif; ?>
       <p>
         <a class="btn btn--ghost" href="plan-wieczoru.html">Wróć do zabawy Plan Wieczoru</a>
       </p>
