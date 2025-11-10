@@ -4,96 +4,66 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Planszówka dla dwojga – Pokój</title>
-  <link rel="manifest" href="manifest.webmanifest">
+  <title>Zabawa planszówka – pokój gry</title>
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet" />
   <script type="module" src="assets/js/app.js"></script>
-  <script type="module" src="assets/js/board-room.js"></script>
 </head>
-<body class="page page--room" data-theme="light" data-waiting-page="planszowa-waiting.html">
-  <main class="container">
-    <header class="hero">
-      <div class="hero__branding">
-        <a class="hero__logo-link" href="index.html">
-          <img
-            class="hero__logo"
-            src="https://sklep.allemedia.pl/momenty/logo.png"
-            alt="Momenty"
-          />
-        </a>
-        <div class="hero__text">
-          <h1>Planszówka dla dwojga</h1>
-          <p>Rzucajcie kostką, wykonujcie zadania i zbierajcie serduszka na romantycznej planszy.</p>
-        </div>
-        <details class="game-switcher">
-          <summary class="game-switcher__toggle">Wybierz grę</summary>
-          <div class="game-switcher__panel">
-            <ul class="game-switcher__list">
-              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
-              <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
-              <li><a class="game-switcher__link" href="planszowa.html" aria-current="page">Planszówka dla dwojga</a></li>
-            </ul>
-          </div>
-        </details>
+<body class="planszowka-body" data-theme="light">
+  <header class="planszowka-topbar">
+    <div class="planszowka-topbar__branding">
+      <a class="planszowka-topbar__logo" href="index.html">
+        <img src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
+      </a>
+      <div class="planszowka-topbar__titles">
+        <h1>Zabawa planszówka – we dwoje</h1>
+        <p>Kolory i klimat jak w Momenty</p>
       </div>
-      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
-    </header>
-
-    <div id="board-content" class="board-layout" hidden>
-      <section class="card board-card board-card--players">
-        <header class="card__header card__header--inline">
-          <div>
-            <h2>Zespół graczy</h2>
-            <p class="card__subtitle">Śledźcie serduszka i kolejność tur.</p>
-          </div>
-        </header>
-        <p id="board-empty" class="board-empty" hidden>Aby rozpocząć, zaproś partnera linkiem lub kodem do pokoju.</p>
-        <ul id="board-players" class="board-players"></ul>
-        <div class="board-share">
-          <p>Udostępnij kod <strong id="board-room-key"></strong> lub wyślij link partnerowi.</p>
-          <div class="board-share__actions">
-            <button type="button" class="btn btn--primary" id="board-copy-link">Skopiuj link do pokoju</button>
-            <a class="btn btn--ghost" id="board-open-invite" href="#" target="_blank" rel="noopener">Otwórz stronę zaproszenia</a>
-          </div>
-          <p id="board-copy-feedback" class="board-share__feedback" role="status" aria-live="polite"></p>
-        </div>
-        <section id="board-pending" class="board-pending" hidden>
-          <h3>Oczekujące zgłoszenia</h3>
-          <p id="board-pending-empty">Gdy ktoś poprosi o wejście, zobaczysz to tutaj.</p>
-          <ul id="board-pending-list" class="board-pending__list"></ul>
-        </section>
-      </section>
-
-      <section class="card board-card board-card--board">
-        <div class="board-track" id="board-grid" role="list" aria-label="Plansza z zadaniami"></div>
-        <div class="board-controls">
-          <div class="board-controls__turn">
-            <p id="board-turn">Oczekiwanie na graczy...</p>
-            <p id="board-last-roll" class="board-last-roll" hidden></p>
-          </div>
-          <button type="button" class="btn btn--primary board-roll" id="board-roll" disabled>Rzuć kostką</button>
-        </div>
-        <article class="board-challenge" id="board-challenge" aria-live="polite">
-          <header>
-            <h3 id="board-challenge-title">Gotowi na start</h3>
-          </header>
-          <p id="board-challenge-description">Gdy pojawi się pierwszy ruch, zobaczysz tu zadanie do wykonania na wylosowanym polu.</p>
-        </article>
-      </section>
-
-      <section class="card board-card board-card--history">
-        <header class="card__header card__header--inline">
-          <div>
-            <h2>Historia wieczoru</h2>
-            <p class="card__subtitle">Zapis ostatnich rzutów i serduszek.</p>
-          </div>
-        </header>
-        <ol id="board-history" class="board-history" aria-live="polite"></ol>
-      </section>
     </div>
+    <div class="planszowka-topbar__meta">
+      <span class="planszowka-topbar__room">Pokój: <strong id="planszowka-room-code">---</strong></span>
+      <button class="planszowka-topbar__theme" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
+    </div>
+  </header>
+  <main class="planszowka-main">
+    <section class="planszowka-status" aria-live="polite">
+      <h2 id="planszowka-turn-label">Czekamy na graczy</h2>
+      <p id="planszowka-wait-hint">Dołączcie w dwójkę, aby zacząć zabawę.</p>
+      <p id="planszowka-info" class="planszowka-info" hidden aria-live="assertive"></p>
+    </section>
+
+    <section class="planszowka-players" id="planszowka-players"></section>
+
+    <section class="planszowka-dice">
+      <button type="button" class="btn btn--primary planszowka-dice__button" id="planszowka-roll" disabled>Rzuć kostką 🎲</button>
+      <p id="planszowka-last-roll" class="planszowka-dice__info">Jeszcze nikt nie rzucał kostką.</p>
+    </section>
+
+    <section class="planszowka-task" aria-live="polite">
+      <h3 id="planszowka-task-title">Wybierz pole na planszy</h3>
+      <p id="planszowka-task-body">Rzućcie kostką i przesuwajcie pionki, aby odkryć kolejne zadania.</p>
+      <div id="planszowka-task-actions" class="planszowka-task__actions" hidden>
+        <button type="button" class="btn btn--primary" data-action="confirm">Zrobione – dodaj serduszko ❤️</button>
+        <button type="button" class="btn btn--ghost" data-action="skip">Pomiń – bez punktu</button>
+      </div>
+      <p id="planszowka-task-notice" class="planszowka-task__notice">Poczekajcie, aż dołączy druga osoba.</p>
+    </section>
+
+    <section class="planszowka-board-wrapper">
+      <ol id="planszowka-board" class="planszowka-board" aria-label="Plansza Zabawy planszówki"></ol>
+    </section>
+
+    <section id="planszowka-finish" class="planszowka-finish" hidden>
+      <h3>Koniec gry!</h3>
+      <p>Wygrany wybiera jedno zadanie dla przegranego 😉</p>
+      <div id="planszowka-finish-scores" class="planszowka-finish__scores"></div>
+      <button type="button" class="btn btn--primary" id="planszowka-reset">Zagraj jeszcze raz</button>
+    </section>
   </main>
+
+  <script type="module" src="assets/js/planszowka-board.js"></script>
 </body>
 </html>
