@@ -202,6 +202,7 @@ function buildSummaryLines(array $invite): array
             <ul class="game-switcher__list">
               <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html" aria-current="page">Plan Wieczoru – We Dwoje</a></li>
+              <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga</a></li>
             </ul>
           </div>
         </details>
