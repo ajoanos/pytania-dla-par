@@ -8,6 +8,7 @@ const inviteForm = document.getElementById('invite-form');
 const displayNameInput = document.getElementById('invite-display-name');
 const inviteError = document.getElementById('invite-error');
 const inviteHint = document.getElementById('invite-hint');
+const successTarget = inviteForm?.dataset.success || 'room.html';
 
 if (roomLabel) {
   roomLabel.textContent = roomKey
@@ -48,7 +49,7 @@ inviteForm?.addEventListener('submit', async (event) => {
       room_key: payload.room_key,
       pid: payload.participant_id,
     });
-    window.location.href = `room.html?${params.toString()}`;
+    window.location.href = `${successTarget}?${params.toString()}`;
   } catch (error) {
     console.error(error);
     showInviteError(error.message || 'Wystąpił błąd podczas dołączania do pokoju.');
