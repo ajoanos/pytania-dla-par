@@ -13,8 +13,8 @@
   <script type="module" src="assets/js/app.js"></script>
 </head>
 <body class="planszowka-body page page--board" data-theme="light">
-  <header class="planszowka-header">
-    <div class="planszowka-header__inner hero">
+  <main class="planszowka-shell">
+    <header class="hero planszowka-hero">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
           <img
@@ -39,9 +39,8 @@
         </details>
       </div>
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
-    </div>
-  </header>
-  <main class="planszowka-main">
+    </header>
+    <div class="planszowka-main">
     <section class="planszowka-status" aria-live="polite">
       <h2 id="planszowka-turn-label">Czekamy na graczy</h2>
       <p id="planszowka-wait-hint">Dołączcie w dwójkę, aby zacząć zabawę.</p>
@@ -77,7 +76,7 @@
       <p id="planszowka-task-notice" class="planszowka-task__notice">Poczekajcie, aż dołączy druga osoba.</p>
     </section>
 
-    <section class="planszowka-board-wrapper">
+    <section class="planszowka-board-wrapper" id="planszowka-board-wrapper">
       <ol id="planszowka-board" class="planszowka-board" aria-label="Plansza Zabawy planszówki"></ol>
     </section>
 
@@ -87,6 +86,7 @@
       <div id="planszowka-finish-scores" class="planszowka-finish__scores"></div>
       <button type="button" class="btn btn--primary" id="planszowka-reset">Zagraj jeszcze raz</button>
     </section>
+    </div>
   </main>
 
   <script type="module" src="assets/js/planszowka-board.js"></script>

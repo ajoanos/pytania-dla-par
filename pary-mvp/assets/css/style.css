@@ -1970,44 +1970,28 @@ body {
   justify-content: flex-start;
 }
 
-.planszowka-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  backdrop-filter: blur(12px);
-  background: color-mix(in srgb, var(--color-card) 92%, transparent);
-  border-bottom: 1px solid var(--color-border);
-  padding: 1.5rem 1.2rem 1rem;
-}
-
-.planszowka-header__inner {
+.planszowka-shell {
   width: min(1100px, 100%);
   margin: 0 auto;
+  padding: 2rem 1.2rem 3rem;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-@media (max-width: 720px) {
-  .planszowka-header__inner {
-    flex-direction: column;
-    align-items: center;
-    gap: 1.5rem;
-  }
+.planszowka-hero {
+  align-items: center;
+  gap: 1.5rem;
+}
 
-  .planszowka-header__inner > .btn {
-    align-self: center;
-  }
+.planszowka-hero .hero__branding {
+  gap: 1.2rem;
 }
 
 .planszowka-main {
   flex: 1;
   display: grid;
   gap: 1.5rem;
-  padding: 1.5rem 1.2rem 3rem;
-  width: min(1100px, 100%);
-  margin: 0 auto 3rem;
   grid-template-columns: 1fr;
   grid-template-areas:
     'status'
@@ -2239,6 +2223,7 @@ body {
   padding: 1.2rem;
   box-shadow: inset 0 0 0 1px var(--color-border), 0 24px 48px rgba(0, 0, 0, 0.08);
   overflow-x: auto;
+  scroll-behavior: smooth;
 }
 
 .planszowka-board {
@@ -2247,8 +2232,8 @@ body {
   padding: 0;
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(6, minmax(110px, 1fr));
-  min-width: 660px;
+  grid-template-columns: repeat(8, minmax(80px, 1fr));
+  min-width: 640px;
 }
 
 .board-field {
@@ -2363,13 +2348,8 @@ body {
 }
 
 @media (max-width: 767px) {
-  .planszowka-header .hero__text h1 {
+  .planszowka-hero .hero__text h1 {
     font-size: 1.2rem;
-  }
-
-  .planszowka-board {
-    grid-template-columns: repeat(6, minmax(100px, 1fr));
-    min-width: 600px;
   }
 }
 
@@ -2386,9 +2366,13 @@ body {
       'finish';
   }
 
+  .planszowka-board-wrapper {
+    overflow-x: visible;
+  }
+
   .planszowka-board {
-    grid-template-columns: repeat(6, minmax(120px, 1fr));
-    min-width: 720px;
+    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    min-width: 0;
   }
 }
 
@@ -2407,6 +2391,10 @@ body {
 
   .planszowka-board-wrapper {
     min-height: 620px;
+  }
+
+  .planszowka-board {
+    grid-template-columns: repeat(5, minmax(140px, 1fr));
   }
 
   .planszowka-status,

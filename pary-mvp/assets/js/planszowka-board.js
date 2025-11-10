@@ -1,3 +1,4 @@
+import { postJson, getJson } from './app.js';
 import { boardFields, finishIndex } from './board-data.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -23,6 +24,7 @@ const elements = {
   taskBody: document.getElementById('planszowka-task-body'),
   taskActions: document.getElementById('planszowka-task-actions'),
   board: document.getElementById('planszowka-board'),
+  boardWrapper: document.getElementById('planszowka-board-wrapper'),
   finishPanel: document.getElementById('planszowka-finish'),
   finishScores: document.getElementById('planszowka-finish-scores'),
   resetButton: document.getElementById('planszowka-reset'),
@@ -44,20 +46,24 @@ let gameState = createEmptyState();
 let toastTimer = null;
 let shareFeedbackTimer = null;
 
+let currentParticipants = [];
+let pollHandle = null;
+let lastSnapshotSignature = '';
+let lastParticipantsSignature = '';
+
 init();
 
-function init() {
+async function init() {
   renderBoardSkeleton();
   bindEvents();
-  setupRealtimeBridge();
 
-  const stored = loadFallbackState();
-  if (stored) {
-    applyState(stored, { skipBroadcast: true });
-  }
+  await loadInitialState();
 
+  ensureParticipantRecord(localPlayerId, localPlayerName);
   ensureLocalPlayer();
   render();
+
+  setupRealtimeBridge();
 }
 
 function createEmptyState() {
@@ -78,6 +84,102 @@ function createEmptyState() {
     version: 0,
     history: [],
   };
+}
+
+async function loadInitialState() {
+  const remoteLoaded = await loadRemoteState();
+  if (remoteLoaded) {
+    return;
+  }
+
+  const stored = loadFallbackState();
+  if (stored) {
+    currentParticipants = deriveParticipantsFromState(stored);
+    applyState(stored, { skipBroadcast: true });
+  } else {
+    applyState(createEmptyState(), { skipBroadcast: true });
+  }
+
+}
+
+async function loadRemoteState() {
+  try {
+    const snapshot = await requestBoardSnapshot();
+    if (!snapshot) {
+      return false;
+    }
+    currentParticipants = snapshot.participants;
+    applyState(snapshot.state, { skipBroadcast: true });
+    updateSnapshotSignature(snapshot.state, snapshot.participants);
+    return true;
+  } catch (error) {
+    console.error('Nie udało się pobrać stanu planszówki z serwera.', error);
+    return false;
+  }
+}
+
+function deriveParticipantsFromState(state) {
+  if (!state || typeof state !== 'object') {
+    return [];
+  }
+  if (state.players && typeof state.players === 'object') {
+    return Object.values(state.players)
+      .map((player) => ({
+        id: String(player?.id ?? ''),
+        name: String(player?.name ?? '').trim() || 'Gracz',
+      }))
+      .filter((entry) => entry.id);
+  }
+  return [];
+}
+
+function ensureParticipantRecord(participantId, participantName) {
+  const id = String(participantId || '').trim();
+  if (!id) {
+    return;
+  }
+  const name = (participantName || '').trim() || 'Ty';
+  const existing = currentParticipants.find((entry) => String(entry.id) === id);
+  if (existing) {
+    existing.name = name;
+  } else {
+    currentParticipants.push({ id, name });
+  }
+}
+
+async function requestBoardSnapshot() {
+  if (!roomKey || !localPlayerId) {
+    return null;
+  }
+  const query = new URLSearchParams({
+    room_key: roomKey,
+    participant_id: localPlayerId,
+  });
+  const url = `api/board_state.php?${query.toString()}`;
+  const payload = await getJson(url);
+  if (!payload || !payload.ok) {
+    if (payload?.error) {
+      console.warn(payload.error);
+    }
+    return null;
+  }
+  const participants = normalizeParticipants(payload.participants);
+  const state = payload.board_state && typeof payload.board_state === 'object'
+    ? payload.board_state
+    : createEmptyState();
+  return { state, participants, updatedAt: payload.updated_at || '' };
+}
+
+function normalizeParticipants(list) {
+  if (!Array.isArray(list)) {
+    return [];
+  }
+  return list
+    .map((item) => ({
+      id: String(item?.id ?? item?.participant_id ?? ''),
+      name: String(item?.display_name ?? item?.name ?? '').trim() || 'Gracz',
+    }))
+    .filter((entry) => entry.id);
 }
 
 function bindEvents() {
@@ -150,20 +252,27 @@ function bindEvents() {
 }
 
 function setupRealtimeBridge() {
-  onGameStateFromServer((incoming) => {
+  if (pollHandle) {
+    window.clearTimeout(pollHandle);
+    pollHandle = null;
+  }
+  onGameStateFromServer((incoming, participants) => {
     if (!incoming) {
       return;
     }
+    currentParticipants = participants;
     applyState(incoming, { skipBroadcast: true });
   });
 }
 
 function ensureLocalPlayer() {
-  const existing = gameState.players[localPlayerId];
+  const id = String(localPlayerId);
+  ensureParticipantRecord(id, localPlayerName);
+  const existing = gameState.players[id];
   if (existing) {
     if (existing.name !== localPlayerName) {
       updateState((draft) => {
-        const player = draft.players[localPlayerId];
+        const player = draft.players[id];
         if (player) {
           player.name = localPlayerName;
         }
@@ -175,17 +284,17 @@ function ensureLocalPlayer() {
   updateState((draft) => {
     const usedColors = new Set(Object.values(draft.players).map((player) => player.color));
     const color = colorPalette.find((item) => !usedColors.has(item)) || colorPalette[0];
-    draft.players[localPlayerId] = {
-      id: localPlayerId,
+    draft.players[id] = {
+      id,
       name: localPlayerName,
       color,
     };
-    draft.turnOrder.push(localPlayerId);
-    draft.positions[localPlayerId] = 0;
-    draft.hearts[localPlayerId] = 0;
-    draft.jail[localPlayerId] = 0;
+    draft.turnOrder.push(id);
+    draft.positions[id] = 0;
+    draft.hearts[id] = 0;
+    draft.jail[id] = 0;
     if (!draft.currentTurn) {
-      draft.currentTurn = localPlayerId;
+      draft.currentTurn = id;
     }
   });
 }
@@ -198,7 +307,7 @@ function handleRollRequest() {
 
   updateState((draft) => {
     const roll = Math.floor(Math.random() * 6) + 1;
-    const playerId = localPlayerId;
+    const playerId = String(localPlayerId);
     const startIndex = draft.positions[playerId] ?? 0;
     let targetIndex = Math.min(startIndex + roll, finishIndex);
     const steps = [];
@@ -339,7 +448,7 @@ function resolveTaskResult(completed) {
   if (!awaiting) {
     return;
   }
-  if (awaiting.playerId === localPlayerId) {
+  if (awaiting.playerId === String(localPlayerId)) {
     displayInfo('Poczekaj, aż partner zatwierdzi zadanie.');
     return;
   }
@@ -388,80 +497,238 @@ function canCurrentPlayerRoll() {
   if (gameState.turnOrder.length < 2) {
     return false;
   }
-  return gameState.currentTurn === localPlayerId;
+  return gameState.currentTurn === String(localPlayerId);
 }
 
 function applyState(newState, options = {}) {
-  gameState = sanitizeState(newState);
+  gameState = sanitizeState(newState, currentParticipants);
   render();
+  updateSnapshotSignature(gameState, currentParticipants);
   if (!options.skipBroadcast) {
     persistState(gameState);
   }
 }
 
 function updateState(mutator, options = {}) {
-  const draft = sanitizeState(JSON.parse(JSON.stringify(gameState)));
+  const draft = sanitizeState(JSON.parse(JSON.stringify(gameState)), currentParticipants);
   mutator(draft);
-  draft.version = (draft.version || 0) + 1;
-  gameState = sanitizeState(draft);
+  const baseVersion = Number.isFinite(draft.version) ? Number(draft.version) : 0;
+  draft.version = baseVersion + 1;
+  gameState = sanitizeState(draft, currentParticipants);
   render();
+  updateSnapshotSignature(gameState, currentParticipants);
   if (options.broadcast !== false) {
     persistState(gameState);
   }
 }
 
-function sanitizeState(state) {
+function sanitizeState(state, participants = []) {
   const next = createEmptyState();
-  if (state && typeof state === 'object') {
-    next.players = { ...state.players };
-    next.turnOrder = Array.isArray(state.turnOrder) ? [...state.turnOrder] : [];
-    next.positions = { ...state.positions };
-    next.hearts = { ...state.hearts };
-    next.jail = { ...state.jail };
-    next.notice = typeof state.notice === 'string' ? state.notice : '';
-    next.currentTurn = state.currentTurn || null;
-    next.awaitingConfirmation = state.awaitingConfirmation || null;
-    next.nextTurn = state.nextTurn || null;
-    next.lastRoll = state.lastRoll || null;
-    next.focusField = typeof state.focusField === 'number' ? state.focusField : 0;
-    next.finished = Boolean(state.finished);
-    next.winnerId = state.winnerId || null;
-    next.version = state.version || 0;
-    next.history = Array.isArray(state.history) ? [...state.history] : [];
+  const source = state && typeof state === 'object' ? state : {};
+
+  const participantList = Array.isArray(participants)
+    ? participants
+        .map((entry) => ({
+          id: String(entry?.id ?? ''),
+          name: String(entry?.name ?? '').trim() || 'Gracz',
+        }))
+        .filter((entry) => entry.id)
+    : [];
+
+  const incomingPlayers = {};
+  if (source.players && typeof source.players === 'object') {
+    Object.entries(source.players).forEach(([key, value]) => {
+      const id = String(value?.id ?? key);
+      if (!id) {
+        return;
+      }
+      incomingPlayers[id] = {
+        id,
+        name: String(value?.name ?? '').trim() || 'Gracz',
+        color: String(value?.color ?? '').trim(),
+      };
+    });
   }
 
-  Object.values(next.players).forEach((player) => {
-    if (!player.color) {
-      player.color = colorPalette[0];
-    }
-    next.positions[player.id] = Math.max(0, next.positions[player.id] ?? 0);
-    next.hearts[player.id] = Math.max(0, next.hearts[player.id] ?? 0);
-    next.jail[player.id] = Math.max(0, next.jail[player.id] ?? 0);
+  const usedColors = new Set(
+    Object.values(incomingPlayers)
+      .map((player) => player.color)
+      .filter((color) => Boolean(color)),
+  );
+
+  const players = {};
+  participantList.forEach((participant) => {
+    const id = participant.id;
+    const existing = incomingPlayers[id] || {};
+    const color = existing.color || pickColor(usedColors);
+    usedColors.add(color);
+    players[id] = {
+      id,
+      name: participant.name,
+      color,
+    };
   });
 
-  next.turnOrder = next.turnOrder.filter((id) => Boolean(next.players[id]));
-  Object.keys(next.positions).forEach((key) => {
-    if (!next.players[key]) {
-      delete next.positions[key];
-    }
-  });
-  Object.keys(next.hearts).forEach((key) => {
-    if (!next.players[key]) {
-      delete next.hearts[key];
-    }
-  });
-  Object.keys(next.jail).forEach((key) => {
-    if (!next.players[key]) {
-      delete next.jail[key];
+  Object.values(incomingPlayers).forEach((player) => {
+    if (!players[player.id]) {
+      const color = player.color || pickColor(usedColors);
+      usedColors.add(color);
+      players[player.id] = {
+        id: player.id,
+        name: player.name,
+        color,
+      };
     }
   });
 
-  if (!next.currentTurn && next.turnOrder.length) {
-    next.currentTurn = next.turnOrder[0];
+  next.players = players;
+
+  const desiredOrder = Array.isArray(source.turnOrder)
+    ? source.turnOrder.map((id) => String(id))
+    : [];
+  const turnOrder = [];
+  desiredOrder.forEach((id) => {
+    if (players[id] && !turnOrder.includes(id)) {
+      turnOrder.push(id);
+    }
+  });
+  Object.keys(players).forEach((id) => {
+    if (!turnOrder.includes(id)) {
+      turnOrder.push(id);
+    }
+  });
+  next.turnOrder = turnOrder;
+
+  const rawPositions = source.positions && typeof source.positions === 'object' ? source.positions : {};
+  const rawHearts = source.hearts && typeof source.hearts === 'object' ? source.hearts : {};
+  const rawJail = source.jail && typeof source.jail === 'object' ? source.jail : {};
+
+  next.positions = {};
+  next.hearts = {};
+  next.jail = {};
+
+  next.turnOrder.forEach((id) => {
+    next.positions[id] = clampFieldIndex(rawPositions[id]);
+    next.hearts[id] = clampNonNegative(rawHearts[id]);
+    next.jail[id] = clampNonNegative(rawJail[id]);
+  });
+
+  next.notice = typeof source.notice === 'string' ? source.notice : '';
+  next.focusField = clampFieldIndex(source.focusField);
+  next.finished = Boolean(source.finished);
+  next.version = Number.isFinite(source.version) ? Number(source.version) : Number(next.version || 0);
+
+  let currentTurn = source.currentTurn ? String(source.currentTurn) : null;
+  if (currentTurn && !players[currentTurn]) {
+    currentTurn = null;
   }
+  next.currentTurn = currentTurn || (next.turnOrder[0] || null);
+
+  const nextTurnCandidate = source.nextTurn ? String(source.nextTurn) : null;
+  next.nextTurn = nextTurnCandidate && players[nextTurnCandidate] ? nextTurnCandidate : null;
+
+  if (source.awaitingConfirmation && typeof source.awaitingConfirmation === 'object') {
+    const awaiting = {
+      playerId: String(source.awaitingConfirmation.playerId || ''),
+      fieldIndex: clampFieldIndex(source.awaitingConfirmation.fieldIndex),
+    };
+    if (awaiting.playerId && players[awaiting.playerId]) {
+      next.awaitingConfirmation = awaiting;
+    }
+  }
+
+  if (source.lastRoll && typeof source.lastRoll === 'object') {
+    const rollPlayerId = String(source.lastRoll.playerId || source.lastRoll.rolled_by || '');
+    if (rollPlayerId) {
+      const rollValue = clampDiceValue(source.lastRoll.value ?? source.lastRoll.roll);
+      next.lastRoll = {
+        playerId: rollPlayerId,
+        value: rollValue,
+        from: clampFieldIndex(source.lastRoll.from ?? source.lastRoll.previous_position),
+        to: clampFieldIndex(source.lastRoll.to ?? source.lastRoll.new_position),
+      };
+    }
+  }
+
+  next.winnerId = source.winnerId ? String(source.winnerId) : null;
+  if (next.winnerId && !players[next.winnerId]) {
+    next.winnerId = null;
+  }
+
+  next.history = Array.isArray(source.history)
+    ? source.history
+        .map((entry) => ({
+          message: String(entry?.message ?? '').trim(),
+          timestamp: String(entry?.timestamp ?? ''),
+        }))
+        .filter((entry) => entry.message)
+    : [];
 
   return next;
 }
+
+function updateSnapshotSignature(state, participants = []) {
+  try {
+    lastSnapshotSignature = JSON.stringify(state ?? {});
+    lastParticipantsSignature = JSON.stringify(participantsSignature(participants));
+  } catch (error) {
+    console.warn('Nie udało się zapisać podpisu stanu planszówki.', error);
+  }
+}
+
+function participantsSignature(participants) {
+  if (!Array.isArray(participants)) {
+    return [];
+  }
+  return participants.map((entry) => ({
+    id: String(entry?.id ?? ''),
+    name: String(entry?.name ?? '').trim(),
+  }));
+}
+
+function clampFieldIndex(value) {
+  const numeric = Number.isFinite(value) ? Number(value) : Number(value ?? 0);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  const bounded = Math.min(Math.max(0, Math.trunc(numeric)), finishIndex);
+  return bounded;
+}
+
+function clampNonNegative(value) {
+  const numeric = Number.isFinite(value) ? Number(value) : Number(value ?? 0);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  return Math.max(0, Math.trunc(numeric));
+}
+
+function clampDiceValue(value) {
+  const numeric = Number.isFinite(value) ? Number(value) : Number(value ?? 0);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  const bounded = Math.min(Math.max(1, Math.trunc(numeric)), 6);
+  return bounded;
+}
+
+function pickColor(usedColors) {
+  const palette = colorPalette;
+  for (let index = 0; index < palette.length; index += 1) {
+    const candidate = palette[index];
+    if (!usedColors.has(candidate)) {
+      return candidate;
+    }
+  }
+  return palette[palette.length - 1];
+}
+
+window.addEventListener('beforeunload', () => {
+  if (pollHandle) {
+    window.clearTimeout(pollHandle);
+    pollHandle = null;
+  }
+});
 
 function renderBoardSkeleton() {
   if (!elements.board) {
@@ -508,11 +775,11 @@ function renderTurn() {
     return;
   }
   const active = gameState.players[gameState.currentTurn];
-  const viewer = gameState.players[localPlayerId];
+  const viewer = gameState.players[String(localPlayerId)];
   elements.turnLabel.textContent = active ? `Teraz ruch: ${active.name}` : 'Trwa ustalanie kolejki';
   if (gameState.awaitingConfirmation) {
     const confirmer = gameState.players[gameState.awaitingConfirmation.playerId];
-    if (gameState.awaitingConfirmation.playerId === localPlayerId) {
+    if (gameState.awaitingConfirmation.playerId === String(localPlayerId)) {
       elements.waitHint.textContent = 'Poczekaj na potwierdzenie zadania przez partnera.';
     } else {
       elements.waitHint.textContent = `Zatwierdź zadanie dla ${confirmer?.name || 'partnera'}.`;
@@ -615,7 +882,7 @@ function renderTaskCard() {
   }
 
   if (awaiting) {
-    const isReviewer = awaiting.playerId !== localPlayerId;
+    const isReviewer = awaiting.playerId !== String(localPlayerId);
     elements.taskActions.hidden = !isReviewer;
     elements.taskNotice.hidden = isReviewer;
     elements.taskNotice.textContent = isReviewer
@@ -677,7 +944,12 @@ function renderBoard() {
 }
 
 function scrollFieldIntoView(tile) {
-  if (!tile) {
+  if (!tile || !elements.boardWrapper) {
+    return;
+  }
+  const { scrollWidth, clientWidth } = elements.boardWrapper;
+  const hasHorizontalOverflow = scrollWidth - clientWidth > 4;
+  if (!hasHorizontalOverflow) {
     return;
   }
   tile.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
@@ -867,23 +1139,48 @@ function loadFallbackState() {
 }
 
 function sendGameStateToServer(state) {
-  // TODO: Wpiąć wysyłkę stanu gry do istniejącego mechanizmu realtime w Momentach.
-  console.debug('Stan planszówki do wysłania', state);
+  if (!roomKey || !localPlayerId) {
+    return;
+  }
+  postJson('api/board_sync.php', {
+    room_key: roomKey,
+    participant_id: localPlayerId,
+    state,
+  })
+    .then((response) => {
+      if (!response || !response.ok) {
+        throw new Error(response?.error || 'Nie udało się zsynchronizować planszówki.');
+      }
+      if (response.board_state && typeof response.board_state === 'object') {
+        updateSnapshotSignature(response.board_state, currentParticipants);
+      }
+    })
+    .catch((error) => {
+      console.error('Nie udało się wysłać stanu planszówki.', error);
+    });
 }
 
 function onGameStateFromServer(callback) {
-  // TODO: Podłącz odbieranie stanu gry (np. websocket / SSE) i wywołuj callback z najnowszym stanem.
-  window.addEventListener('storage', (event) => {
-    if (event.key !== fallbackStorageKey || !event.newValue) {
-      return;
-    }
+  async function poll() {
     try {
-      const parsed = JSON.parse(event.newValue);
-      if (parsed && parsed.state) {
-        callback(parsed.state);
+      const snapshot = await requestBoardSnapshot();
+      if (snapshot) {
+        currentParticipants = snapshot.participants;
+        const stateSignature = JSON.stringify(snapshot.state ?? {});
+        const participantsSig = JSON.stringify(participantsSignature(snapshot.participants));
+        const shouldUpdate =
+          stateSignature !== lastSnapshotSignature || participantsSig !== lastParticipantsSignature;
+        if (shouldUpdate) {
+          updateSnapshotSignature(snapshot.state, snapshot.participants);
+          callback(snapshot.state, snapshot.participants);
+        }
       }
     } catch (error) {
-      console.error('Nie udało się sparsować stanu planszówki z magazynu.', error);
+      console.error('Nie udało się pobrać aktualnego stanu planszówki.', error);
+    } finally {
+      pollHandle = window.setTimeout(poll, 2500);
     }
-  });
+  }
+
+  poll();
 }

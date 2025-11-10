@@ -585,13 +585,25 @@ function getRoomByKeyOrFail(string $roomKey): array
     return $room;
 }
 
+const BOARD_MAX_INDEX = 38;
+
 function defaultBoardState(): array
 {
     return [
+        'players' => [],
+        'turnOrder' => [],
         'positions' => [],
         'hearts' => [],
-        'current_turn' => 0,
-        'last_roll' => null,
+        'jail' => [],
+        'notice' => '',
+        'currentTurn' => null,
+        'awaitingConfirmation' => null,
+        'nextTurn' => null,
+        'lastRoll' => null,
+        'focusField' => 0,
+        'finished' => false,
+        'winnerId' => null,
+        'version' => 0,
         'history' => [],
     ];
 }
@@ -646,85 +658,238 @@ function saveBoardState(int $roomId, array $state): void
 
 function normalizeBoardState(array $state, array $participants): array
 {
-    $positions = [];
-    if (isset($state['positions']) && is_array($state['positions'])) {
-        foreach ($state['positions'] as $key => $value) {
-            $id = (int)$key;
-            if ($id <= 0) {
-                continue;
-            }
-            $positions[$id] = max(1, (int)$value);
-        }
-    }
+    $normalized = defaultBoardState();
 
-    $hearts = [];
-    if (isset($state['hearts']) && is_array($state['hearts'])) {
-        foreach ($state['hearts'] as $key => $value) {
-            $id = (int)$key;
-            if ($id <= 0) {
-                continue;
-            }
-            $hearts[$id] = max(0, (int)$value);
-        }
-    }
-
-    $orderedIds = [];
+    $participantMap = [];
     foreach ($participants as $participant) {
-        $id = (int)($participant['id'] ?? 0);
-        if ($id <= 0) {
+        $id = (string)((int)($participant['id'] ?? 0));
+        if ($id === '0') {
             continue;
         }
-        $orderedIds[] = $id;
-        if (!array_key_exists($id, $positions)) {
-            $positions[$id] = 1;
+        $name = trim((string)($participant['display_name'] ?? ''));
+        if ($name === '') {
+            $name = 'Gracz';
         }
-        if (!array_key_exists($id, $hearts)) {
-            $hearts[$id] = 0;
-        }
-    }
-
-    $positions = array_intersect_key($positions, array_flip($orderedIds));
-    $hearts = array_intersect_key($hearts, array_flip($orderedIds));
-
-    $orderedPositions = [];
-    $orderedHearts = [];
-    foreach ($orderedIds as $id) {
-        $orderedPositions[$id] = $positions[$id];
-        $orderedHearts[$id] = $hearts[$id];
-    }
-
-    $state['positions'] = $orderedPositions;
-    $state['hearts'] = $orderedHearts;
-
-    if (!isset($state['history']) || !is_array($state['history'])) {
-        $state['history'] = [];
-    } else {
-        $state['history'] = array_values(array_slice($state['history'], -40));
-    }
-
-    if (!isset($state['last_roll']) || !is_array($state['last_roll'])) {
-        $state['last_roll'] = null;
-    } else {
-        $state['last_roll'] = [
-            'value' => (int)($state['last_roll']['value'] ?? 0),
-            'rolled_by' => (int)($state['last_roll']['rolled_by'] ?? 0),
-            'new_position' => (int)($state['last_roll']['new_position'] ?? 0),
-            'rolled_at' => (string)($state['last_roll']['rolled_at'] ?? ''),
+        $participantMap[$id] = [
+            'id' => $id,
+            'name' => $name,
         ];
     }
 
-    if (empty($orderedIds)) {
-        $state['current_turn'] = 0;
-    } else {
-        $currentTurn = (int)($state['current_turn'] ?? 0);
-        if (!in_array($currentTurn, $orderedIds, true)) {
-            $state['current_turn'] = $orderedIds[0];
-        } else {
-            $state['current_turn'] = $currentTurn;
+    $incomingPlayers = [];
+    if (isset($state['players']) && is_array($state['players'])) {
+        foreach ($state['players'] as $key => $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            $id = (string)($value['id'] ?? $key);
+            if ($id === '' || $id === '0') {
+                continue;
+            }
+            $incomingPlayers[$id] = [
+                'id' => $id,
+                'name' => trim((string)($value['name'] ?? '')),
+                'color' => trim((string)($value['color'] ?? '')),
+            ];
         }
     }
 
-    return $state;
+    $usedColors = [];
+    foreach ($incomingPlayers as $player) {
+        if ($player['color'] !== '' && !in_array($player['color'], $usedColors, true)) {
+            $usedColors[] = $player['color'];
+        }
+    }
+
+    foreach ($participantMap as $id => $participant) {
+        $existing = $incomingPlayers[$id] ?? null;
+        $color = $existing['color'] ?? pickBoardColor($usedColors);
+        if (!in_array($color, $usedColors, true)) {
+            $usedColors[] = $color;
+        }
+        $normalized['players'][$id] = [
+            'id' => $id,
+            'name' => $participant['name'] !== '' ? $participant['name'] : ($existing['name'] ?? 'Gracz'),
+            'color' => $color,
+        ];
+    }
+
+    $desiredOrder = isset($state['turnOrder']) && is_array($state['turnOrder']) ? $state['turnOrder'] : [];
+    $turnOrder = [];
+    foreach ($desiredOrder as $value) {
+        $id = (string)$value;
+        if ($id !== '' && isset($normalized['players'][$id]) && !in_array($id, $turnOrder, true)) {
+            $turnOrder[] = $id;
+        }
+    }
+    foreach (array_keys($normalized['players']) as $id) {
+        if (!in_array($id, $turnOrder, true)) {
+            $turnOrder[] = $id;
+        }
+    }
+    $normalized['turnOrder'] = $turnOrder;
+
+    if (isset($state['positions']) && is_array($state['positions'])) {
+        foreach ($state['positions'] as $key => $value) {
+            $id = (string)$key;
+            if (!isset($normalized['players'][$id])) {
+                continue;
+            }
+            $normalized['positions'][$id] = clampBoardIndexValue($value);
+        }
+    }
+    foreach ($normalized['players'] as $id => $_) {
+        if (!array_key_exists($id, $normalized['positions'])) {
+            $normalized['positions'][$id] = 0;
+        }
+    }
+
+    if (isset($state['hearts']) && is_array($state['hearts'])) {
+        foreach ($state['hearts'] as $key => $value) {
+            $id = (string)$key;
+            if (!isset($normalized['players'][$id])) {
+                continue;
+            }
+            $normalized['hearts'][$id] = clampNonNegativeInt($value);
+        }
+    }
+    foreach ($normalized['players'] as $id => $_) {
+        if (!array_key_exists($id, $normalized['hearts'])) {
+            $normalized['hearts'][$id] = 0;
+        }
+    }
+
+    if (isset($state['jail']) && is_array($state['jail'])) {
+        foreach ($state['jail'] as $key => $value) {
+            $id = (string)$key;
+            if (!isset($normalized['players'][$id])) {
+                continue;
+            }
+            $normalized['jail'][$id] = clampNonNegativeInt($value);
+        }
+    }
+    foreach ($normalized['players'] as $id => $_) {
+        if (!array_key_exists($id, $normalized['jail'])) {
+            $normalized['jail'][$id] = 0;
+        }
+    }
+
+    $normalized['notice'] = isset($state['notice']) && is_string($state['notice']) ? $state['notice'] : '';
+    $normalized['focusField'] = clampBoardIndexValue($state['focusField'] ?? 0);
+    $normalized['finished'] = !empty($state['finished']);
+    $normalized['version'] = isset($state['version']) ? (int)$state['version'] : 0;
+
+    $currentTurn = isset($state['currentTurn']) ? (string)$state['currentTurn'] : '';
+    if ($currentTurn !== '' && isset($normalized['players'][$currentTurn])) {
+        $normalized['currentTurn'] = $currentTurn;
+    } else {
+        $normalized['currentTurn'] = $turnOrder[0] ?? null;
+    }
+
+    $nextTurn = isset($state['nextTurn']) ? (string)$state['nextTurn'] : '';
+    $normalized['nextTurn'] = ($nextTurn !== '' && isset($normalized['players'][$nextTurn])) ? $nextTurn : null;
+
+    if (isset($state['awaitingConfirmation']) && is_array($state['awaitingConfirmation'])) {
+        $awaitingPlayer = (string)($state['awaitingConfirmation']['playerId'] ?? '');
+        $awaitingField = clampBoardIndexValue($state['awaitingConfirmation']['fieldIndex'] ?? 0);
+        if ($awaitingPlayer !== '' && isset($normalized['players'][$awaitingPlayer])) {
+            $normalized['awaitingConfirmation'] = [
+                'playerId' => $awaitingPlayer,
+                'fieldIndex' => $awaitingField,
+            ];
+        }
+    }
+
+    if (isset($state['lastRoll']) && is_array($state['lastRoll'])) {
+        $rollPlayer = (string)($state['lastRoll']['playerId'] ?? '');
+        if ($rollPlayer !== '' && isset($normalized['players'][$rollPlayer])) {
+            $normalized['lastRoll'] = [
+                'playerId' => $rollPlayer,
+                'value' => clampDiceValueInt($state['lastRoll']['value'] ?? 0),
+                'from' => clampBoardIndexValue($state['lastRoll']['from'] ?? 0),
+                'to' => clampBoardIndexValue($state['lastRoll']['to'] ?? 0),
+            ];
+        }
+    }
+
+    $winnerId = isset($state['winnerId']) ? (string)$state['winnerId'] : '';
+    $normalized['winnerId'] = ($winnerId !== '' && isset($normalized['players'][$winnerId])) ? $winnerId : null;
+
+    if (isset($state['history']) && is_array($state['history'])) {
+        $history = [];
+        foreach ($state['history'] as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $message = trim((string)($entry['message'] ?? ''));
+            if ($message === '') {
+                continue;
+            }
+            $history[] = [
+                'message' => $message,
+                'timestamp' => (string)($entry['timestamp'] ?? gmdate('c')),
+            ];
+        }
+        if (count($history) > 40) {
+            $history = array_slice($history, -40);
+        }
+        $normalized['history'] = $history;
+    }
+
+    return $normalized;
+}
+
+function clampBoardIndexValue($value): int
+{
+    if (is_numeric($value)) {
+        $numeric = (int)$value;
+    } else {
+        $numeric = 0;
+    }
+    if ($numeric < 0) {
+        return 0;
+    }
+    if ($numeric > BOARD_MAX_INDEX) {
+        return BOARD_MAX_INDEX;
+    }
+    return $numeric;
+}
+
+function clampNonNegativeInt($value): int
+{
+    if (is_numeric($value)) {
+        $numeric = (int)$value;
+    } else {
+        $numeric = 0;
+    }
+    return $numeric < 0 ? 0 : $numeric;
+}
+
+function clampDiceValueInt($value): int
+{
+    if (is_numeric($value)) {
+        $numeric = (int)$value;
+    } else {
+        $numeric = 0;
+    }
+    if ($numeric <= 0) {
+        return 0;
+    }
+    if ($numeric > 6) {
+        return 6;
+    }
+    return $numeric;
+}
+
+function pickBoardColor(array $usedColors): string
+{
+    $palette = ['rose', 'mint', 'violet', 'sun', 'sea'];
+    foreach ($palette as $color) {
+        if (!in_array($color, $usedColors, true)) {
+            return $color;
+        }
+    }
+    return $palette[count($palette) - 1] ?? 'rose';
 }
 
 function appendBoardHistory(array &$state, string $message): void
