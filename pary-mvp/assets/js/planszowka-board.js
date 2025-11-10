@@ -14,15 +14,19 @@ const colorPalette = ['rose', 'mint', 'violet', 'sun', 'sea'];
 const fallbackStorageKey = `momenty.planszowka.state.${roomKey}`;
 const shareLinkUrl = buildShareUrl();
 
+const rollButtons = Array.from(document.querySelectorAll('[data-role="roll-button"]'));
+
 const elements = {
   turnLabel: document.getElementById('planszowka-turn-label'),
   waitHint: document.getElementById('planszowka-wait-hint'),
   players: document.getElementById('planszowka-players'),
-  diceButton: document.getElementById('planszowka-roll'),
+  diceButtons: rollButtons,
+  diceButton: rollButtons[0] || null,
   lastRoll: document.getElementById('planszowka-last-roll'),
   taskTitle: document.getElementById('planszowka-task-title'),
   taskBody: document.getElementById('planszowka-task-body'),
   taskActions: document.getElementById('planszowka-task-actions'),
+  taskRollButton: document.getElementById('planszowka-roll-inline'),
   board: document.getElementById('planszowka-board'),
   boardWrapper: document.getElementById('planszowka-board-wrapper'),
   finishPanel: document.getElementById('planszowka-finish'),
@@ -183,7 +187,9 @@ function normalizeParticipants(list) {
 }
 
 function bindEvents() {
-  elements.diceButton?.addEventListener('click', handleRollRequest);
+  elements.diceButtons?.forEach((button) => {
+    button.addEventListener('click', handleRollRequest);
+  });
   elements.resetButton?.addEventListener('click', () => {
     if (!confirm('Zresetować planszę i zacząć od nowa?')) {
       return;
@@ -886,10 +892,19 @@ function renderPlayers() {
 }
 
 function renderDice() {
-  if (!elements.diceButton || !elements.lastRoll) {
+  if (!elements.lastRoll) {
     return;
   }
-  elements.diceButton.disabled = !canCurrentPlayerRoll();
+  const canRoll = canCurrentPlayerRoll();
+  if (Array.isArray(elements.diceButtons)) {
+    elements.diceButtons.forEach((button) => {
+      if (button instanceof HTMLButtonElement) {
+        button.disabled = !canRoll;
+      }
+    });
+  } else if (elements.diceButton instanceof HTMLButtonElement) {
+    elements.diceButton.disabled = !canRoll;
+  }
   const roll = gameState.lastRoll;
   if (roll && roll.value) {
     const name = gameState.players[roll.playerId]?.name || 'Gracz';
@@ -910,6 +925,12 @@ function renderTaskCard() {
   const reviewer = awaiting?.reviewerId ? gameState.players[awaiting.reviewerId] : null;
   const confirmButton = elements.taskActions.querySelector('[data-action="confirm"]');
   const skipButton = elements.taskActions.querySelector('[data-action="skip"]');
+  const inlineRollButton = elements.taskRollButton instanceof HTMLButtonElement
+    ? elements.taskRollButton
+    : elements.taskActions.querySelector('#planszowka-roll-inline');
+  const canRoll = canCurrentPlayerRoll();
+
+  elements.taskActions.hidden = false;
 
   if (field) {
     elements.taskTitle.textContent = field.label;
@@ -935,6 +956,11 @@ function renderTaskCard() {
     elements.taskBody.textContent = 'Rzućcie kostką i przesuwajcie pionki, aby odkryć kolejne zadania.';
   }
 
+  if (inlineRollButton) {
+    inlineRollButton.hidden = false;
+    inlineRollButton.disabled = !canRoll;
+  }
+
   if (awaiting) {
     const localId = String(localPlayerId);
     const isPerformer = awaiting.playerId === localId;
@@ -943,12 +969,18 @@ function renderTaskCard() {
 
     if (confirmButton) {
       confirmButton.textContent = 'Dodaj serduszko ❤️';
+      confirmButton.hidden = !isReviewer;
+      confirmButton.disabled = !isReviewer;
     }
     if (skipButton) {
       skipButton.textContent = 'Nie wykonał';
+      skipButton.hidden = !isReviewer;
+      skipButton.disabled = !isReviewer;
+    }
+    if (inlineRollButton) {
+      inlineRollButton.disabled = !canRoll;
     }
 
-    elements.taskActions.hidden = !isReviewer;
     elements.taskNotice.hidden = false;
 
     if (isReviewer) {
@@ -963,7 +995,14 @@ function renderTaskCard() {
         : 'Czekamy na decyzję partnera.';
     }
   } else {
-    elements.taskActions.hidden = true;
+    if (confirmButton) {
+      confirmButton.hidden = true;
+      confirmButton.disabled = true;
+    }
+    if (skipButton) {
+      skipButton.hidden = true;
+      skipButton.disabled = true;
+    }
     elements.taskNotice.hidden = false;
     if (gameState.turnOrder.length < 2) {
       elements.taskNotice.textContent = 'Poczekajcie, aż dołączy druga osoba.';

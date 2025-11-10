@@ -2203,12 +2203,16 @@ body {
 
 .planszowka-task__actions {
   display: flex;
+  flex-direction: column;
   gap: 0.75rem;
-  flex-wrap: wrap;
 }
 
 .planszowka-task__actions .btn {
-  flex: 1 1 180px;
+  width: 100%;
+}
+
+.planszowka-task__roll {
+  order: 3;
 }
 
 .planszowka-task__notice {
@@ -2229,12 +2233,14 @@ body {
 
 .planszowka-board {
   list-style: none;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
   display: grid;
   gap: 0.75rem;
   grid-template-columns: repeat(1, minmax(0, 1fr));
   min-width: 0;
+  max-width: 640px;
+  width: 100%;
 }
 
 .board-field {
@@ -2355,17 +2361,13 @@ body {
 
   .planszowka-task__actions {
     position: sticky;
-    top: 0;
+    top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
     z-index: 3;
     background: var(--color-card);
-    padding: 0.75rem 0;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
-  }
-}
-
-@media (min-width: 600px) {
-  .planszowka-board {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0.75rem;
+    border-radius: 1rem;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
   }
 }
 
@@ -2386,9 +2388,18 @@ body {
     overflow-x: visible;
   }
 
-  .planszowka-board {
-    grid-template-columns: repeat(3, minmax(140px, 1fr));
-    min-width: 0;
+  .planszowka-task__actions {
+    position: static;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .planszowka-task__actions .btn {
+    flex: 1 1 180px;
+    width: auto;
   }
 }
 
@@ -2407,10 +2418,6 @@ body {
 
   .planszowka-board-wrapper {
     min-height: 620px;
-  }
-
-  .planszowka-board {
-    grid-template-columns: repeat(4, minmax(160px, 1fr));
   }
 
   .planszowka-status,

@@ -62,16 +62,17 @@
     </section>
 
     <section class="planszowka-dice">
-      <button type="button" class="btn btn--primary planszowka-dice__button" id="planszowka-roll" disabled>Rzuć kostką 🎲</button>
+      <button type="button" class="btn btn--primary planszowka-dice__button" id="planszowka-roll" data-role="roll-button" disabled>Rzuć kostką 🎲</button>
       <p id="planszowka-last-roll" class="planszowka-dice__info">Jeszcze nikt nie rzucał kostką.</p>
     </section>
 
     <section class="planszowka-task" aria-live="polite">
       <h3 id="planszowka-task-title">Wybierz pole na planszy</h3>
       <p id="planszowka-task-body">Rzućcie kostką i przesuwajcie pionki, aby odkryć kolejne zadania.</p>
-      <div id="planszowka-task-actions" class="planszowka-task__actions" hidden>
+      <div id="planszowka-task-actions" class="planszowka-task__actions">
         <button type="button" class="btn btn--primary" data-action="confirm">Zrobione – dodaj serduszko ❤️</button>
         <button type="button" class="btn btn--ghost" data-action="skip">Pomiń – bez punktu</button>
+        <button type="button" class="btn btn--ghost planszowka-task__roll" id="planszowka-roll-inline" data-role="roll-button">Rzuć kostką 🎲</button>
       </div>
       <p id="planszowka-task-notice" class="planszowka-task__notice">Poczekajcie, aż dołączy druga osoba.</p>
     </section>
