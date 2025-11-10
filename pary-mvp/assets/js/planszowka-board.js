@@ -1,17 +1,19 @@
 import { postJson, getJson } from './app.js';
-import { boardFields, finishIndex } from './board-data.js';
+import { boardFields, finishIndex, boardConfig } from './board-data.js';
 
 const params = new URLSearchParams(window.location.search);
 const roomKey = (params.get('room_key') || '').toUpperCase();
 const localPlayerId = params.get('pid') || '';
 const localPlayerName = (params.get('name') || '').trim() || 'Ty';
 
+const accessPage = boardConfig && boardConfig.accessPage ? boardConfig.accessPage : 'planszowa.html';
 if (!roomKey || !localPlayerId) {
-  window.location.replace('planszowa.html');
+  window.location.replace(accessPage);
 }
 
 const colorPalette = ['rose', 'mint', 'violet', 'sun', 'sea'];
-const fallbackStorageKey = `momenty.planszowka.state.${roomKey}`;
+const storagePrefix = boardConfig && boardConfig.storagePrefix ? boardConfig.storagePrefix : 'momenty.planszowka';
+const fallbackStorageKey = `${storagePrefix}.state.${roomKey}`;
 const shareLinkUrl = buildShareUrl();
 
 const rollButtons = Array.from(document.querySelectorAll('[data-role="roll-button"]'));
@@ -384,14 +386,16 @@ function resolveSpecialTiles(draft, playerId, startIndex) {
       break;
     }
     if (field.type === 'moveForward') {
-      index = Math.min(index + 5, finishIndex);
-      messages.push('Przemieszczasz się 5 pól do przodu.');
+      const steps = Number.isFinite(field.steps) ? Math.max(1, Number(field.steps)) : 5;
+      index = Math.min(index + steps, finishIndex);
+      messages.push(field.label || `Przemieszczasz się ${describeSteps(steps)} do przodu.`);
       loopGuard += 1;
       continue;
     }
     if (field.type === 'moveBack') {
-      index = Math.max(index - 4, 0);
-      messages.push('Cofasz się o 4 pola.');
+      const steps = Number.isFinite(field.steps) ? Math.max(1, Number(field.steps)) : 4;
+      index = Math.max(index - steps, 0);
+      messages.push(field.label || `Cofasz się o ${describeSteps(steps)}.`);
       loopGuard += 1;
       continue;
     }
@@ -399,17 +403,18 @@ function resolveSpecialTiles(draft, playerId, startIndex) {
       const safeIndex = findPreviousSafeField(index);
       if (safeIndex !== index) {
         index = safeIndex;
-        messages.push('Wracasz na najbliższe bezpieczne pole.');
+        messages.push(field.label || 'Wracasz na najbliższe bezpieczne pole.');
         loopGuard += 1;
         continue;
       }
     }
     if (field.type === 'jail') {
-      draft.jail[playerId] = 2;
-      messages.push('Lądujesz w więzieniu – pauzujesz dwie kolejne tury.');
+      const penalty = Number.isFinite(field.penaltyTurns) ? Math.max(1, Number(field.penaltyTurns)) : 2;
+      draft.jail[playerId] = penalty;
+      messages.push(field.label || `Lądujesz w więzieniu – pauzujesz ${describeTurns(penalty)}.`);
     }
     if (field.type === 'safe') {
-      notice = 'Bezpieczne pole – chwilka oddechu 😌';
+      notice = field.label || 'Bezpieczne pole – chwilka oddechu 😌';
     }
     break;
   }
@@ -445,7 +450,7 @@ function determineNextTurn(draft, currentId) {
     if (jailTurns > 0) {
       draft.jail[candidate] = Math.max(0, jailTurns - 1);
       const name = draft.players[candidate]?.name || 'Gracz';
-      addHistoryEntry(draft, `${name} pauzuje jeszcze ${draft.jail[candidate]} tur(y).`);
+      addHistoryEntry(draft, `${name} pauzuje jeszcze ${describeTurns(draft.jail[candidate])}.`);
       continue;
     }
     return candidate;
@@ -883,7 +888,7 @@ function renderPlayers() {
         <span class="player-card__hearts" aria-label="Serduszka">❤️ ${hearts}</span>
       </header>
       <footer class="player-card__footer">
-        ${jail > 0 ? `<span class="player-card__status">Pauzuje ${jail} tur</span>` : '<span class="player-card__status">Gotowy do gry</span>'}
+        ${jail > 0 ? `<span class="player-card__status">Pauzuje ${describeTurns(jail)}</span>` : '<span class="player-card__status">Gotowy do gry</span>'}
       </footer>
     `;
     elements.players.appendChild(card);
@@ -935,23 +940,7 @@ function renderTaskCard() {
     elements.taskTitle.textContent = 'Wybierz pole na planszy';
   }
 
-  if (field?.type === 'task') {
-    elements.taskBody.textContent = 'Wykonajcie zadanie, a partner może nagrodzić Cię serduszkiem.';
-  } else if (field?.type === 'safe') {
-    elements.taskBody.textContent = 'Bezpieczne pole – złapcie oddech i przygotujcie się na kolejne wyzwanie.';
-  } else if (field?.type === 'jail') {
-    elements.taskBody.textContent = 'Pauzujesz dwie tury lub wykonujesz polecenia partnera przez minutę.';
-  } else if (field?.type === 'moveForward') {
-    elements.taskBody.textContent = 'Przesuń pionek o 5 pól do przodu i wykonaj nowe zadanie.';
-  } else if (field?.type === 'moveBack') {
-    elements.taskBody.textContent = 'Cofasz się o 4 pola i sprawdzasz nowe zadanie.';
-  } else if (field?.type === 'gotoNearestSafe') {
-    elements.taskBody.textContent = 'Wracasz na najbliższe bezpieczne pole.';
-  } else if (field?.type === 'finish') {
-    elements.taskBody.textContent = 'Meta! Wygrany wybiera zadanie dla przegranego.';
-  } else {
-    elements.taskBody.textContent = 'Rzućcie kostką i przesuwajcie pionki, aby odkryć kolejne zadania.';
-  }
+  elements.taskBody.textContent = getFieldDescription(field);
 
   if (inlineRollButton) {
     inlineRollButton.hidden = false;
@@ -1136,11 +1125,69 @@ function displayInfo(message) {
   }, 3500);
 }
 
+function getFieldDescription(field) {
+  if (!field) {
+    return 'Rzućcie kostką i przesuwajcie pionki, aby odkryć kolejne zadania.';
+  }
+  if (field.type === 'task') {
+    return 'Wykonajcie zadanie, a partner może nagrodzić Cię serduszkiem.';
+  }
+  if (field.type === 'safe') {
+    return field.label || 'Bezpieczne pole – złapcie oddech i przygotujcie się na kolejne wyzwanie.';
+  }
+  if (field.type === 'jail') {
+    const penalty = Number.isFinite(field.penaltyTurns) ? Math.max(1, Number(field.penaltyTurns)) : 2;
+    return field.label || `Pauzujesz ${describeTurns(penalty)} lub wykonujesz polecenia partnera.`;
+  }
+  if (field.type === 'moveForward') {
+    const steps = Number.isFinite(field.steps) ? Math.max(1, Number(field.steps)) : 5;
+    return field.label || `Przesuń pionek o ${describeSteps(steps)} do przodu i wykonaj nowe zadanie.`;
+  }
+  if (field.type === 'moveBack') {
+    const steps = Number.isFinite(field.steps) ? Math.max(1, Number(field.steps)) : 4;
+    return field.label || `Cofasz się o ${describeSteps(steps)} i sprawdzasz nowe zadanie.`;
+  }
+  if (field.type === 'gotoNearestSafe') {
+    return field.label || 'Wracasz na najbliższe bezpieczne pole.';
+  }
+  if (field.type === 'finish') {
+    return field.label || 'Meta! Wygrany wybiera zadanie dla przegranego.';
+  }
+  if (field.type === 'start') {
+    return field.label || 'Start – przygotujcie się do wspólnej zabawy.';
+  }
+  return 'Rzućcie kostką i przesuwajcie pionki, aby odkryć kolejne zadania.';
+}
+
+function describeSteps(count) {
+  return `${count} ${getPolishPlural(count, 'pole', 'pola', 'pól')}`;
+}
+
+function describeTurns(count) {
+  return `${count} ${getPolishPlural(count, 'turę', 'tury', 'tur')}`;
+}
+
+function getPolishPlural(count, singular, few, many) {
+  const abs = Math.abs(Number(count)) % 100;
+  const lastDigit = abs % 10;
+  if (abs > 10 && abs < 20) {
+    return many;
+  }
+  if (lastDigit === 1) {
+    return singular;
+  }
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return few;
+  }
+  return many;
+}
+
 function buildShareUrl() {
   if (!roomKey) {
     return '';
   }
-  const url = new URL('planszowa-invite.html', window.location.href);
+  const invitePage = boardConfig && boardConfig.invitePage ? boardConfig.invitePage : 'planszowa-invite.html';
+  const url = new URL(invitePage, window.location.href);
   url.searchParams.set('room_key', roomKey);
   return url.toString();
 }

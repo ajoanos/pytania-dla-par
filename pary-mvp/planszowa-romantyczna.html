@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Pytania dla par – Stwórz pokój</title>
+  <title>Planszówka dla dwojga (romantyczna, zbliżająca) – Hasło dostępu</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
   <script type="module" src="assets/js/app.js"></script>
 </head>
-<body class="page page--game" data-theme="light">
+<body class="page page--access" data-theme="light">
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
@@ -24,17 +24,17 @@
           />
         </a>
         <div class="hero__text">
-          <h1>Pytania dla par</h1>
-          <p>Stwórz pokój i zaproś partnera, aby rozpocząć grę.</p>
+          <h1>Planszówka dla dwojga (romantyczna, zbliżająca)</h1>
+          <p>Podaj hasło, aby przygotować czułą planszową przygodę online.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
           <div class="game-switcher__panel">
             <ul class="game-switcher__list">
-              <li><a class="game-switcher__link" href="pytania-dla-par.html" aria-current="page">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
-              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
+              <li><a class="game-switcher__link" href="planszowa-romantyczna.html" aria-current="page">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
             </ul>
           </div>
         </details>
@@ -42,32 +42,24 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--game" id="game-card">
-      <header class="card__header">
-        <h2>Pytania dla par</h2>
-      </header>
+    <section class="card card--password" id="password-card">
+      <h2>Podaj hasło dostępu</h2>
       <form
-        id="join-form"
-        class="form"
-        data-success-active="room.html"
-        data-success-pending="room-waiting.html"
-        data-storage-key="pary.access.pdp"
-        data-access-redirect="pytania-dla-par.html"
-        data-require-room-key="true"
-        data-submit-mode="host"
+        id="password-form"
+        class="form form--inline"
+        data-success="planszowa-romantyczna-room.html"
+        data-storage-key="momenty.planszowa.romantyczna.access"
       >
-        <input type="hidden" id="room_key" name="room_key" autocomplete="off" />
-        <aside class="form__notice" data-role="room-ready" hidden>
-          <p>
-            Wasz pokój jest już gotowy. Wejdź do środka, aby zaprosić partnera linkiem lub kodem QR. Pokój wygaśnie po 6 godzinach.
-          </p>
-        </aside>
         <label class="form__field">
-          <span>Twoje imię</span>
-          <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
+          <span>Hasło</span>
+          <input type="password" id="access-password" name="access_password" placeholder="••••" autocomplete="current-password" required />
         </label>
-        <button type="submit" class="btn btn--primary btn--enter-room">Wejdź do pokoju</button>
+        <div class="form__actions">
+          <button type="submit" class="btn btn--primary">Potwierdź</button>
+          <button type="button" class="btn btn--ghost" id="password-cancel" data-back="index.html">Wróć</button>
+        </div>
       </form>
+      <p class="form__hint" id="password-error" hidden>Niepoprawne hasło. Spróbuj ponownie.</p>
     </section>
 
     <footer class="footer">
