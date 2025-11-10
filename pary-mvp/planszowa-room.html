@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Pytania dla par – Stwórz pokój</title>
+  <title>Planszówka dla dwojga – Stwórz pokój</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,16 +24,16 @@
           />
         </a>
         <div class="hero__text">
-          <h1>Pytania dla par</h1>
-          <p>Stwórz pokój i zaproś partnera, aby rozpocząć grę.</p>
+          <h1>Planszówka dla dwojga</h1>
+          <p>Stwórz pokój, aby zaprosić partnera i rozpocząć romantyczną rozgrywkę.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
           <div class="game-switcher__panel">
             <ul class="game-switcher__list">
-              <li><a class="game-switcher__link" href="pytania-dla-par.html" aria-current="page">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
-              <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga</a></li>
+              <li><a class="game-switcher__link" href="planszowa.html" aria-current="page">Planszówka dla dwojga</a></li>
             </ul>
           </div>
         </details>
@@ -43,22 +43,22 @@
 
     <section class="card card--game" id="game-card">
       <header class="card__header">
-        <h2>Pytania dla par</h2>
+        <h2>Planszówka dla dwojga</h2>
       </header>
       <form
         id="join-form"
         class="form"
-        data-success-active="room.html"
-        data-success-pending="room-waiting.html"
-        data-storage-key="pary.access.pdp"
-        data-access-redirect="pytania-dla-par.html"
+        data-success-active="planszowa-board.html"
+        data-success-pending="planszowa-waiting.html"
+        data-storage-key="momenty.planszowa.access"
+        data-access-redirect="planszowa.html"
         data-require-room-key="true"
         data-submit-mode="host"
       >
         <input type="hidden" id="room_key" name="room_key" autocomplete="off" />
         <aside class="form__notice" data-role="room-ready" hidden>
           <p>
-            Wasz pokój jest już gotowy. Wejdź do środka, aby zaprosić partnera linkiem lub kodem QR. Pokój wygaśnie po 6 godzinach.
+            Wasz pokój jest gotowy. Skopiuj link lub kod, aby zaprosić partnera. Pokój wygaśnie po 6 godzinach.
           </p>
         </aside>
         <label class="form__field">
