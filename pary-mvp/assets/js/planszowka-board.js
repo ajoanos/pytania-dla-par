@@ -21,14 +21,12 @@ const elements = {
   waitHint: document.getElementById('planszowka-wait-hint'),
   players: document.getElementById('planszowka-players'),
   diceButtons: rollButtons,
-  diceButton: rollButtons[0] || null,
   lastRoll: document.getElementById('planszowka-last-roll'),
   taskTitle: document.getElementById('planszowka-task-title'),
   taskBody: document.getElementById('planszowka-task-body'),
   taskActions: document.getElementById('planszowka-task-actions'),
   taskRollButton: document.getElementById('planszowka-roll-inline'),
   board: document.getElementById('planszowka-board'),
-  boardWrapper: document.getElementById('planszowka-board-wrapper'),
   finishPanel: document.getElementById('planszowka-finish'),
   finishScores: document.getElementById('planszowka-finish-scores'),
   resetButton: document.getElementById('planszowka-reset'),
@@ -54,6 +52,7 @@ let currentParticipants = [];
 let pollHandle = null;
 let lastSnapshotSignature = '';
 let lastParticipantsSignature = '';
+let lastFocusedFieldIndex = null;
 
 init();
 
@@ -902,8 +901,6 @@ function renderDice() {
         button.disabled = !canRoll;
       }
     });
-  } else if (elements.diceButton instanceof HTMLButtonElement) {
-    elements.diceButton.disabled = !canRoll;
   }
   const roll = gameState.lastRoll;
   if (roll && roll.value) {
@@ -1016,6 +1013,8 @@ function renderBoard() {
   if (!elements.board) {
     return;
   }
+  const focusIndex = clampFieldIndex(gameState.focusField);
+  const focusChanged = focusIndex !== lastFocusedFieldIndex;
   const tokens = new Map();
   Object.entries(gameState.positions).forEach(([id, index]) => {
     const fieldTokens = tokens.get(index) || [];
@@ -1028,9 +1027,11 @@ function renderBoard() {
       return;
     }
     const index = Number(tile.dataset.index || '0');
-    if (index === gameState.focusField) {
+    if (index === focusIndex) {
       tile.classList.add('board-field--active');
-      scrollFieldIntoView(tile);
+      if (focusChanged) {
+        scrollFieldIntoView(tile);
+      }
     } else {
       tile.classList.remove('board-field--active');
     }
@@ -1048,22 +1049,19 @@ function renderBoard() {
       holder.appendChild(chip);
     });
   });
+  lastFocusedFieldIndex = focusIndex;
 }
 
 function scrollFieldIntoView(tile) {
-  if (!tile || !elements.boardWrapper) {
+  if (!tile) {
     return;
   }
-  const { scrollWidth, clientWidth, scrollHeight, clientHeight } = elements.boardWrapper;
-  const hasHorizontalOverflow = scrollWidth - clientWidth > 4;
-  const hasVerticalOverflow = scrollHeight - clientHeight > 4;
-  if (!hasHorizontalOverflow && !hasVerticalOverflow) {
-    return;
-  }
-  tile.scrollIntoView({
-    behavior: 'smooth',
-    inline: hasHorizontalOverflow ? 'center' : 'nearest',
-    block: hasVerticalOverflow ? 'center' : 'nearest',
+  window.requestAnimationFrame(() => {
+    tile.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'nearest',
+    });
   });
 }
 
