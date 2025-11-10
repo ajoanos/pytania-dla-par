@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Planszówka dla dwojga – Pokój</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="assets/js/board-room.js"></script>
+</head>
+<body class="page page--room" data-theme="light" data-waiting-page="planszowa-waiting.html">
+  <main class="container">
+    <header class="hero">
+      <div class="hero__branding">
+        <a class="hero__logo-link" href="index.html">
+          <img
+            class="hero__logo"
+            src="https://sklep.allemedia.pl/momenty/logo.png"
+            alt="Momenty"
+          />
+        </a>
+        <div class="hero__text">
+          <h1>Planszówka dla dwojga</h1>
+          <p>Rzucajcie kostką, wykonujcie zadania i zbierajcie serduszka na romantycznej planszy.</p>
+        </div>
+        <details class="game-switcher">
+          <summary class="game-switcher__toggle">Wybierz grę</summary>
+          <div class="game-switcher__panel">
+            <ul class="game-switcher__list">
+              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
+              <li><a class="game-switcher__link" href="planszowa.html" aria-current="page">Planszówka dla dwojga</a></li>
+            </ul>
+          </div>
+        </details>
+      </div>
+      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
+    </header>
+
+    <div id="board-content" class="board-layout" hidden>
+      <section class="card board-card board-card--players">
+        <header class="card__header card__header--inline">
+          <div>
+            <h2>Zespół graczy</h2>
+            <p class="card__subtitle">Śledźcie serduszka i kolejność tur.</p>
+          </div>
+        </header>
+        <p id="board-empty" class="board-empty" hidden>Aby rozpocząć, zaproś partnera linkiem lub kodem do pokoju.</p>
+        <ul id="board-players" class="board-players"></ul>
+        <div class="board-share">
+          <p>Udostępnij kod <strong id="board-room-key"></strong> lub wyślij link partnerowi.</p>
+          <div class="board-share__actions">
+            <button type="button" class="btn btn--primary" id="board-copy-link">Skopiuj link do pokoju</button>
+            <a class="btn btn--ghost" id="board-open-invite" href="#" target="_blank" rel="noopener">Otwórz stronę zaproszenia</a>
+          </div>
+          <p id="board-copy-feedback" class="board-share__feedback" role="status" aria-live="polite"></p>
+        </div>
+        <section id="board-pending" class="board-pending" hidden>
+          <h3>Oczekujące zgłoszenia</h3>
+          <p id="board-pending-empty">Gdy ktoś poprosi o wejście, zobaczysz to tutaj.</p>
+          <ul id="board-pending-list" class="board-pending__list"></ul>
+        </section>
+      </section>
+
+      <section class="card board-card board-card--board">
+        <div class="board-track" id="board-grid" role="list" aria-label="Plansza z zadaniami"></div>
+        <div class="board-controls">
+          <div class="board-controls__turn">
+            <p id="board-turn">Oczekiwanie na graczy...</p>
+            <p id="board-last-roll" class="board-last-roll" hidden></p>
+          </div>
+          <button type="button" class="btn btn--primary board-roll" id="board-roll" disabled>Rzuć kostką</button>
+        </div>
+        <article class="board-challenge" id="board-challenge" aria-live="polite">
+          <header>
+            <h3 id="board-challenge-title">Gotowi na start</h3>
+          </header>
+          <p id="board-challenge-description">Gdy pojawi się pierwszy ruch, zobaczysz tu zadanie do wykonania na wylosowanym polu.</p>
+        </article>
+      </section>
+
+      <section class="card board-card board-card--history">
+        <header class="card__header card__header--inline">
+          <div>
+            <h2>Historia wieczoru</h2>
+            <p class="card__subtitle">Zapis ostatnich rzutów i serduszek.</p>
+          </div>
+        </header>
+        <ol id="board-history" class="board-history" aria-live="polite"></ol>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

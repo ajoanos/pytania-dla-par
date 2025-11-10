@@ -8,16 +8,19 @@ const waitingTitle = document.getElementById('waiting-title');
 const waitingMessage = document.getElementById('waiting-message');
 const waitingLabel = document.getElementById('waiting-room-label');
 const waitingLeave = document.getElementById('waiting-leave');
+const hostSetupPage = document.body?.dataset.hostPage || 'pytania-dla-par-room.html';
+const backToGames = document.body?.dataset.homePage || 'pytania-dla-par.html';
+const activeRoomPage = document.body?.dataset.roomPage || 'room.html';
 
 if (waitingLabel && roomKey) {
   waitingLabel.textContent = `Pokój ${roomKey}`;
 }
 
 if (!roomKey || !participantId) {
-  window.location.replace('pytania-dla-par-room.html');
+  window.location.replace(hostSetupPage);
 } else {
   waitingLeave?.addEventListener('click', () => {
-    window.location.href = 'pytania-dla-par.html';
+    window.location.href = backToGames;
   });
 
   let pollTimer = null;
@@ -89,7 +92,7 @@ if (!roomKey || !participantId) {
       room_key: roomKey,
       pid: participantId,
     });
-    window.location.replace(`room.html?${targetParams.toString()}`);
+    window.location.replace(`${activeRoomPage}?${targetParams.toString()}`);
   }
 
   function startPolling() {
