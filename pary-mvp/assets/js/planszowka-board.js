@@ -345,11 +345,16 @@ function handleRollRequest() {
     } else {
       const field = boardFields[targetIndex];
       if (field?.type === 'task') {
+        const reviewerCandidate = determineNextTurn(draft, playerId);
+        const reviewerId = reviewerCandidate && reviewerCandidate !== playerId
+          ? reviewerCandidate
+          : null;
         draft.awaitingConfirmation = {
           playerId,
           fieldIndex: targetIndex,
+          reviewerId,
         };
-        draft.nextTurn = determineNextTurn(draft, playerId);
+        draft.nextTurn = reviewerId;
       } else {
         draft.awaitingConfirmation = null;
         draft.currentTurn = determineNextTurn(draft, playerId);
@@ -448,27 +453,47 @@ function resolveTaskResult(completed) {
   if (!awaiting) {
     return;
   }
-  if (awaiting.playerId === String(localPlayerId)) {
+
+  const reviewerId = awaiting.reviewerId ? String(awaiting.reviewerId) : null;
+  const performerId = awaiting.playerId ? String(awaiting.playerId) : null;
+  const localId = String(localPlayerId);
+
+  if (reviewerId) {
+    if (reviewerId !== localId) {
+      const reviewerName = gameState.players[reviewerId]?.name || 'partner';
+      displayInfo(`Na decyzję czeka ${reviewerName}.`);
+      return;
+    }
+  } else if (performerId === localId) {
     displayInfo('Poczekaj, aż partner zatwierdzi zadanie.');
     return;
   }
 
   updateState((draft) => {
-    const { playerId, fieldIndex } = draft.awaitingConfirmation || {};
-    if (!playerId) {
+    const record = draft.awaitingConfirmation;
+    if (!record || !record.playerId) {
       return;
     }
+
+    const field = boardFields[record.fieldIndex];
+    const performer = draft.players[record.playerId];
+    const reviewer = record.reviewerId ? draft.players[record.reviewerId] : null;
+    const performerName = performer?.name || 'Gracz';
+    const reviewerName = reviewer?.name || 'Partner';
+    const taskLabel = field?.label || 'zadanie';
+
     draft.awaitingConfirmation = null;
-    const playerName = draft.players[playerId]?.name || 'Gracz';
-    const field = boardFields[fieldIndex];
+
     if (completed) {
-      draft.hearts[playerId] = (draft.hearts[playerId] ?? 0) + 1;
-      addHistoryEntry(draft, `${playerName} zdobywa serduszko za zadanie "${field?.label || 'zadanie'}".`);
+      draft.hearts[record.playerId] = (draft.hearts[record.playerId] ?? 0) + 1;
+      addHistoryEntry(draft, `${reviewerName} przyznaje ${performerName} serduszko za "${taskLabel}".`);
+      draft.notice = `${performerName} zdobywa serduszko ❤️.`;
     } else {
-      addHistoryEntry(draft, `${playerName} nie zdobywa serduszka za zadanie "${field?.label || 'zadanie'}".`);
+      addHistoryEntry(draft, `${reviewerName} nie przyznaje serduszka ${performerName} za "${taskLabel}".`);
+      draft.notice = `${performerName} nie zdobywa serduszka tym razem.`;
     }
-    draft.notice = '';
-    const next = draft.nextTurn || determineNextTurn(draft, playerId);
+
+    const next = draft.nextTurn || determineNextTurn(draft, record.playerId);
     draft.currentTurn = next;
     draft.nextTurn = null;
   });
@@ -632,6 +657,12 @@ function sanitizeState(state, participants = []) {
       playerId: String(source.awaitingConfirmation.playerId || ''),
       fieldIndex: clampFieldIndex(source.awaitingConfirmation.fieldIndex),
     };
+    const reviewerId = source.awaitingConfirmation.reviewerId
+      ? String(source.awaitingConfirmation.reviewerId)
+      : '';
+    if (reviewerId && players[reviewerId]) {
+      awaiting.reviewerId = reviewerId;
+    }
     if (awaiting.playerId && players[awaiting.playerId]) {
       next.awaitingConfirmation = awaiting;
     }
@@ -774,18 +805,38 @@ function renderTurn() {
     elements.waitHint.textContent = 'Dołączcie w dwójkę, aby zacząć zabawę.';
     return;
   }
-  const active = gameState.players[gameState.currentTurn];
   const viewer = gameState.players[String(localPlayerId)];
-  elements.turnLabel.textContent = active ? `Teraz ruch: ${active.name}` : 'Trwa ustalanie kolejki';
+
   if (gameState.awaitingConfirmation) {
-    const confirmer = gameState.players[gameState.awaitingConfirmation.playerId];
-    if (gameState.awaitingConfirmation.playerId === String(localPlayerId)) {
-      elements.waitHint.textContent = 'Poczekaj na potwierdzenie zadania przez partnera.';
+    const awaiting = gameState.awaitingConfirmation;
+    const performer = awaiting.playerId ? gameState.players[awaiting.playerId] : null;
+    const reviewer = awaiting.reviewerId ? gameState.players[awaiting.reviewerId] : null;
+    const performerName = performer?.name || 'partner';
+
+    if (reviewer) {
+      elements.turnLabel.textContent = `Decyzja: ${reviewer.name}`;
+      if (reviewer.id === String(localPlayerId)) {
+        elements.waitHint.textContent = `Zdecyduj, czy ${performerName} zdobywa serduszko.`;
+      } else if (awaiting.playerId === String(localPlayerId)) {
+        elements.waitHint.textContent = `Czekaj, aż ${reviewer.name} zdecyduje o serduszku.`;
+      } else {
+        elements.waitHint.textContent = `Czekamy na decyzję ${reviewer.name}.`;
+      }
     } else {
-      elements.waitHint.textContent = `Zatwierdź zadanie dla ${confirmer?.name || 'partnera'}.`;
+      elements.turnLabel.textContent = performer
+        ? `Czekamy na decyzję partnera ${performer.name}`
+        : 'Czekamy na potwierdzenie zadania';
+      if (awaiting.playerId === String(localPlayerId)) {
+        elements.waitHint.textContent = 'Poczekaj na potwierdzenie zadania przez partnera.';
+      } else {
+        elements.waitHint.textContent = `Pomóż ${performerName} – dodaj serduszko lub pomiń.`;
+      }
     }
     return;
   }
+
+  const active = gameState.players[gameState.currentTurn];
+  elements.turnLabel.textContent = active ? `Teraz ruch: ${active.name}` : 'Trwa ustalanie kolejki';
   if (viewer && viewer.id === gameState.currentTurn) {
     elements.waitHint.textContent = 'To Twoja kolej – rzuć kostką!';
   } else {
@@ -855,7 +906,10 @@ function renderTaskCard() {
   const awaiting = gameState.awaitingConfirmation;
   const focusIndex = awaiting?.fieldIndex ?? gameState.focusField ?? 0;
   const field = boardFields[focusIndex] || boardFields[0];
-  const player = awaiting ? gameState.players[awaiting.playerId] : null;
+  const performer = awaiting ? gameState.players[awaiting.playerId] : null;
+  const reviewer = awaiting?.reviewerId ? gameState.players[awaiting.reviewerId] : null;
+  const confirmButton = elements.taskActions.querySelector('[data-action="confirm"]');
+  const skipButton = elements.taskActions.querySelector('[data-action="skip"]');
 
   if (field) {
     elements.taskTitle.textContent = field.label;
@@ -882,17 +936,31 @@ function renderTaskCard() {
   }
 
   if (awaiting) {
-    const isReviewer = awaiting.playerId !== String(localPlayerId);
+    const localId = String(localPlayerId);
+    const isPerformer = awaiting.playerId === localId;
+    const isReviewer = reviewer ? reviewer.id === localId : !isPerformer;
+    const performerName = performer?.name || 'partner';
+
+    if (confirmButton) {
+      confirmButton.textContent = 'Dodaj serduszko ❤️';
+    }
+    if (skipButton) {
+      skipButton.textContent = 'Nie wykonał';
+    }
+
     elements.taskActions.hidden = !isReviewer;
-    elements.taskNotice.hidden = isReviewer;
-    elements.taskNotice.textContent = isReviewer
-      ? ''
-      : 'Czekamy na potwierdzenie zadania przez partnera.';
+    elements.taskNotice.hidden = false;
+
     if (isReviewer) {
-      elements.taskNotice.textContent = '';
-      const name = player?.name || 'Partner';
-      elements.taskActions.querySelector('[data-action="confirm"]').textContent = `Zrobione – dodaj serduszko ❤️`;
-      elements.taskActions.querySelector('[data-action="skip"]').textContent = 'Pomiń – bez punktu';
+      elements.taskNotice.textContent = `${performerName} czeka na Twoją decyzję.`;
+    } else if (isPerformer) {
+      elements.taskNotice.textContent = reviewer
+        ? `Czekaj, aż ${reviewer.name} zdecyduje o serduszku.`
+        : 'Czekaj na potwierdzenie zadania przez partnera.';
+    } else {
+      elements.taskNotice.textContent = reviewer
+        ? `Czekamy na decyzję ${reviewer.name}.`
+        : 'Czekamy na decyzję partnera.';
     }
   } else {
     elements.taskActions.hidden = true;
@@ -947,12 +1015,17 @@ function scrollFieldIntoView(tile) {
   if (!tile || !elements.boardWrapper) {
     return;
   }
-  const { scrollWidth, clientWidth } = elements.boardWrapper;
+  const { scrollWidth, clientWidth, scrollHeight, clientHeight } = elements.boardWrapper;
   const hasHorizontalOverflow = scrollWidth - clientWidth > 4;
-  if (!hasHorizontalOverflow) {
+  const hasVerticalOverflow = scrollHeight - clientHeight > 4;
+  if (!hasHorizontalOverflow && !hasVerticalOverflow) {
     return;
   }
-  tile.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  tile.scrollIntoView({
+    behavior: 'smooth',
+    inline: hasHorizontalOverflow ? 'center' : 'nearest',
+    block: hasVerticalOverflow ? 'center' : 'nearest',
+  });
 }
 
 function renderFinishPanel() {
