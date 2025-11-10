@@ -12,20 +12,33 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet" />
   <script type="module" src="assets/js/app.js"></script>
 </head>
-<body class="planszowka-body" data-theme="light">
-  <header class="planszowka-topbar">
-    <div class="planszowka-topbar__branding">
-      <a class="planszowka-topbar__logo" href="index.html">
-        <img src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
-      </a>
-      <div class="planszowka-topbar__titles">
-        <h1>Zabawa planszówka – we dwoje</h1>
-        <p>Kolory i klimat jak w Momenty</p>
+<body class="planszowka-body page page--board" data-theme="light">
+  <header class="planszowka-header">
+    <div class="planszowka-header__inner hero">
+      <div class="hero__branding">
+        <a class="hero__logo-link" href="index.html">
+          <img
+            class="hero__logo"
+            src="https://sklep.allemedia.pl/momenty/logo.png"
+            alt="Momenty"
+          />
+        </a>
+        <div class="hero__text">
+          <h1>Zabawa planszówka – we dwoje</h1>
+          <p>Kolory i klimat jak w Momenty</p>
+        </div>
+        <details class="game-switcher">
+          <summary class="game-switcher__toggle">Wybierz grę</summary>
+          <div class="game-switcher__panel">
+            <ul class="game-switcher__list">
+              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
+              <li><a class="game-switcher__link" href="planszowa.html" aria-current="page">Planszówka dla dwojga</a></li>
+            </ul>
+          </div>
+        </details>
       </div>
-    </div>
-    <div class="planszowka-topbar__meta">
-      <span class="planszowka-topbar__room">Pokój: <strong id="planszowka-room-code">---</strong></span>
-      <button class="planszowka-topbar__theme" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
+      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </div>
   </header>
   <main class="planszowka-main">
@@ -36,6 +49,18 @@
     </section>
 
     <section class="planszowka-players" id="planszowka-players"></section>
+
+    <section class="planszowka-share" id="planszowka-share">
+      <h3>Udostępnij pokój</h3>
+      <p class="planszowka-share__hint">
+        Wyślij partnerowi link lub pokaż kod QR, aby dołączył do gry z drugiego urządzenia.
+      </p>
+      <div class="planszowka-share__actions">
+        <button type="button" class="btn btn--primary" id="planszowka-share-copy">Skopiuj link</button>
+        <button type="button" class="btn btn--ghost" id="planszowka-share-qr">Pokaż kod QR</button>
+      </div>
+      <p class="planszowka-share__feedback share__feedback" id="planszowka-share-feedback" role="status" aria-live="polite"></p>
+    </section>
 
     <section class="planszowka-dice">
       <button type="button" class="btn btn--primary planszowka-dice__button" id="planszowka-roll" disabled>Rzuć kostką 🎲</button>
@@ -65,5 +90,16 @@
   </main>
 
   <script type="module" src="assets/js/planszowka-board.js"></script>
+
+  <div id="planszowka-qr-modal" class="qr-modal" hidden aria-hidden="true">
+    <div class="qr-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="planszowka-qr-title">
+      <h2 id="planszowka-qr-title">Zeskanuj kod QR</h2>
+      <img id="planszowka-qr-image" class="qr-modal__image" alt="Kod QR prowadzący do pokoju" loading="lazy" />
+      <p class="qr-modal__link">
+        <a id="planszowka-qr-url" href="#" target="_blank" rel="noopener">Otwórz link w nowej karcie</a>
+      </p>
+      <button type="button" class="btn btn--ghost" id="planszowka-qr-close">Zamknij</button>
+    </div>
+  </div>
 </body>
 </html>

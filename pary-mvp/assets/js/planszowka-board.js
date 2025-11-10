@@ -11,9 +11,9 @@ if (!roomKey || !localPlayerId) {
 
 const colorPalette = ['rose', 'mint', 'violet', 'sun', 'sea'];
 const fallbackStorageKey = `momenty.planszowka.state.${roomKey}`;
+const shareLinkUrl = buildShareUrl();
 
 const elements = {
-  roomCode: document.getElementById('planszowka-room-code'),
   turnLabel: document.getElementById('planszowka-turn-label'),
   waitHint: document.getElementById('planszowka-wait-hint'),
   players: document.getElementById('planszowka-players'),
@@ -30,16 +30,23 @@ const elements = {
   taskNotice: document.getElementById('planszowka-task-notice'),
 };
 
+const shareElements = {
+  copyButton: document.getElementById('planszowka-share-copy'),
+  qrButton: document.getElementById('planszowka-share-qr'),
+  feedback: document.getElementById('planszowka-share-feedback'),
+  modal: document.getElementById('planszowka-qr-modal'),
+  modalImage: document.getElementById('planszowka-qr-image'),
+  modalUrl: document.getElementById('planszowka-qr-url'),
+  modalClose: document.getElementById('planszowka-qr-close'),
+};
+
 let gameState = createEmptyState();
 let toastTimer = null;
+let shareFeedbackTimer = null;
 
 init();
 
 function init() {
-  if (elements.roomCode) {
-    elements.roomCode.textContent = roomKey;
-  }
-
   renderBoardSkeleton();
   bindEvents();
   setupRealtimeBridge();
@@ -114,6 +121,30 @@ function bindEvents() {
       resolveTaskResult(true);
     } else if (action === 'skip') {
       resolveTaskResult(false);
+    }
+  });
+
+  shareElements.copyButton?.addEventListener('click', () => {
+    copyShareLink();
+  });
+
+  shareElements.qrButton?.addEventListener('click', () => {
+    openQrModal();
+  });
+
+  shareElements.modalClose?.addEventListener('click', () => {
+    closeQrModal();
+  });
+
+  shareElements.modal?.addEventListener('click', (event) => {
+    if (event.target === shareElements.modal) {
+      closeQrModal();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeQrModal();
     }
   });
 }
@@ -721,6 +752,90 @@ function displayInfo(message) {
       elements.infoBanner.textContent = '';
     }
   }, 3500);
+}
+
+function buildShareUrl() {
+  if (!roomKey) {
+    return '';
+  }
+  const url = new URL('planszowa-invite.html', window.location.href);
+  url.searchParams.set('room_key', roomKey);
+  return url.toString();
+}
+
+async function copyShareLink() {
+  if (!shareLinkUrl) {
+    return;
+  }
+
+  let message = 'Skopiowano link do pokoju.';
+  let isError = false;
+
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(shareLinkUrl);
+    } else {
+      throw new Error('Clipboard API unavailable');
+    }
+  } catch (error) {
+    console.warn('Clipboard copy failed', error);
+    isError = true;
+    message = 'Skopiuj link ręcznie z wyświetlonego okna.';
+    window.prompt('Skopiuj link do pokoju', shareLinkUrl);
+  }
+
+  showShareFeedback(message, isError);
+}
+
+function openQrModal() {
+  if (!shareLinkUrl || !shareElements.modal || !shareElements.modalImage || !shareElements.modalUrl) {
+    return;
+  }
+
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(shareLinkUrl)}`;
+  shareElements.modalImage.src = qrSrc;
+  shareElements.modalUrl.href = shareLinkUrl;
+  shareElements.modal.hidden = false;
+  shareElements.modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeQrModal() {
+  if (!shareElements.modal) {
+    return;
+  }
+  shareElements.modal.hidden = true;
+  shareElements.modal.setAttribute('aria-hidden', 'true');
+}
+
+function showShareFeedback(message, isError = false) {
+  if (!shareElements.feedback) {
+    return;
+  }
+
+  shareElements.feedback.textContent = message;
+  shareElements.feedback.classList.toggle('share__feedback--error', isError);
+
+  if (shareFeedbackTimer) {
+    clearTimeout(shareFeedbackTimer);
+  }
+
+  shareFeedbackTimer = window.setTimeout(() => {
+    resetShareFeedback();
+  }, 4000);
+}
+
+function resetShareFeedback() {
+  if (!shareElements.feedback) {
+    return;
+  }
+
+  if (shareFeedbackTimer) {
+    clearTimeout(shareFeedbackTimer);
+    shareFeedbackTimer = null;
+  }
+
+  shareElements.feedback.textContent = '';
+  shareElements.feedback.classList.remove('share__feedback--error');
 }
 
 function persistState(state) {
