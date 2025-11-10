@@ -100,6 +100,14 @@ function initializeDatabase(PDO $pdo): void
         FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
     )');
 
+    $pdo->exec('CREATE TABLE IF NOT EXISTS board_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL UNIQUE,
+        state_json TEXT NOT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+    )');
+
     $pdo->exec('CREATE TABLE IF NOT EXISTS plan_invites (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         room_id INTEGER NOT NULL,
@@ -575,4 +583,160 @@ function getRoomByKeyOrFail(string $roomKey): array
         respond(['ok' => false, 'error' => 'Pokój nie istnieje lub wygasł.']);
     }
     return $room;
+}
+
+function defaultBoardState(): array
+{
+    return [
+        'positions' => [],
+        'hearts' => [],
+        'current_turn' => 0,
+        'last_roll' => null,
+        'history' => [],
+    ];
+}
+
+function getBoardSession(int $roomId): ?array
+{
+    $stmt = db()->prepare('SELECT state_json, updated_at FROM board_sessions WHERE room_id = :room_id');
+    $stmt->execute(['room_id' => $roomId]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return null;
+    }
+    $decoded = json_decode((string)($row['state_json'] ?? ''), true);
+    if (!is_array($decoded)) {
+        $decoded = defaultBoardState();
+    }
+    return [
+        'state' => $decoded,
+        'updated_at' => (string)($row['updated_at'] ?? ''),
+    ];
+}
+
+function fetchBoardState(int $roomId): array
+{
+    $session = getBoardSession($roomId);
+    if ($session !== null) {
+        return $session;
+    }
+    $state = defaultBoardState();
+    saveBoardState($roomId, $state);
+    return [
+        'state' => $state,
+        'updated_at' => gmdate('c'),
+    ];
+}
+
+function saveBoardState(int $roomId, array $state): void
+{
+    $json = json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json === false) {
+        throw new RuntimeException('Nie udało się zapisać stanu planszówki.');
+    }
+    $stmt = db()->prepare('INSERT INTO board_sessions (room_id, state_json, updated_at)
+        VALUES (:room_id, :state_json, :updated_at)
+        ON CONFLICT(room_id) DO UPDATE SET state_json = excluded.state_json, updated_at = excluded.updated_at');
+    $stmt->execute([
+        'room_id' => $roomId,
+        'state_json' => $json,
+        'updated_at' => gmdate('c'),
+    ]);
+}
+
+function normalizeBoardState(array $state, array $participants): array
+{
+    $positions = [];
+    if (isset($state['positions']) && is_array($state['positions'])) {
+        foreach ($state['positions'] as $key => $value) {
+            $id = (int)$key;
+            if ($id <= 0) {
+                continue;
+            }
+            $positions[$id] = max(1, (int)$value);
+        }
+    }
+
+    $hearts = [];
+    if (isset($state['hearts']) && is_array($state['hearts'])) {
+        foreach ($state['hearts'] as $key => $value) {
+            $id = (int)$key;
+            if ($id <= 0) {
+                continue;
+            }
+            $hearts[$id] = max(0, (int)$value);
+        }
+    }
+
+    $orderedIds = [];
+    foreach ($participants as $participant) {
+        $id = (int)($participant['id'] ?? 0);
+        if ($id <= 0) {
+            continue;
+        }
+        $orderedIds[] = $id;
+        if (!array_key_exists($id, $positions)) {
+            $positions[$id] = 1;
+        }
+        if (!array_key_exists($id, $hearts)) {
+            $hearts[$id] = 0;
+        }
+    }
+
+    $positions = array_intersect_key($positions, array_flip($orderedIds));
+    $hearts = array_intersect_key($hearts, array_flip($orderedIds));
+
+    $orderedPositions = [];
+    $orderedHearts = [];
+    foreach ($orderedIds as $id) {
+        $orderedPositions[$id] = $positions[$id];
+        $orderedHearts[$id] = $hearts[$id];
+    }
+
+    $state['positions'] = $orderedPositions;
+    $state['hearts'] = $orderedHearts;
+
+    if (!isset($state['history']) || !is_array($state['history'])) {
+        $state['history'] = [];
+    } else {
+        $state['history'] = array_values(array_slice($state['history'], -40));
+    }
+
+    if (!isset($state['last_roll']) || !is_array($state['last_roll'])) {
+        $state['last_roll'] = null;
+    } else {
+        $state['last_roll'] = [
+            'value' => (int)($state['last_roll']['value'] ?? 0),
+            'rolled_by' => (int)($state['last_roll']['rolled_by'] ?? 0),
+            'new_position' => (int)($state['last_roll']['new_position'] ?? 0),
+            'rolled_at' => (string)($state['last_roll']['rolled_at'] ?? ''),
+        ];
+    }
+
+    if (empty($orderedIds)) {
+        $state['current_turn'] = 0;
+    } else {
+        $currentTurn = (int)($state['current_turn'] ?? 0);
+        if (!in_array($currentTurn, $orderedIds, true)) {
+            $state['current_turn'] = $orderedIds[0];
+        } else {
+            $state['current_turn'] = $currentTurn;
+        }
+    }
+
+    return $state;
+}
+
+function appendBoardHistory(array &$state, string $message): void
+{
+    if (!isset($state['history']) || !is_array($state['history'])) {
+        $state['history'] = [];
+    }
+    $state['history'][] = [
+        'message' => $message,
+        'timestamp' => gmdate('c'),
+    ];
+    if (count($state['history']) > 40) {
+        $state['history'] = array_slice($state['history'], -40);
+    }
 }
