@@ -1,8 +1,9 @@
-const CACHE_NAME = 'pary-mvp-v14';
+const CACHE_NAME = 'pary-mvp-v15';
 const ASSETS = [
   '/pary-mvp/',
   '/pary-mvp/index.html',
   '/pary-mvp/zdrapka-pozycji.html',
+  '/pary-mvp/zdrapka-pozycji-play.html',
   '/pary-mvp/pytania-dla-par.html',
   '/pary-mvp/plan-wieczoru.html',
   '/pary-mvp/plan-wieczoru-room.html',

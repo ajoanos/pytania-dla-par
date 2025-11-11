@@ -1,7 +1,10 @@
 import { getJson, initThemeToggle } from './app.js';
 
 const CARD_SELECTOR = '[data-role="scratch-card"]';
-const SCRATCH_RADIUS = 36;
+const SCRATCH_RADIUS = 24;
+const ACCESS_KEY = 'momenty.scratch.access';
+const ACCESS_PAGE = 'zdrapka-pozycji.html';
+const LEGACY_KEY = 'pary.access.pdp';
 
 function $(selector) {
   return document.querySelector(selector);
@@ -12,6 +15,30 @@ function setStatus(message) {
   if (!status) return;
   status.textContent = message || '';
   status.hidden = !message;
+}
+
+function ensureAccess() {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.has('auto')) {
+    sessionStorage.setItem(ACCESS_KEY, 'true');
+    if (window.history.replaceState) {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('auto');
+      window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+    }
+  }
+
+  if (sessionStorage.getItem(ACCESS_KEY) !== 'true' && sessionStorage.getItem(LEGACY_KEY) === 'true') {
+    sessionStorage.setItem(ACCESS_KEY, 'true');
+  }
+
+  if (sessionStorage.getItem(ACCESS_KEY) === 'true') {
+    return true;
+  }
+
+  window.location.replace(ACCESS_PAGE);
+  return false;
 }
 
 function createScratchCard() {
@@ -45,7 +72,7 @@ function createScratchCard() {
         throw new Error(payload?.error || 'Nie udało się wczytać listy kart.');
       }
       if (!Array.isArray(payload.files) || payload.files.length === 0) {
-        setStatus('Dodaj pliki PNG do folderu „obrazy/zdrapki”, aby zacząć zabawę.');
+        setStatus('Brak dostępnych kart. Spróbuj ponownie później.');
         nextButton.disabled = true;
         return;
       }
@@ -145,6 +172,9 @@ function createScratchCard() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (!ensureAccess()) {
+    return;
+  }
   initThemeToggle(document.getElementById('theme-toggle'));
   createScratchCard();
 });

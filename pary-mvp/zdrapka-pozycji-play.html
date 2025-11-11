@@ -4,15 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Zdrapka pozycji – Hasło dostępu</title>
+  <title>Zdrapka pozycji</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
-  <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="assets/js/zdrapka-pozycji.js"></script>
 </head>
-<body class="page page--access" data-theme="dark">
+<body class="page page--scratch" data-theme="dark">
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
@@ -25,7 +25,7 @@
         </a>
         <div class="hero__text">
           <h1>Zdrapka pozycji</h1>
-          <p>Podaj hasło, aby odkryć losową pozycję na Wasz wieczór.</p>
+          <p>Zdrapuj kolor, aby odkryć, co czeka na Was dziś wieczorem.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
@@ -43,25 +43,17 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--password" id="password-card">
-      <h2>Podaj hasło dostępu</h2>
-      <form
-        id="password-form"
-        class="form form--inline"
-        data-storage-key="momenty.scratch.access"
-        data-success="zdrapka-pozycji-play.html"
-        data-skip-room-key="true"
-      >
-        <label class="form__field">
-          <span>Hasło</span>
-          <input type="password" id="access-password" name="access_password" placeholder="••••" autocomplete="current-password" required />
-        </label>
-        <div class="form__actions">
-          <button type="submit" class="btn btn--primary">Potwierdź</button>
-          <button type="button" class="btn btn--ghost" id="password-cancel" data-back="index.html">Wróć</button>
-        </div>
-      </form>
-      <p class="form__hint" id="password-error" hidden>Niepoprawne hasło. Spróbuj ponownie.</p>
+    <section class="card card--scratch" id="scratch-card">
+      <h2>Zdrap, aby odkryć</h2>
+      <p class="card__lead">Przesuń palcem lub kursorem po czerwonym kole, aby odsłonić pozycję.</p>
+      <div class="scratch-card" data-role="scratch-card">
+        <img id="scratch-image" class="scratch-card__image" alt="Ukryta pozycja" />
+        <canvas id="scratch-canvas" class="scratch-card__canvas" aria-hidden="true"></canvas>
+      </div>
+      <p class="card__hint" id="scratch-status" role="status" aria-live="polite" hidden></p>
+      <div class="card__actions">
+        <button type="button" class="btn btn--primary" id="next-card">Następna karta</button>
+      </div>
     </section>
 
     <footer class="footer">
