@@ -1,7 +1,8 @@
-const CACHE_NAME = 'pary-mvp-v13';
+const CACHE_NAME = 'pary-mvp-v14';
 const ASSETS = [
   '/pary-mvp/',
   '/pary-mvp/index.html',
+  '/pary-mvp/zdrapka-pozycji.html',
   '/pary-mvp/pytania-dla-par.html',
   '/pary-mvp/plan-wieczoru.html',
   '/pary-mvp/plan-wieczoru-room.html',
@@ -17,6 +18,7 @@ const ASSETS = [
   '/pary-mvp/assets/js/invite.js',
   '/pary-mvp/assets/js/waiting-room.js',
   '/pary-mvp/assets/js/import.js',
+  '/pary-mvp/assets/js/zdrapka-pozycji.js',
   '/pary-mvp/data/questions.json',
   '/pary-mvp/assets/data/plan-wieczoru.json',
   '/pary-mvp/manifest.webmanifest',
