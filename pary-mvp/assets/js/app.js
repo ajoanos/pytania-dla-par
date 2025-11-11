@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formPassword = passwordForm.dataset.password || ACCESS_PASSWORD;
     const storageKey = passwordForm.dataset.storageKey || ACCESS_STORAGE_KEY;
     const successTarget = passwordForm.dataset.success || 'pytania-dla-par-room.html';
+    const skipRoomKey = passwordForm.dataset.skipRoomKey === 'true';
     const defaultErrorMessage = passwordError?.textContent || 'Niepoprawne hasło. Spróbuj ponownie.';
 
     if (passwordInput) {
@@ -134,10 +135,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (submitButton) {
           submitButton.disabled = true;
         }
-        const roomKey = await requestNewRoomKey();
+        let roomKey = '';
+        if (!skipRoomKey) {
+          roomKey = await requestNewRoomKey();
+        }
         sessionStorage.setItem(storageKey, 'true');
         const targetUrl = new URL(successTarget, window.location.href);
-        targetUrl.searchParams.set('room_key', roomKey);
+        if (!skipRoomKey && roomKey) {
+          targetUrl.searchParams.set('room_key', roomKey);
+        }
         window.location.href = targetUrl.toString();
       } catch (error) {
         console.error(error);
