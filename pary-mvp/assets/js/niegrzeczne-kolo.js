@@ -78,6 +78,7 @@ function createWheel() {
   const spinButton = $('#wheel-spin');
   const placeholder = $('#wheel-placeholder');
   const selectedImage = $('#wheel-selected-image');
+  const center = $('#wheel-center');
 
   if (!spinner || !canvas || !randomizeButton || !spinButton || !placeholder || !selectedImage) {
     return;
@@ -134,6 +135,13 @@ function createWheel() {
     canvas.style.width = `${size}px`;
     canvas.style.height = `${size}px`;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    if (center) {
+      const centerSize = Math.min(size * 0.44, 220);
+      center.style.width = `${centerSize}px`;
+      center.style.height = `${centerSize}px`;
+    }
+
     drawWheel();
   }
 
@@ -189,7 +197,7 @@ function createWheel() {
       if (!image) {
         continue;
       }
-      const angle = POINTER_ANGLE_RAD + (index + 0.5) * segmentAngle;
+      const angle = POINTER_ANGLE_RAD + index * segmentAngle;
       const distance = radius * 0.78;
       const x = cx + Math.cos(angle) * distance;
       const y = cy + Math.sin(angle) * distance;

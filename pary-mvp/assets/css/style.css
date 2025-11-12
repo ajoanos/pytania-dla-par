@@ -2225,7 +2225,8 @@ body {
   display: grid;
   place-items: center;
   margin: 0 auto 1.5rem;
-  width: min(420px, 85vw);
+  width: min(420px, 100%);
+  max-width: 85vw;
   aspect-ratio: 1 / 1;
   padding-top: var(--wheel-pointer-space);
 }
@@ -2270,7 +2271,7 @@ body {
   left: 50%;
   transform: translate(-50%, -50%);
   width: min(44%, 220px);
-  aspect-ratio: 1 / 1;
+  height: min(44%, 220px);
   border-radius: 50%;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.75));
   box-sizing: border-box;
@@ -2281,6 +2282,7 @@ body {
   box-shadow: 0 16px 45px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   z-index: 2;
+  flex-shrink: 0;
 }
 
 .wheel__center img {
