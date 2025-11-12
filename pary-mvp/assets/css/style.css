@@ -2220,13 +2220,14 @@ body {
 }
 
 .wheel {
+  --wheel-pointer-space: clamp(2.25rem, 6vw, 3rem);
   position: relative;
   display: grid;
   place-items: center;
   margin: 0 auto 1.5rem;
   width: min(420px, 85vw);
   aspect-ratio: 1 / 1;
-  padding-top: 3.25rem;
+  padding-top: var(--wheel-pointer-space);
 }
 
 .wheel__spinner {
@@ -2253,7 +2254,7 @@ body {
   position: absolute;
   top: 0;
   left: 50%;
-  transform: translate(-50%, -65%);
+  transform: translate(-50%, -22%);
   width: 0;
   height: 0;
   border-left: 1.1rem solid transparent;
@@ -2265,11 +2266,11 @@ body {
 
 .wheel__center {
   position: absolute;
-  top: 50%;
+  top: calc(50% + var(--wheel-pointer-space) / 2);
   left: 50%;
   transform: translate(-50%, -50%);
-  width: min(44%, 200px);
-  height: min(44%, 200px);
+  width: min(44%, 220px);
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.75));
   display: flex;

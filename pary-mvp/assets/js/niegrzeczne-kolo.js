@@ -179,7 +179,7 @@ function createWheel() {
       if (!image) {
         continue;
       }
-      const angle = POINTER_ANGLE_RAD + index * segmentAngle;
+      const angle = POINTER_ANGLE_RAD + (index + 0.5) * segmentAngle;
       const distance = radius * 0.78;
       const x = cx + Math.cos(angle) * distance;
       const y = cy + Math.sin(angle) * distance;
