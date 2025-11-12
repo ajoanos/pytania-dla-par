@@ -97,6 +97,8 @@ function createWheel() {
     images: [],
     currentRotation: 0,
     isSpinning: false,
+    canvasSize: 0,
+    devicePixelRatio: 0,
   };
 
   function resetSpinner() {
@@ -118,7 +120,15 @@ function createWheel() {
   function resizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const rect = spinner.getBoundingClientRect();
-    const size = Math.max(Math.min(rect.width, rect.height), 240);
+    const baseSize = spinner.clientWidth || spinner.offsetWidth || rect.width || 0;
+    const size = Math.max(baseSize, 240);
+
+    if (size === state.canvasSize && dpr === state.devicePixelRatio) {
+      return;
+    }
+
+    state.canvasSize = size;
+    state.devicePixelRatio = dpr;
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     canvas.style.width = `${size}px`;
@@ -157,7 +167,7 @@ function createWheel() {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.lineWidth = radius * 0.025;
     for (let index = 0; index < count; index += 1) {
-      const angle = POINTER_ANGLE_RAD + index * segmentAngle;
+      const angle = POINTER_ANGLE_RAD - segmentAngle / 2 + index * segmentAngle;
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
