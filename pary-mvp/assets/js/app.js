@@ -39,26 +39,41 @@ async function requestNewRoomKey() {
 
 export function initThemeToggle(button) {
   if (!button) return;
-  const stored = localStorage.getItem(STORAGE_KEY_THEME);
-  if (stored) {
-    document.body.dataset.theme = stored;
+
+  const applyStoredTheme = () => {
+    const stored = localStorage.getItem(STORAGE_KEY_THEME);
+    if (stored) {
+      document.body.dataset.theme = stored;
+    } else if (!document.body.dataset.theme) {
+      document.body.dataset.theme = 'light';
+    }
+  };
+
+  const updateIcon = () => {
+    if (document.body.dataset.theme === 'dark') {
+      button.textContent = '☀️';
+    } else {
+      button.textContent = '🌙';
+    }
+  };
+
+  applyStoredTheme();
+
+  if (button.dataset.themeInit === 'true') {
+    updateIcon();
+    return;
   }
 
+  button.dataset.themeInit = 'true';
+
   updateIcon();
+
   button.addEventListener('click', () => {
     const next = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
     document.body.dataset.theme = next;
     localStorage.setItem(STORAGE_KEY_THEME, next);
     updateIcon();
   });
-
-  function updateIcon() {
-    if (document.body.dataset.theme === 'dark') {
-      button.textContent = '☀️';
-    } else {
-      button.textContent = '🌙';
-    }
-  }
 }
 
 function focusElement(element) {
