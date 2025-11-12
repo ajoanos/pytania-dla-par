@@ -5,6 +5,7 @@ const ACCESS_PAGE = 'niegrzeczne-kolo.html';
 const POSITIONS_ENDPOINT = 'api/list_scratchcards.php';
 const SEGMENT_COUNT = 12;
 const SEGMENT_COLORS = ['#f72585', '#b5179e', '#7209b7', '#560bad'];
+const POINTER_ANGLE_RAD = -Math.PI / 2;
 
 function $(selector) {
   return document.querySelector(selector);
@@ -142,7 +143,7 @@ function createWheel() {
     const segmentAngle = (Math.PI * 2) / count;
 
     for (let index = 0; index < count; index += 1) {
-      const start = -Math.PI / 2 + index * segmentAngle;
+      const start = POINTER_ANGLE_RAD - segmentAngle / 2 + index * segmentAngle;
       const end = start + segmentAngle;
       ctx.beginPath();
       ctx.moveTo(cx, cy);
@@ -156,7 +157,7 @@ function createWheel() {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.lineWidth = radius * 0.025;
     for (let index = 0; index < count; index += 1) {
-      const angle = -Math.PI / 2 + index * segmentAngle;
+      const angle = POINTER_ANGLE_RAD + index * segmentAngle;
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
@@ -178,8 +179,8 @@ function createWheel() {
       if (!image) {
         continue;
       }
-      const angle = -Math.PI / 2 + index * segmentAngle + segmentAngle / 2;
-      const distance = radius * 0.65;
+      const angle = POINTER_ANGLE_RAD + index * segmentAngle;
+      const distance = radius * 0.78;
       const x = cx + Math.cos(angle) * distance;
       const y = cy + Math.sin(angle) * distance;
 
@@ -303,6 +304,10 @@ function createWheel() {
     setStatus('Miłej zabawy!');
   }
 
+  function normalizeDegrees(value) {
+    return ((value % 360) + 360) % 360;
+  }
+
   function spinWheel() {
     if (state.isSpinning || !state.positions.length) {
       if (!state.positions.length) {
@@ -314,9 +319,11 @@ function createWheel() {
     const count = state.positions.length;
     const segmentAngle = 360 / count;
     const selectedIndex = Math.floor(Math.random() * count);
-    const midpoint = (selectedIndex + 0.5) * segmentAngle - 90;
     const extraSpins = 4 + Math.floor(Math.random() * 3);
-    const targetRotation = extraSpins * 360 + (-90 - midpoint);
+    const desiredNormalized = normalizeDegrees(-selectedIndex * segmentAngle);
+    const currentNormalized = normalizeDegrees(state.currentRotation);
+    const rotationDelta = desiredNormalized - currentNormalized;
+    const targetRotation = extraSpins * 360 + rotationDelta;
 
     state.isSpinning = true;
     spinButton.disabled = true;
