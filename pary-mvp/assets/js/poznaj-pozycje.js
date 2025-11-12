@@ -1,8 +1,10 @@
-import { getJson, initThemeToggle } from './app.js';
+import { getJson, postJson, initThemeToggle } from './app.js';
 
 const ACCESS_KEY = 'momenty.positions.access';
 const ACCESS_PAGE = 'poznaj-wszystkie-pozycje.html';
 const LIST_ENDPOINT = 'api/list_scratchcards.php';
+const EMAIL_ENDPOINT = 'api/send_positions_email.php';
+const EMAIL_SUBJECT = 'Poznaj wszystkie pozycje – nasze typy';
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -249,6 +251,99 @@ function buildShareLinks(url, count) {
   };
 }
 
+function initializeShareSheet(elements) {
+  const {
+    shareLayer,
+    shareCard,
+    shareOpenButton,
+    shareCloseButton,
+    shareBackdrop,
+    shareBar,
+  } = elements;
+
+  if (!shareLayer || !shareCard || !shareOpenButton || !shareCloseButton) {
+    if (shareBar) {
+      shareBar.hidden = true;
+    }
+    return null;
+  }
+
+  shareLayer.hidden = false;
+  shareLayer.dataset.open = 'false';
+  shareLayer.setAttribute('aria-hidden', 'true');
+
+  if (!shareCard.hasAttribute('tabindex')) {
+    shareCard.tabIndex = -1;
+  }
+
+  const baseLabel = shareOpenButton.dataset.baseLabel || shareOpenButton.textContent.trim() || 'Udostępnij';
+  shareOpenButton.dataset.baseLabel = baseLabel;
+  shareOpenButton.textContent = baseLabel;
+  shareOpenButton.disabled = false;
+  shareOpenButton.setAttribute('aria-expanded', 'false');
+
+  if (shareBar) {
+    shareBar.hidden = false;
+  }
+
+  let activeTrigger = null;
+
+  const closeSheet = () => {
+    if (shareLayer.dataset.open !== 'true') {
+      return;
+    }
+    shareLayer.dataset.open = 'false';
+    shareLayer.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('share-layer-open');
+    shareOpenButton.setAttribute('aria-expanded', 'false');
+    if (activeTrigger) {
+      activeTrigger.focus({ preventScroll: true });
+      activeTrigger = null;
+    }
+  };
+
+  const openSheet = () => {
+    if (shareLayer.dataset.open === 'true') {
+      return;
+    }
+    activeTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : shareOpenButton;
+    shareLayer.dataset.open = 'true';
+    shareLayer.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('share-layer-open');
+    shareOpenButton.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => {
+      shareCard.focus({ preventScroll: true });
+    });
+  };
+
+  shareOpenButton.addEventListener('click', () => {
+    if (shareLayer.dataset.open === 'true') {
+      closeSheet();
+    } else {
+      openSheet();
+    }
+  });
+
+  shareCloseButton.addEventListener('click', () => {
+    closeSheet();
+  });
+
+  if (shareBackdrop) {
+    shareBackdrop.addEventListener('click', () => {
+      closeSheet();
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && shareLayer.dataset.open === 'true') {
+      event.preventDefault();
+      closeSheet();
+    }
+  });
+
+  return { openSheet, closeSheet };
+}
+
 async function copyToClipboard(text) {
   if (!text) {
     return false;
@@ -433,6 +528,7 @@ function updateShareState(state, elements) {
     shareEmail,
     shareEmailInput,
     shareEmailFeedback,
+    shareOpenButton,
   } = elements;
 
   if (count > 0) {
@@ -452,6 +548,13 @@ function updateShareState(state, elements) {
   const shareMessage = shareUrl ? buildShareMessage(shareUrl, count) : '';
   const links = shareLinks ? shareLinks.querySelectorAll('[data-share-channel]') : [];
   const hrefs = shareUrl ? buildShareLinks(shareUrl, count) : null;
+
+  if (shareOpenButton) {
+    const baseLabel = shareOpenButton.dataset.baseLabel || 'Udostępnij';
+    shareOpenButton.textContent = count > 0 ? `${baseLabel} (${count})` : baseLabel;
+    shareOpenButton.dataset.hasLikes = count > 0 ? 'true' : 'false';
+    shareOpenButton.disabled = false;
+  }
 
   links.forEach((link) => {
     if (!shareUrl || !hrefs) {
@@ -486,6 +589,7 @@ function updateShareState(state, elements) {
       shareEmail.hidden = false;
       shareEmail.dataset.shareUrl = shareUrl;
       shareEmail.dataset.shareMessage = shareMessage;
+      shareEmail.dataset.shareCount = String(count);
       if (shareEmailFeedback) {
         shareEmailFeedback.hidden = true;
         shareEmailFeedback.textContent = '';
@@ -495,6 +599,7 @@ function updateShareState(state, elements) {
       shareEmail.hidden = true;
       delete shareEmail.dataset.shareUrl;
       delete shareEmail.dataset.shareMessage;
+      delete shareEmail.dataset.shareCount;
       if (shareEmailInput) {
         shareEmailInput.value = '';
       }
@@ -690,7 +795,10 @@ function initializeEmailForm(elements) {
   if (!shareEmail || !shareEmailInput) {
     return;
   }
-  shareEmail.addEventListener('submit', (event) => {
+
+  const submitButton = shareEmail.querySelector('button[type="submit"]');
+
+  shareEmail.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!shareEmailInput.checkValidity()) {
       shareEmailInput.reportValidity();
@@ -699,20 +807,55 @@ function initializeEmailForm(elements) {
 
     const email = shareEmailInput.value.trim();
     const shareUrl = shareEmail.dataset.shareUrl;
-    const shareMessage = shareEmail.dataset.shareMessage;
+    const shareMessage = shareEmail.dataset.shareMessage || '';
+    const shareCount = Number.parseInt(shareEmail.dataset.shareCount || '0', 10) || 0;
 
-    if (!email || !shareUrl || !shareMessage) {
+    if (!email || !shareUrl) {
       return;
     }
 
-    const subject = 'Poznaj wszystkie pozycje – nasze typy';
-    const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shareMessage)}`;
-    window.location.href = mailto;
-
     if (shareEmailFeedback) {
       shareEmailFeedback.hidden = false;
-      shareEmailFeedback.dataset.tone = 'success';
-      shareEmailFeedback.textContent = 'Otworzyliśmy Twoją aplikację e-mail. Jeśli wiadomość się nie pojawi, skopiuj link i wyślij go ręcznie.';
+      shareEmailFeedback.textContent = 'Wysyłamy wiadomość…';
+      shareEmailFeedback.removeAttribute('data-tone');
+    }
+
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+
+    try {
+      const response = await postJson(EMAIL_ENDPOINT, {
+        partner_email: email,
+        share_url: shareUrl,
+        message: shareMessage,
+        like_count: shareCount,
+        subject: EMAIL_SUBJECT,
+      });
+
+      if (!response?.ok) {
+        throw new Error(response?.error || 'Nie udało się wysłać wiadomości.');
+      }
+
+      if (shareEmailFeedback) {
+        shareEmailFeedback.hidden = false;
+        shareEmailFeedback.dataset.tone = 'success';
+        shareEmailFeedback.textContent = 'Wiadomość wysłana! Powiedz partnerowi, żeby zajrzał do skrzynki.';
+      }
+
+      shareEmailInput.value = '';
+    } catch (error) {
+      console.error(error);
+      if (shareEmailFeedback) {
+        shareEmailFeedback.hidden = false;
+        shareEmailFeedback.dataset.tone = 'error';
+        shareEmailFeedback.textContent =
+          error instanceof Error && error.message ? error.message : 'Nie udało się wysłać wiadomości.';
+      }
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
     }
   });
 }
@@ -764,6 +907,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     shareEmail: document.getElementById('share-email'),
     shareEmailInput: document.getElementById('share-email-input'),
     shareEmailFeedback: document.getElementById('share-email-feedback'),
+    shareBar: document.getElementById('share-bar'),
+    shareOpenButton: document.getElementById('share-open'),
+    shareLayer: document.getElementById('share-layer'),
+    shareCard: document.getElementById('share-card'),
+    shareCloseButton: document.getElementById('share-close'),
+    shareBackdrop: document.getElementById('share-backdrop'),
   };
 
   if (!elements.grid || !elements.empty) {
@@ -771,6 +920,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  initializeShareSheet(elements);
   updateViewText(state, elements);
   initializeCopyButton(elements);
   initializeEmailForm(elements);
