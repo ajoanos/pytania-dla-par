@@ -2245,6 +2245,7 @@ body {
 
 .position-card__image {
   width: 100%;
+  height: auto;
   display: block;
   border-radius: 14px;
   object-fit: cover;
@@ -2358,6 +2359,13 @@ body {
   gap: 0.75rem;
 }
 
+.share__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
 .share-link {
   display: inline-flex;
   align-items: center;
@@ -2446,6 +2454,26 @@ body {
 
 .share-email__feedback[data-tone="success"] {
   color: var(--color-fav);
+}
+
+@media (max-width: 640px) {
+  .positions-grid {
+    gap: clamp(0.7rem, 3vw, 1rem);
+  }
+
+  .position-card__figure {
+    padding: clamp(0.5rem, 2vw + 0.25rem, 0.9rem);
+    padding-bottom: clamp(0.7rem, 2vw + 0.4rem, 1rem);
+    gap: clamp(0.5rem, 1.8vw + 0.25rem, 0.8rem);
+  }
+
+  .position-card__footer {
+    padding: 0 clamp(0.5rem, 2vw + 0.25rem, 0.9rem) clamp(0.75rem, 2vw + 0.35rem, 1rem);
+  }
+
+  .position-card__title {
+    font-size: clamp(0.95rem, 2vw + 0.85rem, 1.05rem);
+  }
 }
 
 /* Zdrapka pozycji */

@@ -31,6 +31,18 @@ function formatTitle(id) {
     .join(' ');
 }
 
+function normaliseAssetPath(path) {
+  if (!path) {
+    return '';
+  }
+  try {
+    const decoded = decodeURI(path);
+    return encodeURI(decoded);
+  } catch (error) {
+    return encodeURI(path);
+  }
+}
+
 function encodeLikes(set) {
   if (!set || set.size === 0) {
     return '';
@@ -177,6 +189,16 @@ function createPositionCard(item) {
   image.src = item.src;
   image.alt = item.title;
   image.loading = 'lazy';
+  image.decoding = 'async';
+  if (item.rawSrc && item.rawSrc !== item.src) {
+    image.addEventListener(
+      'error',
+      () => {
+        image.src = item.rawSrc;
+      },
+      { once: true },
+    );
+  }
   figure.appendChild(image);
 
   const caption = document.createElement('figcaption');
@@ -623,9 +645,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     state.allPositions = payload.files.map((src) => {
       const id = normalizeId(src);
+      const encodedSrc = normaliseAssetPath(src);
       return {
         id,
-        src,
+        src: encodedSrc,
+        rawSrc: src,
         title: formatTitle(id),
       };
     });
