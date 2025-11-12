@@ -30,10 +30,17 @@ const hostRequestsOverlay = document.getElementById('host-requests-overlay');
 const hostRequestsPanel = document.getElementById('host-requests');
 const hostRequestsList = document.getElementById('host-requests-list');
 const hostRequestsEmpty = document.getElementById('host-requests-empty');
+const shareBar = document.getElementById('share-bar');
+const shareOpenButton = document.getElementById('share-open');
+const shareLayer = document.getElementById('share-layer');
 const shareCard = document.getElementById('share-card');
-const shareCopyButton = document.getElementById('share-copy-link');
+const shareCloseButton = document.getElementById('share-close');
+const shareBackdrop = document.getElementById('share-backdrop');
+const shareHint = document.getElementById('share-hint');
+const shareFeedback = document.getElementById('share-feedback');
+const shareLinksContainer = document.getElementById('share-links');
+const shareCopyButton = document.getElementById('share-copy');
 const shareQrButton = document.getElementById('share-show-qr');
-const shareCopyFeedback = document.getElementById('share-copy-feedback');
 const shareQrModal = document.getElementById('share-qr-modal');
 const shareQrImage = document.getElementById('share-qr-image');
 const shareQrUrl = document.getElementById('share-qr-url');
@@ -56,6 +63,9 @@ let hasRedirectedToWaiting = false;
 let shareFeedbackTimer = null;
 let chatMessagesState = [];
 let emojiPanelOpen = false;
+let shareSheetController = null;
+let activeParticipantCount = 0;
+let isCurrentUserHost = false;
 
 const waitingRoomPath = 'room-waiting.html';
 const shareLinkUrl = buildShareUrl();
@@ -78,6 +88,17 @@ function hasChatAccess() {
 }
 
 setupCategoryOptions();
+
+shareSheetController = initializeShareSheet({
+  bar: shareBar,
+  openButton: shareOpenButton,
+  layer: shareLayer,
+  card: shareCard,
+  closeButton: shareCloseButton,
+  backdrop: shareBackdrop,
+});
+
+initializeShareChannels();
 
 nextQuestionButton?.addEventListener('click', async () => {
   try {
@@ -309,6 +330,9 @@ async function refreshState() {
 }
 
 function renderParticipants(participants) {
+  activeParticipantCount = Array.isArray(participants) ? participants.length : 0;
+  updateShareVisibility();
+
   if (!participantsList) {
     return;
   }
@@ -774,14 +798,8 @@ function updateAccessState(participant) {
     roomContent.hidden = !hasFullAccess;
   }
 
-  if (shareCard) {
-    const shouldShowShare = Boolean(participant?.is_host);
-    shareCard.hidden = !shouldShowShare;
-    if (!shouldShowShare) {
-      resetShareFeedback();
-      closeQrModal();
-    }
-  }
+  isCurrentUserHost = Boolean(participant?.is_host);
+  updateShareVisibility();
 
   if (!hasFullAccess && !isPending && status !== lastKnownStatus) {
     let message = 'Trwa oczekiwanie na dostęp do pokoju.';
@@ -826,6 +844,192 @@ function buildShareUrl() {
   return url.toString();
 }
 
+function buildShareMessage(url) {
+  return `Dołącz do mojego pokoju w Momenty: ${url}`;
+}
+
+function buildShareLinks(url) {
+  const message = buildShareMessage(url);
+  const encoded = encodeURIComponent(message);
+  return {
+    messenger: `https://m.me/?text=${encoded}`,
+    whatsapp: `https://wa.me/?text=${encoded}`,
+    sms: `sms:&body=${encoded}`,
+  };
+}
+
+function initializeShareChannels() {
+  if (shareCopyButton) {
+    const hasLink = Boolean(shareLinkUrl);
+    shareCopyButton.hidden = !hasLink;
+    shareCopyButton.disabled = !hasLink;
+  }
+
+  if (shareQrButton) {
+    const hasLink = Boolean(shareLinkUrl);
+    shareQrButton.hidden = !hasLink;
+    shareQrButton.disabled = !hasLink;
+  }
+
+  if (shareHint && !shareLinkUrl) {
+    shareHint.textContent = 'Nie udało się przygotować linku do udostępnienia. Odśwież stronę i spróbuj ponownie.';
+  }
+
+  if (!shareLinksContainer) {
+    return;
+  }
+
+  const links = shareLinksContainer.querySelectorAll('[data-share-channel]');
+  if (links.length === 0) {
+    return;
+  }
+
+  if (!shareLinkUrl) {
+    links.forEach((link) => {
+      if (!(link instanceof HTMLAnchorElement)) {
+        return;
+      }
+      link.href = '#';
+      link.setAttribute('aria-disabled', 'true');
+      link.setAttribute('tabindex', '-1');
+      link.classList.add('share-link--disabled');
+    });
+    return;
+  }
+
+  const hrefs = buildShareLinks(shareLinkUrl);
+  links.forEach((link) => {
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+    const channel = link.dataset.shareChannel || '';
+    const target = hrefs[channel] || shareLinkUrl;
+    link.href = target;
+    link.removeAttribute('aria-disabled');
+    link.removeAttribute('tabindex');
+    link.classList.remove('share-link--disabled');
+  });
+}
+
+function initializeShareSheet(elements) {
+  const { bar, openButton, layer, card, closeButton, backdrop } = elements || {};
+  if (!layer || !card || !openButton || !closeButton) {
+    if (bar) {
+      bar.hidden = true;
+    }
+    return null;
+  }
+
+  layer.hidden = false;
+  layer.dataset.open = 'false';
+  layer.setAttribute('aria-hidden', 'true');
+
+  if (!card.hasAttribute('tabindex')) {
+    card.tabIndex = -1;
+  }
+
+  const baseLabel = openButton.dataset.baseLabel || openButton.textContent.trim() || 'Udostępnij pokój';
+  openButton.dataset.baseLabel = baseLabel;
+  openButton.textContent = baseLabel;
+  openButton.disabled = true;
+  openButton.setAttribute('aria-expanded', 'false');
+
+  let activeTrigger = null;
+
+  const close = () => {
+    if (layer.dataset.open !== 'true') {
+      return;
+    }
+    layer.dataset.open = 'false';
+    layer.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('share-layer-open');
+    openButton.setAttribute('aria-expanded', 'false');
+    if (activeTrigger) {
+      activeTrigger.focus({ preventScroll: true });
+      activeTrigger = null;
+    }
+  };
+
+  const open = () => {
+    if (layer.dataset.open === 'true') {
+      return;
+    }
+    activeTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : openButton;
+    layer.dataset.open = 'true';
+    layer.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('share-layer-open');
+    openButton.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => {
+      card.focus({ preventScroll: true });
+    });
+  };
+
+  openButton.addEventListener('click', () => {
+    if (layer.dataset.open === 'true') {
+      close();
+    } else {
+      open();
+    }
+  });
+
+  closeButton.addEventListener('click', () => {
+    close();
+  });
+
+  if (backdrop) {
+    backdrop.addEventListener('click', () => {
+      close();
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && layer.dataset.open === 'true') {
+      event.preventDefault();
+      close();
+    }
+  });
+
+  return { open, close };
+}
+
+function closeShareSheet() {
+  if (shareSheetController && typeof shareSheetController.close === 'function') {
+    shareSheetController.close();
+    return;
+  }
+  if (!shareLayer) {
+    return;
+  }
+  shareLayer.dataset.open = 'false';
+  shareLayer.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('share-layer-open');
+  shareOpenButton?.setAttribute('aria-expanded', 'false');
+}
+
+function updateShareVisibility() {
+  const effectiveCount = activeParticipantCount > 0 ? activeParticipantCount : (isCurrentUserHost ? 1 : 0);
+  const shouldShow = isCurrentUserHost && effectiveCount < 2;
+
+  if (!shouldShow) {
+    closeShareSheet();
+    resetShareFeedback();
+    closeQrModal();
+  }
+
+  if (shareBar) {
+    shareBar.hidden = !shouldShow;
+  }
+  if (shareOpenButton) {
+    shareOpenButton.disabled = !shouldShow;
+    if (shouldShow) {
+      shareOpenButton.removeAttribute('tabindex');
+    } else {
+      shareOpenButton.setAttribute('tabindex', '-1');
+      shareOpenButton.setAttribute('aria-expanded', 'false');
+    }
+  }
+}
+
 async function copyShareLink() {
   if (!shareLinkUrl) {
     return;
@@ -867,11 +1071,12 @@ function closeQrModal() {
 }
 
 function showShareFeedback(message, isError = false) {
-  if (!shareCopyFeedback) {
+  if (!shareFeedback) {
     return;
   }
-  shareCopyFeedback.textContent = message;
-  shareCopyFeedback.classList.toggle('share__feedback--error', isError);
+  shareFeedback.hidden = false;
+  shareFeedback.textContent = message;
+  shareFeedback.dataset.tone = isError ? 'error' : 'success';
   if (shareFeedbackTimer) {
     clearTimeout(shareFeedbackTimer);
   }
@@ -881,15 +1086,16 @@ function showShareFeedback(message, isError = false) {
 }
 
 function resetShareFeedback() {
-  if (!shareCopyFeedback) {
+  if (!shareFeedback) {
     return;
   }
   if (shareFeedbackTimer) {
     clearTimeout(shareFeedbackTimer);
     shareFeedbackTimer = null;
   }
-  shareCopyFeedback.textContent = '';
-  shareCopyFeedback.classList.remove('share__feedback--error');
+  shareFeedback.hidden = true;
+  shareFeedback.textContent = '';
+  delete shareFeedback.dataset.tone;
 }
 
 function setInteractionEnabled(enabled) {

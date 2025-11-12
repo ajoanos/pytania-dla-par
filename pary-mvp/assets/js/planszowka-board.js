@@ -37,24 +37,38 @@ const elements = {
 };
 
 const shareElements = {
-  copyButton: document.getElementById('planszowka-share-copy'),
-  qrButton: document.getElementById('planszowka-share-qr'),
-  feedback: document.getElementById('planszowka-share-feedback'),
-  modal: document.getElementById('planszowka-qr-modal'),
-  modalImage: document.getElementById('planszowka-qr-image'),
-  modalUrl: document.getElementById('planszowka-qr-url'),
-  modalClose: document.getElementById('planszowka-qr-close'),
+  bar: document.getElementById('share-bar'),
+  openButton: document.getElementById('share-open'),
+  layer: document.getElementById('share-layer'),
+  card: document.getElementById('share-card'),
+  closeButton: document.getElementById('share-close'),
+  backdrop: document.getElementById('share-backdrop'),
+  hint: document.getElementById('share-hint'),
+  feedback: document.getElementById('share-feedback'),
+  linksContainer: document.getElementById('share-links'),
+  copyButton: document.getElementById('share-copy'),
+  qrButton: document.getElementById('share-show-qr'),
+  modal: document.getElementById('share-qr-modal'),
+  modalImage: document.getElementById('share-qr-image'),
+  modalUrl: document.getElementById('share-qr-url'),
+  modalClose: document.getElementById('share-qr-close'),
 };
 
 let gameState = createEmptyState();
 let toastTimer = null;
 let shareFeedbackTimer = null;
+let shareSheetController = initializeShareSheet(shareElements);
+
+initializeShareChannels();
+
+updateShareVisibility();
 
 let currentParticipants = [];
 let pollHandle = null;
 let lastSnapshotSignature = '';
 let lastParticipantsSignature = '';
 let lastFocusedFieldIndex = null;
+let isCurrentUserHost = false;
 
 init();
 
@@ -99,7 +113,7 @@ async function loadInitialState() {
 
   const stored = loadFallbackState();
   if (stored) {
-    currentParticipants = deriveParticipantsFromState(stored);
+    setCurrentParticipants(deriveParticipantsFromState(stored));
     applyState(stored, { skipBroadcast: true });
   } else {
     applyState(createEmptyState(), { skipBroadcast: true });
@@ -113,7 +127,8 @@ async function loadRemoteState() {
     if (!snapshot) {
       return false;
     }
-    currentParticipants = snapshot.participants;
+    isCurrentUserHost = Boolean(snapshot.self?.is_host);
+    setCurrentParticipants(snapshot.participants);
     applyState(snapshot.state, { skipBroadcast: true });
     updateSnapshotSignature(snapshot.state, snapshot.participants);
     return true;
@@ -172,7 +187,8 @@ async function requestBoardSnapshot() {
   const state = payload.board_state && typeof payload.board_state === 'object'
     ? payload.board_state
     : createEmptyState();
-  return { state, participants, updatedAt: payload.updated_at || '' };
+  const self = payload.self && typeof payload.self === 'object' ? payload.self : null;
+  return { state, participants, self, updatedAt: payload.updated_at || '' };
 }
 
 function normalizeParticipants(list) {
@@ -252,7 +268,7 @@ function bindEvents() {
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
+    if (event.key === 'Escape' && !shareElements.modal?.hidden) {
       closeQrModal();
     }
   });
@@ -267,7 +283,7 @@ function setupRealtimeBridge() {
     if (!incoming) {
       return;
     }
-    currentParticipants = participants;
+    setCurrentParticipants(participants);
     applyState(incoming, { skipBroadcast: true });
   });
 }
@@ -1192,6 +1208,199 @@ function buildShareUrl() {
   return url.toString();
 }
 
+function buildShareMessage(url) {
+  return `Dołącz do mojej planszówki w Momenty: ${url}`;
+}
+
+function buildShareLinks(url) {
+  const message = buildShareMessage(url);
+  const encoded = encodeURIComponent(message);
+  return {
+    messenger: `https://m.me/?text=${encoded}`,
+    whatsapp: `https://wa.me/?text=${encoded}`,
+    sms: `sms:&body=${encoded}`,
+  };
+}
+
+function initializeShareChannels() {
+  const hasLink = Boolean(shareLinkUrl);
+
+  if (shareElements.copyButton) {
+    shareElements.copyButton.hidden = !hasLink;
+    shareElements.copyButton.disabled = !hasLink;
+  }
+
+  if (shareElements.qrButton) {
+    shareElements.qrButton.hidden = !hasLink;
+    shareElements.qrButton.disabled = !hasLink;
+  }
+
+  if (shareElements.hint && !hasLink) {
+    shareElements.hint.textContent = 'Nie udało się przygotować linku do udostępnienia. Odśwież stronę i spróbuj ponownie.';
+  }
+
+  const { linksContainer } = shareElements;
+  if (!linksContainer) {
+    return;
+  }
+
+  const links = linksContainer.querySelectorAll('[data-share-channel]');
+  if (links.length === 0) {
+    return;
+  }
+
+  if (!hasLink) {
+    links.forEach((link) => {
+      if (!(link instanceof HTMLAnchorElement)) {
+        return;
+      }
+      link.href = '#';
+      link.setAttribute('aria-disabled', 'true');
+      link.setAttribute('tabindex', '-1');
+      link.classList.add('share-link--disabled');
+    });
+    return;
+  }
+
+  const hrefs = buildShareLinks(shareLinkUrl);
+  links.forEach((link) => {
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+    const channel = link.dataset.shareChannel || '';
+    const target = hrefs[channel] || shareLinkUrl;
+    link.href = target;
+    link.removeAttribute('aria-disabled');
+    link.removeAttribute('tabindex');
+    link.classList.remove('share-link--disabled');
+  });
+}
+
+function initializeShareSheet(elements) {
+  const { bar, openButton, layer, card, closeButton, backdrop } = elements || {};
+  if (!layer || !card || !openButton || !closeButton) {
+    if (bar) {
+      bar.hidden = true;
+    }
+    return null;
+  }
+
+  layer.hidden = false;
+  layer.dataset.open = 'false';
+  layer.setAttribute('aria-hidden', 'true');
+
+  if (!card.hasAttribute('tabindex')) {
+    card.tabIndex = -1;
+  }
+
+  const baseLabel = openButton.dataset.baseLabel || openButton.textContent.trim() || 'Udostępnij pokój';
+  openButton.dataset.baseLabel = baseLabel;
+  openButton.textContent = baseLabel;
+  openButton.disabled = true;
+  openButton.setAttribute('aria-expanded', 'false');
+
+  let activeTrigger = null;
+
+  const close = () => {
+    if (layer.dataset.open !== 'true') {
+      return;
+    }
+    layer.dataset.open = 'false';
+    layer.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('share-layer-open');
+    openButton.setAttribute('aria-expanded', 'false');
+    if (activeTrigger) {
+      activeTrigger.focus({ preventScroll: true });
+      activeTrigger = null;
+    }
+  };
+
+  const open = () => {
+    if (layer.dataset.open === 'true') {
+      return;
+    }
+    activeTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : openButton;
+    layer.dataset.open = 'true';
+    layer.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('share-layer-open');
+    openButton.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => {
+      card.focus({ preventScroll: true });
+    });
+  };
+
+  openButton.addEventListener('click', () => {
+    if (layer.dataset.open === 'true') {
+      close();
+    } else {
+      open();
+    }
+  });
+
+  closeButton.addEventListener('click', () => {
+    close();
+  });
+
+  if (backdrop) {
+    backdrop.addEventListener('click', () => {
+      close();
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && layer.dataset.open === 'true') {
+      event.preventDefault();
+      close();
+    }
+  });
+
+  return { open, close };
+}
+
+function closeShareSheet() {
+  if (shareSheetController && typeof shareSheetController.close === 'function') {
+    shareSheetController.close();
+    return;
+  }
+  const { layer, openButton } = shareElements;
+  if (!layer) {
+    return;
+  }
+  layer.dataset.open = 'false';
+  layer.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('share-layer-open');
+  openButton?.setAttribute('aria-expanded', 'false');
+}
+
+function updateShareVisibility() {
+  const count = Array.isArray(currentParticipants) ? currentParticipants.length : 0;
+  const shouldShow = isCurrentUserHost && count < 2;
+
+  if (!shouldShow) {
+    closeShareSheet();
+    resetShareFeedback();
+    closeQrModal();
+  }
+
+  if (shareElements.bar) {
+    shareElements.bar.hidden = !shouldShow;
+  }
+  if (shareElements.openButton) {
+    shareElements.openButton.disabled = !shouldShow;
+    if (shouldShow) {
+      shareElements.openButton.removeAttribute('tabindex');
+    } else {
+      shareElements.openButton.setAttribute('tabindex', '-1');
+      shareElements.openButton.setAttribute('aria-expanded', 'false');
+    }
+  }
+}
+
+function setCurrentParticipants(list) {
+  currentParticipants = Array.isArray(list) ? [...list] : [];
+  updateShareVisibility();
+}
+
 async function copyShareLink() {
   if (!shareLinkUrl) {
     return;
@@ -1241,8 +1450,9 @@ function showShareFeedback(message, isError = false) {
     return;
   }
 
+  shareElements.feedback.hidden = false;
   shareElements.feedback.textContent = message;
-  shareElements.feedback.classList.toggle('share__feedback--error', isError);
+  shareElements.feedback.dataset.tone = isError ? 'error' : 'success';
 
   if (shareFeedbackTimer) {
     clearTimeout(shareFeedbackTimer);
@@ -1263,8 +1473,9 @@ function resetShareFeedback() {
     shareFeedbackTimer = null;
   }
 
+  shareElements.feedback.hidden = true;
   shareElements.feedback.textContent = '';
-  shareElements.feedback.classList.remove('share__feedback--error');
+  delete shareElements.feedback.dataset.tone;
 }
 
 function persistState(state) {
@@ -1322,7 +1533,8 @@ function onGameStateFromServer(callback) {
     try {
       const snapshot = await requestBoardSnapshot();
       if (snapshot) {
-        currentParticipants = snapshot.participants;
+        isCurrentUserHost = Boolean(snapshot.self?.is_host);
+        setCurrentParticipants(snapshot.participants);
         const stateSignature = JSON.stringify(snapshot.state ?? {});
         const participantsSig = JSON.stringify(participantsSignature(snapshot.participants));
         const shouldUpdate =

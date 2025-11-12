@@ -53,18 +53,6 @@
 
     <section class="planszowka-players" id="planszowka-players"></section>
 
-    <section class="planszowka-share" id="planszowka-share">
-      <h3>Udostępnij pokój</h3>
-      <p class="planszowka-share__hint">
-        Wyślij partnerowi link lub pokaż kod QR, aby dołączył do gry z drugiego urządzenia.
-      </p>
-      <div class="planszowka-share__actions">
-        <button type="button" class="btn btn--primary" id="planszowka-share-copy">Skopiuj link</button>
-        <button type="button" class="btn btn--ghost" id="planszowka-share-qr">Pokaż kod QR</button>
-      </div>
-      <p class="planszowka-share__feedback share__feedback" id="planszowka-share-feedback" role="status" aria-live="polite"></p>
-    </section>
-
     <section class="planszowka-dice">
       <p id="planszowka-last-roll" class="planszowka-dice__info">Jeszcze nikt nie rzucał kostką.</p>
     </section>
@@ -91,18 +79,64 @@
       <button type="button" class="btn btn--primary" id="planszowka-reset">Zagraj jeszcze raz</button>
     </section>
     </div>
+
+    <div class="share-bar" id="share-bar" hidden>
+      <button
+        type="button"
+        class="btn btn--primary share-bar__button"
+        id="share-open"
+        aria-haspopup="dialog"
+        aria-controls="share-card"
+        aria-expanded="false"
+      >
+        Udostępnij pokój
+      </button>
+    </div>
+
+    <section class="share-layer" id="share-layer" data-open="false" aria-hidden="true" hidden>
+      <div class="share-layer__backdrop" id="share-backdrop"></div>
+      <section
+        class="card card--share share-layer__panel"
+        id="share-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-card-title"
+        tabindex="-1"
+      >
+        <div class="share-card__header">
+          <h2 id="share-card-title">Udostępnij pokój</h2>
+          <button type="button" class="share-card__close" id="share-close">
+            <span aria-hidden="true">×</span>
+            <span class="visually-hidden">Zamknij okno „Udostępnij pokój”</span>
+          </button>
+        </div>
+        <div class="share-card__body">
+          <p id="share-hint">Wyślij partnerowi link, aby dołączył do planszówki.</p>
+          <p class="share-feedback" id="share-feedback" hidden role="status" aria-live="polite"></p>
+          <div class="share__actions">
+            <button type="button" class="btn btn--ghost" id="share-copy" hidden disabled>Kopiuj link</button>
+            <button type="button" class="btn btn--ghost" id="share-show-qr" hidden disabled>Zeskanuj QR dla partnera</button>
+            <div class="share-links" id="share-links">
+              <a class="share-link" data-share-channel="messenger" href="#" aria-disabled="true" tabindex="-1">Messenger</a>
+              <a class="share-link" data-share-channel="whatsapp" href="#" aria-disabled="true" tabindex="-1">WhatsApp</a>
+              <a class="share-link" data-share-channel="sms" href="#" aria-disabled="true" tabindex="-1">SMS</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
   </main>
 
   <script type="module" src="assets/js/planszowka-board.js"></script>
 
-  <div id="planszowka-qr-modal" class="qr-modal" hidden aria-hidden="true">
-    <div class="qr-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="planszowka-qr-title">
-      <h2 id="planszowka-qr-title">Zeskanuj kod QR</h2>
-      <img id="planszowka-qr-image" class="qr-modal__image" alt="Kod QR prowadzący do pokoju" loading="lazy" />
+  <div id="share-qr-modal" class="qr-modal" hidden aria-hidden="true">
+    <div class="qr-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="share-qr-title">
+      <h2 id="share-qr-title">Zeskanuj kod QR</h2>
+      <img id="share-qr-image" class="qr-modal__image" alt="Kod QR prowadzący do pokoju" loading="lazy" />
       <p class="qr-modal__link">
-        <a id="planszowka-qr-url" href="#" target="_blank" rel="noopener">Otwórz link w nowej karcie</a>
+        <a id="share-qr-url" href="#" target="_blank" rel="noopener">Otwórz link w nowej karcie</a>
       </p>
-      <button type="button" class="btn btn--ghost" id="planszowka-qr-close">Zamknij</button>
+      <button type="button" class="btn btn--ghost" id="share-qr-close">Zamknij</button>
     </div>
   </div>
 </body>
