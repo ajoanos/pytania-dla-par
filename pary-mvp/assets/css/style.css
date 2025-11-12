@@ -2174,20 +2174,35 @@ body {
 }
 
 .card__lead {
-  margin: 0;
+  margin: 0 auto;
   color: var(--color-muted);
   max-width: 28rem;
+  text-align: center;
 }
 
 .card__hint {
   margin: 0;
   color: var(--color-muted);
   min-height: 1.5rem;
+  text-align: center;
 }
 
 .card__actions {
   display: flex;
   justify-content: center;
+}
+
+.card__actions--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  max-width: 320px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.card__actions--stack .btn {
+  width: 100%;
 }
 
 .scratch-card {
@@ -2198,6 +2213,93 @@ body {
   overflow: hidden;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
   background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.35));
+}
+
+.card--wheel {
+  text-align: center;
+}
+
+.wheel {
+  --wheel-pointer-space: clamp(2.25rem, 6vw, 3rem);
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 1.5rem;
+  width: min(420px, 85vw);
+  aspect-ratio: 1 / 1;
+  padding-top: var(--wheel-pointer-space);
+}
+
+.wheel__spinner {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.18), rgba(0, 0, 0, 0.45));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  transition: transform 4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.wheel__spinner canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wheel__pointer {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -8%);
+  width: 0;
+  height: 0;
+  border-left: 1.1rem solid transparent;
+  border-right: 1.1rem solid transparent;
+  border-top: 1.9rem solid var(--color-primary);
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35));
+  z-index: 3;
+}
+
+.wheel__center {
+  position: absolute;
+  top: calc(50% + var(--wheel-pointer-space) / 2);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(44%, 220px);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.75));
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.75rem, 2vw, 1.15rem);
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  z-index: 2;
+}
+
+.wheel__center img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.wheel__placeholder {
+  font-size: clamp(2.25rem, 5vw, 3rem);
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+
+.wheel__result {
+  min-height: 1.5rem;
+  font-weight: 600;
+  color: var(--color-primary-dark);
 }
 
 .scratch-card__image {
@@ -2217,6 +2319,10 @@ body {
 }
 
 .page--scratch .footer__nav {
+  justify-content: center;
+}
+
+.page--wheel .footer__nav {
   justify-content: center;
 }
 
