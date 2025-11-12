@@ -36,9 +36,11 @@ const shareLayer = document.getElementById('share-layer');
 const shareCard = document.getElementById('share-card');
 const shareCloseButton = document.getElementById('share-close');
 const shareBackdrop = document.getElementById('share-backdrop');
-const shareCopyButton = document.getElementById('share-copy-link');
+const shareHint = document.getElementById('share-hint');
+const shareFeedback = document.getElementById('share-feedback');
+const shareLinksContainer = document.getElementById('share-links');
+const shareCopyButton = document.getElementById('share-copy');
 const shareQrButton = document.getElementById('share-show-qr');
-const shareCopyFeedback = document.getElementById('share-copy-feedback');
 const shareQrModal = document.getElementById('share-qr-modal');
 const shareQrImage = document.getElementById('share-qr-image');
 const shareQrUrl = document.getElementById('share-qr-url');
@@ -95,6 +97,8 @@ shareSheetController = initializeShareSheet({
   closeButton: shareCloseButton,
   backdrop: shareBackdrop,
 });
+
+initializeShareChannels();
 
 nextQuestionButton?.addEventListener('click', async () => {
   try {
@@ -840,6 +844,73 @@ function buildShareUrl() {
   return url.toString();
 }
 
+function buildShareMessage(url) {
+  return `Dołącz do mojego pokoju w Momenty: ${url}`;
+}
+
+function buildShareLinks(url) {
+  const message = buildShareMessage(url);
+  const encoded = encodeURIComponent(message);
+  return {
+    messenger: `https://m.me/?text=${encoded}`,
+    whatsapp: `https://wa.me/?text=${encoded}`,
+    sms: `sms:&body=${encoded}`,
+  };
+}
+
+function initializeShareChannels() {
+  if (shareCopyButton) {
+    const hasLink = Boolean(shareLinkUrl);
+    shareCopyButton.hidden = !hasLink;
+    shareCopyButton.disabled = !hasLink;
+  }
+
+  if (shareQrButton) {
+    const hasLink = Boolean(shareLinkUrl);
+    shareQrButton.hidden = !hasLink;
+    shareQrButton.disabled = !hasLink;
+  }
+
+  if (shareHint && !shareLinkUrl) {
+    shareHint.textContent = 'Nie udało się przygotować linku do udostępnienia. Odśwież stronę i spróbuj ponownie.';
+  }
+
+  if (!shareLinksContainer) {
+    return;
+  }
+
+  const links = shareLinksContainer.querySelectorAll('[data-share-channel]');
+  if (links.length === 0) {
+    return;
+  }
+
+  if (!shareLinkUrl) {
+    links.forEach((link) => {
+      if (!(link instanceof HTMLAnchorElement)) {
+        return;
+      }
+      link.href = '#';
+      link.setAttribute('aria-disabled', 'true');
+      link.setAttribute('tabindex', '-1');
+      link.classList.add('share-link--disabled');
+    });
+    return;
+  }
+
+  const hrefs = buildShareLinks(shareLinkUrl);
+  links.forEach((link) => {
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+    const channel = link.dataset.shareChannel || '';
+    const target = hrefs[channel] || shareLinkUrl;
+    link.href = target;
+    link.removeAttribute('aria-disabled');
+    link.removeAttribute('tabindex');
+    link.classList.remove('share-link--disabled');
+  });
+}
+
 function initializeShareSheet(elements) {
   const { bar, openButton, layer, card, closeButton, backdrop } = elements || {};
   if (!layer || !card || !openButton || !closeButton) {
@@ -1000,11 +1071,12 @@ function closeQrModal() {
 }
 
 function showShareFeedback(message, isError = false) {
-  if (!shareCopyFeedback) {
+  if (!shareFeedback) {
     return;
   }
-  shareCopyFeedback.textContent = message;
-  shareCopyFeedback.classList.toggle('share__feedback--error', isError);
+  shareFeedback.hidden = false;
+  shareFeedback.textContent = message;
+  shareFeedback.dataset.tone = isError ? 'error' : 'success';
   if (shareFeedbackTimer) {
     clearTimeout(shareFeedbackTimer);
   }
@@ -1014,15 +1086,16 @@ function showShareFeedback(message, isError = false) {
 }
 
 function resetShareFeedback() {
-  if (!shareCopyFeedback) {
+  if (!shareFeedback) {
     return;
   }
   if (shareFeedbackTimer) {
     clearTimeout(shareFeedbackTimer);
     shareFeedbackTimer = null;
   }
-  shareCopyFeedback.textContent = '';
-  shareCopyFeedback.classList.remove('share__feedback--error');
+  shareFeedback.hidden = true;
+  shareFeedback.textContent = '';
+  delete shareFeedback.dataset.tone;
 }
 
 function setInteractionEnabled(enabled) {

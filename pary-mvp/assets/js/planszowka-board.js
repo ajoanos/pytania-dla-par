@@ -43,9 +43,11 @@ const shareElements = {
   card: document.getElementById('share-card'),
   closeButton: document.getElementById('share-close'),
   backdrop: document.getElementById('share-backdrop'),
-  copyButton: document.getElementById('share-copy-link'),
+  hint: document.getElementById('share-hint'),
+  feedback: document.getElementById('share-feedback'),
+  linksContainer: document.getElementById('share-links'),
+  copyButton: document.getElementById('share-copy'),
   qrButton: document.getElementById('share-show-qr'),
-  feedback: document.getElementById('share-copy-feedback'),
   modal: document.getElementById('share-qr-modal'),
   modalImage: document.getElementById('share-qr-image'),
   modalUrl: document.getElementById('share-qr-url'),
@@ -56,6 +58,8 @@ let gameState = createEmptyState();
 let toastTimer = null;
 let shareFeedbackTimer = null;
 let shareSheetController = initializeShareSheet(shareElements);
+
+initializeShareChannels();
 
 updateShareVisibility();
 
@@ -1204,6 +1208,74 @@ function buildShareUrl() {
   return url.toString();
 }
 
+function buildShareMessage(url) {
+  return `Dołącz do mojej planszówki w Momenty: ${url}`;
+}
+
+function buildShareLinks(url) {
+  const message = buildShareMessage(url);
+  const encoded = encodeURIComponent(message);
+  return {
+    messenger: `https://m.me/?text=${encoded}`,
+    whatsapp: `https://wa.me/?text=${encoded}`,
+    sms: `sms:&body=${encoded}`,
+  };
+}
+
+function initializeShareChannels() {
+  const hasLink = Boolean(shareLinkUrl);
+
+  if (shareElements.copyButton) {
+    shareElements.copyButton.hidden = !hasLink;
+    shareElements.copyButton.disabled = !hasLink;
+  }
+
+  if (shareElements.qrButton) {
+    shareElements.qrButton.hidden = !hasLink;
+    shareElements.qrButton.disabled = !hasLink;
+  }
+
+  if (shareElements.hint && !hasLink) {
+    shareElements.hint.textContent = 'Nie udało się przygotować linku do udostępnienia. Odśwież stronę i spróbuj ponownie.';
+  }
+
+  const { linksContainer } = shareElements;
+  if (!linksContainer) {
+    return;
+  }
+
+  const links = linksContainer.querySelectorAll('[data-share-channel]');
+  if (links.length === 0) {
+    return;
+  }
+
+  if (!hasLink) {
+    links.forEach((link) => {
+      if (!(link instanceof HTMLAnchorElement)) {
+        return;
+      }
+      link.href = '#';
+      link.setAttribute('aria-disabled', 'true');
+      link.setAttribute('tabindex', '-1');
+      link.classList.add('share-link--disabled');
+    });
+    return;
+  }
+
+  const hrefs = buildShareLinks(shareLinkUrl);
+  links.forEach((link) => {
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+    const channel = link.dataset.shareChannel || '';
+    const target = hrefs[channel] || shareLinkUrl;
+    link.href = target;
+    link.removeAttribute('aria-disabled');
+    link.removeAttribute('tabindex');
+    link.classList.remove('share-link--disabled');
+  });
+}
+
 function initializeShareSheet(elements) {
   const { bar, openButton, layer, card, closeButton, backdrop } = elements || {};
   if (!layer || !card || !openButton || !closeButton) {
@@ -1378,8 +1450,9 @@ function showShareFeedback(message, isError = false) {
     return;
   }
 
+  shareElements.feedback.hidden = false;
   shareElements.feedback.textContent = message;
-  shareElements.feedback.classList.toggle('share__feedback--error', isError);
+  shareElements.feedback.dataset.tone = isError ? 'error' : 'success';
 
   if (shareFeedbackTimer) {
     clearTimeout(shareFeedbackTimer);
@@ -1400,8 +1473,9 @@ function resetShareFeedback() {
     shareFeedbackTimer = null;
   }
 
+  shareElements.feedback.hidden = true;
   shareElements.feedback.textContent = '';
-  shareElements.feedback.classList.remove('share__feedback--error');
+  delete shareElements.feedback.dataset.tone;
 }
 
 function persistState(state) {

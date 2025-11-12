@@ -111,14 +111,17 @@
           </button>
         </div>
         <div class="share-card__body">
-          <p class="share__description">
-            Wyślij partnerowi link lub pokaż mu kod QR, aby mógł szybko dołączyć z drugiego urządzenia.
-          </p>
+          <p id="share-hint">Wyślij partnerowi link, aby dołączył do planszówki.</p>
+          <p class="share-feedback" id="share-feedback" hidden role="status" aria-live="polite"></p>
           <div class="share__actions">
-            <button type="button" class="btn btn--primary" id="share-copy-link">Skopiuj link</button>
-            <button type="button" class="btn btn--ghost" id="share-show-qr">Zeskanuj QR dla partnera</button>
+            <button type="button" class="btn btn--ghost" id="share-copy" hidden disabled>Kopiuj link</button>
+            <button type="button" class="btn btn--ghost" id="share-show-qr" hidden disabled>Zeskanuj QR dla partnera</button>
+            <div class="share-links" id="share-links">
+              <a class="share-link" data-share-channel="messenger" href="#" aria-disabled="true" tabindex="-1">Messenger</a>
+              <a class="share-link" data-share-channel="whatsapp" href="#" aria-disabled="true" tabindex="-1">WhatsApp</a>
+              <a class="share-link" data-share-channel="sms" href="#" aria-disabled="true" tabindex="-1">SMS</a>
+            </div>
           </div>
-          <p class="share__feedback" id="share-copy-feedback" role="status" aria-live="polite"></p>
         </div>
       </section>
     </section>
