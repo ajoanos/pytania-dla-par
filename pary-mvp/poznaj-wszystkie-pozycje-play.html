@@ -103,6 +103,7 @@
           <p class="share-feedback" id="share-feedback" hidden role="status"></p>
           <div class="share__actions">
             <button type="button" class="btn btn--ghost" id="share-copy" disabled hidden>Kopiuj link</button>
+            <button type="button" class="btn btn--ghost" id="share-show-qr" hidden disabled>Zeskanuj QR dla partnera</button>
             <div class="share-links" id="share-links">
               <a class="share-link" data-share-channel="messenger" href="#" aria-disabled="true" tabindex="-1">Messenger</a>
               <a class="share-link" data-share-channel="whatsapp" href="#" aria-disabled="true" tabindex="-1">WhatsApp</a>
@@ -127,5 +128,16 @@
       </nav>
     </footer>
   </main>
+
+  <div id="share-qr-modal" class="qr-modal" hidden aria-hidden="true">
+    <div class="qr-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="share-qr-title">
+      <h2 id="share-qr-title">Zeskanuj kod QR</h2>
+      <img id="share-qr-image" class="qr-modal__image" alt="Kod QR prowadzący do udostępnionych pozycji" loading="lazy" />
+      <p class="qr-modal__link">
+        <a id="share-qr-url" href="#" target="_blank" rel="noopener">Otwórz link w nowej karcie</a>
+      </p>
+      <button type="button" class="btn btn--ghost" id="share-qr-close">Zamknij</button>
+    </div>
+  </div>
 </body>
 </html>
