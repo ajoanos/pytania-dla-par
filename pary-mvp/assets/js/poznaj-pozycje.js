@@ -98,11 +98,55 @@ function buildShareMessage(url, count) {
 function buildShareLinks(url, count) {
   const message = buildShareMessage(url, count);
   return {
-    messenger: `https://m.me/?link=${encodeURIComponent(url)}`,
+    messenger: `https://m.me/?text=${encodeURIComponent(message)}`,
     whatsapp: `https://wa.me/?text=${encodeURIComponent(message)}`,
     sms: `sms:&body=${encodeURIComponent(message)}`,
-    email: `mailto:?subject=${encodeURIComponent('Poznaj wszystkie pozycje – nasze typy')}&body=${encodeURIComponent(message)}`,
   };
+}
+
+async function copyToClipboard(text) {
+  if (!text) {
+    return false;
+  }
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (error) {
+      console.warn('Nie udało się skopiować linku przez Clipboard API.', error);
+    }
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '-1000px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  let success = false;
+  try {
+    success = document.execCommand('copy');
+  } catch (error) {
+    console.warn('Nie udało się skopiować linku przy użyciu execCommand.', error);
+  }
+  document.body.removeChild(textarea);
+  return success;
+}
+
+function showShareFeedback(elements, message, tone = 'success') {
+  const { shareFeedback } = elements;
+  if (!shareFeedback) {
+    return;
+  }
+  if (!message) {
+    shareFeedback.hidden = true;
+    shareFeedback.textContent = '';
+    shareFeedback.removeAttribute('data-tone');
+    return;
+  }
+  shareFeedback.textContent = message;
+  shareFeedback.hidden = false;
+  shareFeedback.dataset.tone = tone;
 }
 
 function ensureAccess(receivedLikesSize, previousLikesSize) {
@@ -222,7 +266,15 @@ function buildShareUrl(state) {
 
 function updateShareState(state, elements) {
   const count = state.myLikes.size;
-  const { shareHint, shareCount, shareLinks, shareNative } = elements;
+  const {
+    shareHint,
+    shareCount,
+    shareLinks,
+    shareCopy,
+    shareEmail,
+    shareEmailInput,
+    shareEmailFeedback,
+  } = elements;
 
   if (count > 0) {
     shareCount.hidden = false;
@@ -238,7 +290,8 @@ function updateShareState(state, elements) {
   }
 
   const shareUrl = count > 0 ? buildShareUrl(state) : '';
-  const links = shareLinks.querySelectorAll('[data-share-channel]');
+  const shareMessage = shareUrl ? buildShareMessage(shareUrl, count) : '';
+  const links = shareLinks ? shareLinks.querySelectorAll('[data-share-channel]') : [];
   const hrefs = shareUrl ? buildShareLinks(shareUrl, count) : null;
 
   links.forEach((link) => {
@@ -257,18 +310,45 @@ function updateShareState(state, elements) {
     link.classList.remove('share-link--disabled');
   });
 
-  if (shareNative) {
-    if (navigator.share && shareUrl) {
-      shareNative.hidden = false;
-      shareNative.disabled = false;
-      shareNative.dataset.shareUrl = shareUrl;
-      shareNative.dataset.shareCount = String(count);
+  if (shareCopy) {
+    if (shareUrl) {
+      shareCopy.hidden = false;
+      shareCopy.disabled = false;
+      shareCopy.dataset.shareUrl = shareUrl;
     } else {
-      shareNative.hidden = true;
-      shareNative.disabled = true;
-      delete shareNative.dataset.shareUrl;
-      delete shareNative.dataset.shareCount;
+      shareCopy.hidden = true;
+      shareCopy.disabled = true;
+      delete shareCopy.dataset.shareUrl;
     }
+  }
+
+  if (shareEmail) {
+    if (shareUrl) {
+      shareEmail.hidden = false;
+      shareEmail.dataset.shareUrl = shareUrl;
+      shareEmail.dataset.shareMessage = shareMessage;
+      if (shareEmailFeedback) {
+        shareEmailFeedback.hidden = true;
+        shareEmailFeedback.textContent = '';
+        shareEmailFeedback.removeAttribute('data-tone');
+      }
+    } else {
+      shareEmail.hidden = true;
+      delete shareEmail.dataset.shareUrl;
+      delete shareEmail.dataset.shareMessage;
+      if (shareEmailInput) {
+        shareEmailInput.value = '';
+      }
+      if (shareEmailFeedback) {
+        shareEmailFeedback.hidden = true;
+        shareEmailFeedback.textContent = '';
+        shareEmailFeedback.removeAttribute('data-tone');
+      }
+    }
+  }
+
+  if (!shareUrl) {
+    showShareFeedback(elements, '');
   }
 }
 
@@ -295,12 +375,96 @@ function updateViewText(state, elements) {
   }
 }
 
+function updateSummary(state, elements) {
+  const {
+    summaryContainer,
+    summaryCommon,
+    summaryCommonList,
+    summaryPartner,
+    summaryPartnerList,
+  } = elements;
+
+  if (!summaryContainer || !summaryCommonList || !summaryPartnerList) {
+    return;
+  }
+
+  const partnerLikes = state.receivedLikes || new Set();
+  const myLikes = state.myLikes || new Set();
+
+  if (partnerLikes.size === 0 || myLikes.size === 0) {
+    summaryContainer.hidden = true;
+    summaryCommonList.innerHTML = '';
+    summaryPartnerList.innerHTML = '';
+    return;
+  }
+
+  const partnerIds = Array.from(partnerLikes);
+  const commonIds = partnerIds.filter((id) => myLikes.has(id));
+  const partnerOnlyIds = partnerIds.filter((id) => !myLikes.has(id));
+
+  if (commonIds.length === 0 && partnerOnlyIds.length === 0) {
+    summaryContainer.hidden = true;
+    summaryCommonList.innerHTML = '';
+    summaryPartnerList.innerHTML = '';
+    return;
+  }
+
+  const getTitle = (id) => state.positionById.get(id)?.title || formatTitle(id);
+
+  const fillList = (target, ids) => {
+    target.innerHTML = '';
+    if (ids.length === 0) {
+      return;
+    }
+    const fragment = document.createDocumentFragment();
+    ids.forEach((entry) => {
+      const item = document.createElement('li');
+      item.textContent = getTitle(entry);
+      fragment.appendChild(item);
+    });
+    target.appendChild(fragment);
+  };
+
+  summaryContainer.hidden = false;
+
+  if (commonIds.length > 0) {
+    summaryCommon.hidden = false;
+    fillList(summaryCommonList, commonIds);
+  } else {
+    summaryCommon.hidden = true;
+    summaryCommonList.innerHTML = '';
+  }
+
+  if (partnerOnlyIds.length > 0) {
+    summaryPartner.hidden = false;
+    fillList(summaryPartnerList, partnerOnlyIds);
+  } else {
+    summaryPartner.hidden = true;
+    summaryPartnerList.innerHTML = '';
+  }
+
+  if (summaryCommon.hidden && summaryPartner.hidden) {
+    summaryContainer.hidden = true;
+  }
+}
+
 function renderPositions(state, elements) {
   const { grid, empty } = elements;
   const cardElements = new Map();
-  const items = state.viewMode === 'shared' && state.receivedLikes.size > 0
-    ? state.allPositions.filter((item) => state.receivedLikes.has(item.id))
-    : state.allPositions.slice();
+  let items;
+
+  if (state.viewMode === 'shared' && state.receivedLikes.size > 0) {
+    const partnerLiked = state.allPositions.filter((item) => state.receivedLikes.has(item.id));
+    if (state.myLikes.size > 0) {
+      const common = partnerLiked.filter((item) => state.myLikes.has(item.id));
+      const partnerOnly = partnerLiked.filter((item) => !state.myLikes.has(item.id));
+      items = [...common, ...partnerOnly];
+    } else {
+      items = partnerLiked;
+    }
+  } else {
+    items = state.allPositions.slice();
+  }
 
   grid.innerHTML = '';
 
@@ -331,6 +495,7 @@ function renderPositions(state, elements) {
       }
       updateCardState(cardElements, id, state);
       updateShareState(state, elements);
+      updateSummary(state, elements);
     });
     updateCardState(cardElements, id, state);
   });
@@ -338,28 +503,57 @@ function renderPositions(state, elements) {
   return cardElements;
 }
 
-function initializeShareButton(elements) {
-  const { shareNative } = elements;
-  if (!shareNative) {
+function initializeCopyButton(elements) {
+  const { shareCopy } = elements;
+  if (!shareCopy) {
     return;
   }
-  shareNative.addEventListener('click', async () => {
-    const shareUrl = shareNative.dataset.shareUrl;
-    const count = Number.parseInt(shareNative.dataset.shareCount || '0', 10);
-    if (!shareUrl || !navigator.share) {
+  shareCopy.addEventListener('click', async () => {
+    const shareUrl = shareCopy.dataset.shareUrl;
+    if (!shareUrl) {
       return;
     }
-    try {
-      await navigator.share({
-        title: 'Poznaj wszystkie pozycje',
-        text: buildShareMessage(shareUrl, count),
-        url: shareUrl,
-      });
-    } catch (error) {
-      if (error && error.name === 'AbortError') {
-        return;
-      }
-      console.warn('Nie udało się udostępnić linku.', error);
+    const success = await copyToClipboard(shareUrl);
+    if (success) {
+      showShareFeedback(elements, 'Skopiowano link do schowka.');
+    } else {
+      showShareFeedback(
+        elements,
+        'Nie udało się skopiować linku. Skopiuj go ręcznie.',
+        'error',
+      );
+    }
+  });
+}
+
+function initializeEmailForm(elements) {
+  const { shareEmail, shareEmailInput, shareEmailFeedback } = elements;
+  if (!shareEmail || !shareEmailInput) {
+    return;
+  }
+  shareEmail.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!shareEmailInput.checkValidity()) {
+      shareEmailInput.reportValidity();
+      return;
+    }
+
+    const email = shareEmailInput.value.trim();
+    const shareUrl = shareEmail.dataset.shareUrl;
+    const shareMessage = shareEmail.dataset.shareMessage;
+
+    if (!email || !shareUrl || !shareMessage) {
+      return;
+    }
+
+    const subject = 'Poznaj wszystkie pozycje – nasze typy';
+    const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shareMessage)}`;
+    window.location.href = mailto;
+
+    if (shareEmailFeedback) {
+      shareEmailFeedback.hidden = false;
+      shareEmailFeedback.dataset.tone = 'success';
+      shareEmailFeedback.textContent = 'Otworzyliśmy Twoją aplikację e-mail. Jeśli wiadomość się nie pojawi, skopiuj link i wyślij go ręcznie.';
     }
   });
 }
@@ -378,6 +572,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const state = {
     allPositions: [],
+    positionById: new Map(),
     receivedLikes,
     previousLikes,
     myLikes: previousLikes.size > 0 ? new Set(previousLikes) : new Set(),
@@ -397,19 +592,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     info: document.getElementById('positions-info'),
     lead: document.getElementById('positions-lead'),
     showAllButton: document.getElementById('show-all-button'),
+    summaryContainer: document.getElementById('positions-summary'),
+    summaryCommon: document.getElementById('positions-summary-common'),
+    summaryCommonList: document.getElementById('positions-summary-common-list'),
+    summaryPartner: document.getElementById('positions-summary-partner'),
+    summaryPartnerList: document.getElementById('positions-summary-partner-list'),
     shareHint: document.getElementById('share-hint'),
     shareCount: document.getElementById('share-count'),
     shareLinks: document.getElementById('share-links'),
-    shareNative: document.getElementById('share-native'),
+    shareFeedback: document.getElementById('share-feedback'),
+    shareCopy: document.getElementById('share-copy'),
+    shareEmail: document.getElementById('share-email'),
+    shareEmailInput: document.getElementById('share-email-input'),
+    shareEmailFeedback: document.getElementById('share-email-feedback'),
   };
 
-  if (!elements.grid || !elements.empty || !elements.shareLinks) {
+  if (!elements.grid || !elements.empty) {
     console.error('Brak elementów interfejsu gry.');
     return;
   }
 
   updateViewText(state, elements);
-  initializeShareButton(elements);
+  initializeCopyButton(elements);
+  initializeEmailForm(elements);
 
   try {
     const payload = await getJson(LIST_ENDPOINT);
@@ -424,6 +629,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         title: formatTitle(id),
       };
     });
+    state.positionById = new Map(state.allPositions.map((item) => [item.id, item]));
   } catch (error) {
     console.error(error);
     elements.empty.hidden = false;
@@ -446,6 +652,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let cardElements = renderPositions(state, elements);
   updateShareState(state, elements);
+  updateSummary(state, elements);
 
   if (elements.showAllButton) {
     elements.showAllButton.addEventListener('click', () => {
@@ -466,6 +673,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
       cardElements = renderPositions(state, elements);
       updateShareState(state, elements);
+      updateSummary(state, elements);
     });
   }
 });

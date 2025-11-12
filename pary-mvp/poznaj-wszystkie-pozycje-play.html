@@ -53,6 +53,16 @@
         </p>
         <button type="button" class="btn btn--ghost" id="show-all-button" hidden>Chcesz wysłać swoje propozycje?</button>
       </div>
+      <section class="positions-summary" id="positions-summary" hidden aria-live="polite">
+        <div class="positions-summary__group" id="positions-summary-common" hidden>
+          <h3 class="positions-summary__title">Wasze wspólne typy</h3>
+          <ul class="positions-summary__list" id="positions-summary-common-list"></ul>
+        </div>
+        <div class="positions-summary__group" id="positions-summary-partner" hidden>
+          <h3 class="positions-summary__title">Partner proponuje też</h3>
+          <ul class="positions-summary__list" id="positions-summary-partner-list"></ul>
+        </div>
+      </section>
       <div class="positions-grid" id="positions-grid" role="list"></div>
       <p class="positions-empty" id="positions-empty" hidden>Brak pozycji do wyświetlenia. Odśwież stronę lub spróbuj ponownie później.</p>
     </section>
@@ -61,15 +71,23 @@
       <h2>Wyślij swoje typy</h2>
       <p id="share-hint">Polub przynajmniej jedną pozycję, aby udostępnić ją partnerowi.</p>
       <p class="share__count" id="share-count" hidden></p>
+      <p class="share-feedback" id="share-feedback" hidden role="status"></p>
       <div class="share__actions">
-        <button type="button" class="btn btn--primary" id="share-native" hidden>Udostępnij</button>
+        <button type="button" class="btn btn--ghost" id="share-copy" disabled hidden>Kopiuj link</button>
         <div class="share-links" id="share-links">
           <a class="share-link" data-share-channel="messenger" href="#" aria-disabled="true" tabindex="-1">Messenger</a>
           <a class="share-link" data-share-channel="whatsapp" href="#" aria-disabled="true" tabindex="-1">WhatsApp</a>
           <a class="share-link" data-share-channel="sms" href="#" aria-disabled="true" tabindex="-1">SMS</a>
-          <a class="share-link" data-share-channel="email" href="#" aria-disabled="true" tabindex="-1">E-mail</a>
         </div>
       </div>
+      <form class="share-email" id="share-email" hidden>
+        <label class="share-email__field" for="share-email-input">
+          <span class="share-email__label">Adres e-mail partnera</span>
+          <input type="email" id="share-email-input" name="partner_email" placeholder="partner@przyklad.pl" autocomplete="email" required />
+        </label>
+        <button type="submit" class="btn btn--primary">Wyślij</button>
+        <p class="share-email__feedback" id="share-email-feedback" hidden role="status"></p>
+      </form>
     </section>
 
     <footer class="footer">
