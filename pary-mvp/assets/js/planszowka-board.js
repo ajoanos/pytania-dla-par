@@ -57,18 +57,17 @@ const shareElements = {
 let gameState = createEmptyState();
 let toastTimer = null;
 let shareFeedbackTimer = null;
-let shareSheetController = initializeShareSheet(shareElements);
-
-initializeShareChannels();
-
-updateShareVisibility();
-
 let currentParticipants = [];
 let pollHandle = null;
 let lastSnapshotSignature = '';
 let lastParticipantsSignature = '';
 let lastFocusedFieldIndex = null;
 let isCurrentUserHost = false;
+let shareSheetController = initializeShareSheet(shareElements);
+
+initializeShareChannels();
+
+updateShareVisibility();
 
 init();
 
