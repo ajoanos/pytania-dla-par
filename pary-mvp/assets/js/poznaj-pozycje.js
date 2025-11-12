@@ -43,6 +43,139 @@ function normaliseAssetPath(path) {
   }
 }
 
+let imagePreviewInstance = null;
+
+function createImagePreview() {
+  if (!document.body) {
+    return null;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'position-lightbox';
+  overlay.hidden = true;
+  overlay.dataset.open = 'false';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.setAttribute('aria-label', 'Podgląd pozycji');
+  overlay.tabIndex = -1;
+
+  const content = document.createElement('div');
+  content.className = 'position-lightbox__content';
+
+  const image = document.createElement('img');
+  image.className = 'position-lightbox__image';
+  image.alt = '';
+
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.className = 'position-lightbox__close';
+  closeButton.setAttribute('aria-label', 'Zamknij podgląd');
+  closeButton.innerHTML = '<span aria-hidden="true">×</span><span class="visually-hidden">Zamknij podgląd</span>';
+
+  content.appendChild(image);
+  content.appendChild(closeButton);
+  overlay.appendChild(content);
+  document.body.appendChild(overlay);
+
+  let activeTrigger = null;
+
+  const close = () => {
+    if (overlay.dataset.open !== 'true') {
+      return;
+    }
+    overlay.dataset.open = 'false';
+    overlay.setAttribute('aria-hidden', 'true');
+  };
+
+  const open = (src, alt, trigger) => {
+    if (!src) {
+      return;
+    }
+    activeTrigger = trigger instanceof HTMLElement ? trigger : null;
+    if (activeTrigger) {
+      activeTrigger.setAttribute('aria-expanded', 'true');
+    }
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    image.src = src;
+    image.alt = alt || '';
+    requestAnimationFrame(() => {
+      overlay.dataset.open = 'true';
+      overlay.focus({ preventScroll: true });
+    });
+  };
+
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) {
+      close();
+    }
+  });
+
+  closeButton.addEventListener('click', () => {
+    close();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && overlay.dataset.open === 'true') {
+      event.preventDefault();
+      close();
+    }
+  });
+
+  overlay.addEventListener('transitionend', (event) => {
+    if (event.target !== overlay || overlay.dataset.open === 'true') {
+      return;
+    }
+    overlay.hidden = true;
+    image.removeAttribute('src');
+    image.alt = '';
+    if (activeTrigger) {
+      activeTrigger.setAttribute('aria-expanded', 'false');
+      activeTrigger.focus({ preventScroll: true });
+      activeTrigger = null;
+    }
+  });
+
+  return {
+    attach(imageElement, src, alt) {
+      if (!imageElement || imageElement.dataset.previewBound === 'true') {
+        return;
+      }
+      imageElement.dataset.previewBound = 'true';
+      imageElement.classList.add('position-card__image--interactive');
+      imageElement.setAttribute('tabindex', '0');
+      imageElement.setAttribute('role', 'button');
+      imageElement.setAttribute('aria-haspopup', 'dialog');
+      imageElement.setAttribute('aria-expanded', 'false');
+      if (alt) {
+        imageElement.setAttribute('aria-label', `Powiększ: ${alt}`);
+      }
+
+      const openPreview = () => {
+        const targetSrc = src || imageElement.currentSrc || imageElement.src;
+        open(targetSrc, alt, imageElement);
+      };
+
+      imageElement.addEventListener('click', openPreview);
+      imageElement.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+          event.preventDefault();
+          openPreview();
+        }
+      });
+    },
+    close,
+  };
+}
+
+function getImagePreview() {
+  if (!imagePreviewInstance) {
+    imagePreviewInstance = createImagePreview();
+  }
+  return imagePreviewInstance;
+}
+
 function encodeLikes(set) {
   if (!set || set.size === 0) {
     return '';
@@ -198,6 +331,10 @@ function createPositionCard(item) {
       },
       { once: true },
     );
+  }
+  const preview = getImagePreview();
+  if (preview) {
+    preview.attach(image, item.rawSrc || item.src, item.title);
   }
   figure.appendChild(image);
 
