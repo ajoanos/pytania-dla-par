@@ -1996,7 +1996,6 @@ body {
   grid-template-areas:
     'status'
     'players'
-    'share'
     'dice'
     'task'
     'board'
@@ -2473,7 +2472,12 @@ body {
   color: var(--color-fav);
 }
 
-.page--positions .container {
+.page--positions .container,
+.page--room .container {
+  padding-bottom: clamp(7rem, 12vh, 9rem);
+}
+
+.page--board .planszowka-shell {
   padding-bottom: clamp(7rem, 12vh, 9rem);
 }
 
@@ -3151,7 +3155,6 @@ body.share-layer-open .share-bar {
     grid-template-areas:
       'status'
       'players'
-      'share'
       'dice'
       'task'
       'board'

@@ -529,6 +529,7 @@ function updateShareState(state, elements) {
     shareEmailInput,
     shareEmailFeedback,
     shareOpenButton,
+    shareQrButton,
   } = elements;
 
   if (count > 0) {
@@ -581,6 +582,18 @@ function updateShareState(state, elements) {
       shareCopy.hidden = true;
       shareCopy.disabled = true;
       delete shareCopy.dataset.shareUrl;
+    }
+  }
+
+  if (shareQrButton) {
+    if (shareUrl) {
+      shareQrButton.hidden = false;
+      shareQrButton.disabled = false;
+      shareQrButton.dataset.shareUrl = shareUrl;
+    } else {
+      shareQrButton.hidden = true;
+      shareQrButton.disabled = true;
+      delete shareQrButton.dataset.shareUrl;
     }
   }
 
@@ -790,6 +803,52 @@ function initializeCopyButton(elements) {
   });
 }
 
+function initializeQrControls(elements) {
+  const { shareQrButton, shareQrModal, shareQrImage, shareQrUrl, shareQrClose } = elements;
+  if (!shareQrModal || !shareQrImage || !shareQrUrl) {
+    return;
+  }
+
+  const closeModal = () => {
+    shareQrModal.hidden = true;
+    shareQrModal.setAttribute('aria-hidden', 'true');
+    shareQrImage.removeAttribute('src');
+    shareQrUrl.removeAttribute('href');
+  };
+
+  const openModal = () => {
+    const shareUrl = shareQrButton?.dataset.shareUrl;
+    if (!shareUrl) {
+      return;
+    }
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(shareUrl)}`;
+    shareQrImage.src = qrSrc;
+    shareQrUrl.href = shareUrl;
+    shareQrModal.hidden = false;
+    shareQrModal.setAttribute('aria-hidden', 'false');
+  };
+
+  shareQrButton?.addEventListener('click', () => {
+    openModal();
+  });
+
+  shareQrClose?.addEventListener('click', () => {
+    closeModal();
+  });
+
+  shareQrModal.addEventListener('click', (event) => {
+    if (event.target === shareQrModal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !shareQrModal.hidden) {
+      closeModal();
+    }
+  });
+}
+
 function initializeEmailForm(elements) {
   const { shareEmail, shareEmailInput, shareEmailFeedback } = elements;
   if (!shareEmail || !shareEmailInput) {
@@ -913,6 +972,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     shareCard: document.getElementById('share-card'),
     shareCloseButton: document.getElementById('share-close'),
     shareBackdrop: document.getElementById('share-backdrop'),
+    shareQrButton: document.getElementById('share-show-qr'),
+    shareQrModal: document.getElementById('share-qr-modal'),
+    shareQrImage: document.getElementById('share-qr-image'),
+    shareQrUrl: document.getElementById('share-qr-url'),
+    shareQrClose: document.getElementById('share-qr-close'),
   };
 
   if (!elements.grid || !elements.empty) {
@@ -923,6 +987,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initializeShareSheet(elements);
   updateViewText(state, elements);
   initializeCopyButton(elements);
+  initializeQrControls(elements);
   initializeEmailForm(elements);
 
   try {
