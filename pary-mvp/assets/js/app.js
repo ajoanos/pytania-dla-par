@@ -39,26 +39,41 @@ async function requestNewRoomKey() {
 
 export function initThemeToggle(button) {
   if (!button) return;
-  const stored = localStorage.getItem(STORAGE_KEY_THEME);
-  if (stored) {
-    document.body.dataset.theme = stored;
+
+  const applyStoredTheme = () => {
+    const stored = localStorage.getItem(STORAGE_KEY_THEME);
+    if (stored) {
+      document.body.dataset.theme = stored;
+    } else if (!document.body.dataset.theme) {
+      document.body.dataset.theme = 'light';
+    }
+  };
+
+  const updateIcon = () => {
+    if (document.body.dataset.theme === 'dark') {
+      button.textContent = '☀️';
+    } else {
+      button.textContent = '🌙';
+    }
+  };
+
+  applyStoredTheme();
+
+  if (button.dataset.themeInit === 'true') {
+    updateIcon();
+    return;
   }
 
+  button.dataset.themeInit = 'true';
+
   updateIcon();
+
   button.addEventListener('click', () => {
     const next = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
     document.body.dataset.theme = next;
     localStorage.setItem(STORAGE_KEY_THEME, next);
     updateIcon();
   });
-
-  function updateIcon() {
-    if (document.body.dataset.theme === 'dark') {
-      button.textContent = '☀️';
-    } else {
-      button.textContent = '🌙';
-    }
-  }
 }
 
 function focusElement(element) {
@@ -91,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formPassword = passwordForm.dataset.password || ACCESS_PASSWORD;
     const storageKey = passwordForm.dataset.storageKey || ACCESS_STORAGE_KEY;
     const successTarget = passwordForm.dataset.success || 'pytania-dla-par-room.html';
+    const skipRoomKey = passwordForm.dataset.skipRoomKey === 'true';
     const defaultErrorMessage = passwordError?.textContent || 'Niepoprawne hasło. Spróbuj ponownie.';
 
     if (passwordInput) {
@@ -134,10 +150,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (submitButton) {
           submitButton.disabled = true;
         }
-        const roomKey = await requestNewRoomKey();
+        let roomKey = '';
+        if (!skipRoomKey) {
+          roomKey = await requestNewRoomKey();
+        }
         sessionStorage.setItem(storageKey, 'true');
         const targetUrl = new URL(successTarget, window.location.href);
-        targetUrl.searchParams.set('room_key', roomKey);
+        if (!skipRoomKey && roomKey) {
+          targetUrl.searchParams.set('room_key', roomKey);
+        }
         window.location.href = targetUrl.toString();
       } catch (error) {
         console.error(error);
