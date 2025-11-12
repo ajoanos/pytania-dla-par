@@ -7,6 +7,32 @@ const SEGMENT_COUNT = 12;
 const SEGMENT_COLORS = ['#f72585', '#b5179e', '#7209b7', '#560bad'];
 const POINTER_ANGLE_RAD = -Math.PI / 2;
 
+function getCrypto() {
+  if (typeof window !== 'undefined' && (window.crypto || window.msCrypto)) {
+    return window.crypto || window.msCrypto;
+  }
+  return null;
+}
+
+function randomInt(maxExclusive) {
+  const max = Math.floor(maxExclusive);
+  if (!Number.isFinite(max) || max <= 0) {
+    return 0;
+  }
+  const cryptoObj = getCrypto();
+  if (cryptoObj && cryptoObj.getRandomValues) {
+    const range = max;
+    const maxUint = 0xffffffff;
+    const limit = Math.floor((maxUint + 1) / range) * range;
+    const buffer = new Uint32Array(1);
+    do {
+      cryptoObj.getRandomValues(buffer);
+    } while (buffer[0] >= limit);
+    return buffer[0] % range;
+  }
+  return Math.floor(Math.random() * max);
+}
+
 function $(selector) {
   return document.querySelector(selector);
 }
@@ -45,7 +71,7 @@ function ensureAccess() {
 
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = randomInt(i + 1);
     [array[i], array[j]] = [array[j], array[i]];
   }
   return array;
@@ -100,6 +126,7 @@ function createWheel() {
     isSpinning: false,
     canvasSize: 0,
     devicePixelRatio: 0,
+    spinOrder: [],
   };
 
   function resetSpinner() {
@@ -236,6 +263,23 @@ function createWheel() {
     }
   }
 
+  function refillSpinOrder() {
+    const count = state.positions.length;
+    if (!count) {
+      state.spinOrder = [];
+      return;
+    }
+    const order = Array.from({ length: count }, (_, index) => index);
+    state.spinOrder = shuffle(order);
+  }
+
+  function nextSpinIndex() {
+    if (!state.spinOrder.length) {
+      refillSpinOrder();
+    }
+    return state.spinOrder.pop() ?? 0;
+  }
+
   async function preparePositions() {
     if (!state.allFiles.length) {
       await loadAllFiles();
@@ -291,6 +335,7 @@ function createWheel() {
           state.images.push(state.images[index]);
         }
       }
+      refillSpinOrder();
       drawWheel();
       setStatus('Naciśnij „Zakręć kołem”, aby wylosować pozycję.');
       spinButton.disabled = false;
@@ -336,8 +381,8 @@ function createWheel() {
 
     const count = state.positions.length;
     const segmentAngle = 360 / count;
-    const selectedIndex = Math.floor(Math.random() * count);
-    const extraSpins = 4 + Math.floor(Math.random() * 3);
+    const selectedIndex = nextSpinIndex();
+    const extraSpins = 4 + randomInt(4);
     const desiredNormalized = normalizeDegrees(-selectedIndex * segmentAngle);
     const currentNormalized = normalizeDegrees(state.currentRotation);
     const rotationDelta = desiredNormalized - currentNormalized;
