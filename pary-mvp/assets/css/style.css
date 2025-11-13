@@ -1097,6 +1097,10 @@ body {
   color: var(--color-muted);
 }
 
+.page--room .footer {
+  grid-column: 1 / -1;
+}
+
 .footer__nav a {
   color: inherit;
   font-weight: 700;

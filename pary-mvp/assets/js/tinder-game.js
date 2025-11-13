@@ -60,6 +60,7 @@ let submittingSwipe = false;
 let everyoneReady = false;
 let allFinished = false;
 let shareSheetReady = false;
+let participantCount = 1;
 let availablePool = 100;
 let forceSetupVisible = false;
 let selfDisplayName = '';
@@ -350,17 +351,24 @@ function updateShareVisibility() {
   if (!shareBar) {
     return;
   }
-  if (isHost) {
-    shareBar.hidden = false;
-    if (!shareSheetReady) {
-      initShareSheet();
+  const shouldShow = isHost && participantCount < 2;
+  shareBar.hidden = !shouldShow;
+  if (shareOpen) {
+    shareOpen.disabled = !shouldShow;
+    if (shouldShow) {
+      shareOpen.removeAttribute('tabindex');
+      if (!shareSheetReady) {
+        initShareSheet();
+      }
+    } else {
+      shareOpen.setAttribute('tabindex', '-1');
+      shareOpen.setAttribute('aria-expanded', 'false');
     }
-  } else {
-    shareBar.hidden = true;
-    if (shareLayer) {
-      shareLayer.dataset.open = 'false';
-      shareLayer.setAttribute('aria-hidden', 'true');
-    }
+  }
+  if (!shouldShow && shareLayer) {
+    shareLayer.dataset.open = 'false';
+    shareLayer.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('share-layer-open');
   }
 }
 
@@ -565,6 +573,8 @@ function handleState(payload) {
 
   selfDisplayName = (payload.self?.display_name || '').trim();
   isHost = Boolean(payload.self?.is_host);
+  const participants = Array.isArray(payload.participants) ? payload.participants : [];
+  participantCount = participants.length;
   everyoneReady = Boolean(payload.everyone_ready);
   allFinished = Boolean(payload.all_finished);
   currentSession = payload.session || null;
