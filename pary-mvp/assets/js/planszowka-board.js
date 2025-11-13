@@ -1648,7 +1648,10 @@ function getFieldDescription(field) {
     return 'Wygrany wybiera jedno czułe lub miłe zadanie dla przegranego.';
   }
   if (field.type === 'start') {
-    return field.label || 'Start – przygotujcie się do wspólnej zabawy.';
+    if (field.label && field.label.trim() && field.label.trim().toLowerCase() !== 'start') {
+      return field.label.trim();
+    }
+    return 'Przygotujcie się do wspólnej zabawy.';
   }
   return 'Rzućcie kostką i przesuwajcie pionki, aby odkryć kolejne zadania.';
 }
