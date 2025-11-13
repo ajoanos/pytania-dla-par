@@ -43,11 +43,10 @@ const elements = {
   diceTaskTitle: document.getElementById('planszowka-dice-task-title'),
   diceTaskBody: document.getElementById('planszowka-dice-task-body'),
   diceTaskNotice: document.getElementById('planszowka-dice-task-notice'),
-  lastRoll: document.getElementById('planszowka-last-roll'),
   taskTitle: document.getElementById('planszowka-task-title'),
   taskBody: document.getElementById('planszowka-task-body'),
   taskActions: document.getElementById('planszowka-task-actions'),
-  taskRollButton: document.getElementById('planszowka-roll-inline'),
+  taskSection: document.querySelector('.planszowka-task'),
   board: document.getElementById('planszowka-board'),
   boardWrapper: document.getElementById('planszowka-board-wrapper'),
   finishPanel: document.getElementById('planszowka-finish'),
@@ -1010,9 +1009,6 @@ function renderPlayers() {
 }
 
 function renderDice() {
-  if (!elements.lastRoll) {
-    return;
-  }
   const canRoll = canCurrentPlayerRoll();
   if (Array.isArray(elements.diceButtons)) {
     elements.diceButtons.forEach((button) => {
@@ -1021,13 +1017,21 @@ function renderDice() {
       }
     });
   }
-  const roll = gameState.lastRoll;
-  if (roll && roll.value) {
-    const name = gameState.players[roll.playerId]?.name || 'Gracz';
-    elements.lastRoll.textContent = `${name} wyrzucił(a) ${roll.value} i stoi na polu ${roll.to}.`;
-  } else {
-    elements.lastRoll.textContent = 'Jeszcze nikt nie rzucał kostką.';
-  }
+}
+
+function getTaskActionButtons(action) {
+  const containers = [elements.taskActions, elements.diceReviewActions];
+  const buttons = [];
+  containers.forEach((container) => {
+    if (!(container instanceof HTMLElement)) {
+      return;
+    }
+    const button = container.querySelector(`button[data-action="${action}"]`);
+    if (button instanceof HTMLButtonElement) {
+      buttons.push(button);
+    }
+  });
+  return buttons;
 }
 
 function getTaskActionButtons(action) {
@@ -1056,14 +1060,14 @@ function renderTaskCard() {
   const reviewer = awaiting?.reviewerId ? gameState.players[awaiting.reviewerId] : null;
   const confirmButtons = getTaskActionButtons('confirm');
   const skipButtons = getTaskActionButtons('skip');
-  const inlineRollButton = elements.taskRollButton instanceof HTMLButtonElement
-    ? elements.taskRollButton
-    : elements.taskActions.querySelector('#planszowka-roll-inline');
-  const canRoll = canCurrentPlayerRoll();
+  const floatingTasks = isFloatingDiceActive();
   let noticeText = '';
   let noticeHidden = true;
 
-  elements.taskActions.hidden = false;
+  if (elements.taskSection instanceof HTMLElement) {
+    elements.taskSection.hidden = floatingTasks;
+  }
+  elements.taskActions.hidden = floatingTasks;
 
   if (field) {
     elements.taskTitle.textContent = field.label;
@@ -1072,12 +1076,6 @@ function renderTaskCard() {
   }
 
   elements.taskBody.textContent = getFieldDescription(field);
-
-  if (inlineRollButton) {
-    const showInlineRoll = !isFloatingDiceActive();
-    inlineRollButton.hidden = !showInlineRoll;
-    inlineRollButton.disabled = !canRoll;
-  }
 
   if (awaiting) {
     const localId = String(localPlayerId);
@@ -1095,11 +1093,9 @@ function renderTaskCard() {
       button.hidden = !isReviewer;
       button.disabled = !isReviewer;
     });
+    const showDiceReview = floatingTasks && isReviewer;
     if (elements.diceReviewActions) {
-      elements.diceReviewActions.hidden = !isReviewer;
-    }
-    if (inlineRollButton) {
-      inlineRollButton.disabled = !canRoll;
+      elements.diceReviewActions.hidden = !showDiceReview;
     }
 
     noticeHidden = false;

@@ -2921,9 +2921,37 @@ body.share-layer-open .share-bar {
   gap: 0.75rem;
 }
 
-.planszowka-dice__info {
+.planszowka-dice__task {
+  display: none;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.planszowka-dice__task h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.planszowka-dice__task p {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.planszowka-dice__notice {
+  display: none;
   margin: 0;
   color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.planszowka-dice__action {
+  width: 100%;
+}
+
+.planszowka-dice__review {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .planszowka-dice__task {
@@ -2988,10 +3016,6 @@ body.share-layer-open .share-bar {
 
 .planszowka-task__actions .btn {
   width: 100%;
-}
-
-.planszowka-task__roll {
-  order: 3;
 }
 
 .planszowka-task__notice {
@@ -3115,10 +3139,6 @@ body.has-floating-dice .planszowka-dice[data-floating='false'] {
   max-width: none;
   left: auto;
   top: auto;
-}
-
-body.has-floating-dice .planszowka-task__roll {
-  display: none;
 }
 
 .board-field--start { --field-accent: #4ecdc4; }
