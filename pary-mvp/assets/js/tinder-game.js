@@ -1,5 +1,8 @@
 import { getJson, postJson } from './app.js';
 
+const EMAIL_ENDPOINT = 'api/send_positions_email.php';
+const SHARE_EMAIL_SUBJECT = 'Tinder dla sexu – dołącz do mnie';
+
 const params = new URLSearchParams(window.location.search);
 const roomKey = (params.get('room_key') || '').toUpperCase();
 const participantId = params.get('pid');
@@ -37,6 +40,14 @@ const shareBackdrop = document.getElementById('share-backdrop');
 const shareCopy = document.getElementById('share-copy');
 const shareFeedback = document.getElementById('share-feedback');
 const shareLinks = document.getElementById('share-links');
+const shareQrButton = document.getElementById('share-show-qr');
+const shareQrModal = document.getElementById('share-qr-modal');
+const shareQrImage = document.getElementById('share-qr-image');
+const shareQrUrl = document.getElementById('share-qr-url');
+const shareQrClose = document.getElementById('share-qr-close');
+const shareEmailForm = document.getElementById('share-email');
+const shareEmailInput = document.getElementById('share-email-input');
+const shareEmailFeedback = document.getElementById('share-email-feedback');
 
 const SWIPE_THRESHOLD = 60;
 
@@ -51,6 +62,10 @@ let allFinished = false;
 let shareSheetReady = false;
 let availablePool = 100;
 let forceSetupVisible = false;
+let selfDisplayName = '';
+let summaryAutoScrolled = false;
+let lastSessionId = null;
+let isAnimatingSwipe = false;
 
 function redirectToSetup() {
   window.location.replace('tinder-dla-sexu-room.html');
@@ -63,6 +78,18 @@ function normalizeShareUrl() {
   const shareUrl = new URL('tinder-dla-sexu-invite.html', window.location.href);
   shareUrl.searchParams.set('room_key', roomKey);
   return shareUrl.toString();
+}
+
+function buildShareMessage(url) {
+  const safeUrl = url || normalizeShareUrl();
+  if (!safeUrl) {
+    return '';
+  }
+  const trimmedName = selfDisplayName.trim();
+  if (trimmedName) {
+    return `${trimmedName} zaprasza Cię do wspólnej gry w Tinder dla sexu. Kliknij, aby dołączyć: ${safeUrl}`;
+  }
+  return `Dołącz do mnie w Tinder dla sexu. Kliknij, aby dołączyć: ${safeUrl}`;
 }
 
 function updateShareLinks() {
@@ -78,9 +105,18 @@ function updateShareLinks() {
       anchor.setAttribute('tabindex', '-1');
       anchor.removeAttribute('href');
     });
+    if (shareQrButton) {
+      shareQrButton.disabled = true;
+      shareQrButton.removeAttribute('data-share-url');
+    }
+    if (shareEmailForm) {
+      shareEmailForm.dataset.shareUrl = '';
+      shareEmailForm.dataset.shareMessage = '';
+    }
     return;
   }
-  const message = `Dołącz do mnie w grze Tinder dla sexu: ${url}`;
+  shareOpen.disabled = false;
+  const message = buildShareMessage(url);
   shareCopy.disabled = false;
   shareLinks.querySelectorAll('a').forEach((anchor) => {
     const channel = anchor.dataset.shareChannel;
@@ -98,6 +134,14 @@ function updateShareLinks() {
       anchor.removeAttribute('tabindex');
     }
   });
+  if (shareQrButton) {
+    shareQrButton.disabled = false;
+    shareQrButton.dataset.shareUrl = url;
+  }
+  if (shareEmailForm) {
+    shareEmailForm.dataset.shareUrl = url;
+    shareEmailForm.dataset.shareMessage = message;
+  }
 }
 
 function initShareSheet() {
@@ -184,6 +228,122 @@ function initShareSheet() {
 
   shareSheetReady = true;
   updateShareLinks();
+}
+
+function initShareQrModal() {
+  if (!shareQrButton || !shareQrModal) {
+    return;
+  }
+
+  const closeModal = () => {
+    shareQrModal.hidden = true;
+    shareQrModal.setAttribute('aria-hidden', 'true');
+  };
+
+  const openModal = () => {
+    const url = shareQrButton.dataset.shareUrl || normalizeShareUrl();
+    if (!url) {
+      return;
+    }
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`;
+    if (shareQrImage) {
+      shareQrImage.src = qrSrc;
+    }
+    if (shareQrUrl) {
+      shareQrUrl.href = url;
+    }
+    shareQrModal.hidden = false;
+    shareQrModal.setAttribute('aria-hidden', 'false');
+  };
+
+  shareQrButton.addEventListener('click', () => {
+    openModal();
+  });
+
+  shareQrClose?.addEventListener('click', () => {
+    closeModal();
+  });
+
+  shareQrModal.addEventListener('click', (event) => {
+    if (event.target === shareQrModal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !shareQrModal.hidden) {
+      closeModal();
+    }
+  });
+}
+
+function initShareEmailForm() {
+  if (!shareEmailForm || !shareEmailInput) {
+    return;
+  }
+
+  const submitButton = shareEmailForm.querySelector('button[type="submit"]');
+
+  shareEmailForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!shareEmailInput.checkValidity()) {
+      shareEmailInput.reportValidity();
+      return;
+    }
+
+    const email = shareEmailInput.value.trim();
+    const url = shareEmailForm.dataset.shareUrl || normalizeShareUrl();
+    const message = shareEmailForm.dataset.shareMessage || buildShareMessage(url);
+
+    if (!email || !url) {
+      return;
+    }
+
+    if (shareEmailFeedback) {
+      shareEmailFeedback.hidden = false;
+      shareEmailFeedback.textContent = 'Wysyłamy wiadomość…';
+      shareEmailFeedback.removeAttribute('data-tone');
+    }
+
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+
+    try {
+      const payload = await postJson(EMAIL_ENDPOINT, {
+        partner_email: email,
+        share_url: url,
+        message,
+        subject: SHARE_EMAIL_SUBJECT,
+        sender_name: selfDisplayName,
+        like_count: 0,
+      });
+
+      if (!payload?.ok) {
+        throw new Error(payload?.error || 'Nie udało się wysłać wiadomości.');
+      }
+
+      if (shareEmailFeedback) {
+        shareEmailFeedback.hidden = false;
+        shareEmailFeedback.dataset.tone = 'success';
+        shareEmailFeedback.textContent = 'Wiadomość wysłana! Daj partnerowi znać, żeby sprawdził skrzynkę.';
+      }
+      shareEmailInput.value = '';
+    } catch (error) {
+      console.error(error);
+      if (shareEmailFeedback) {
+        shareEmailFeedback.hidden = false;
+        shareEmailFeedback.dataset.tone = 'error';
+        shareEmailFeedback.textContent = error instanceof Error && error.message
+          ? error.message
+          : 'Nie udało się wysłać wiadomości.';
+      }
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
+    }
+  });
 }
 
 function updateShareVisibility() {
@@ -340,6 +500,16 @@ function renderMatches(matches) {
   });
 }
 
+function maybeScrollToSummary() {
+  if (!summaryCard || summaryCard.hidden || summaryAutoScrolled) {
+    return;
+  }
+  summaryAutoScrolled = true;
+  requestAnimationFrame(() => {
+    summaryCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
 function updateSummary(matches) {
   if (!summaryCard || !summaryLead) {
     return;
@@ -348,6 +518,7 @@ function updateSummary(matches) {
     summaryCard.hidden = false;
     summaryLead.textContent = 'Wybraliśmy dla Was wszystkie wspólne typy. Zainspirujcie się nimi dziś wieczorem!';
     renderMatches(matches);
+    maybeScrollToSummary();
   } else {
     summaryCard.hidden = true;
   }
@@ -392,6 +563,7 @@ function handleState(payload) {
   availablePool = Number(payload.position_pool_size) || availablePool;
   updateSetupSliderLimits();
 
+  selfDisplayName = (payload.self?.display_name || '').trim();
   isHost = Boolean(payload.self?.is_host);
   everyoneReady = Boolean(payload.everyone_ready);
   allFinished = Boolean(payload.all_finished);
@@ -399,6 +571,15 @@ function handleState(payload) {
   positions = Array.isArray(currentSession?.positions) ? currentSession.positions : [];
   selfSwipes = new Map(Object.entries(payload.self_swipes || {}));
   const progressMap = payload.progress || {};
+
+  const nextSessionId = currentSession?.id || null;
+  if (nextSessionId !== lastSessionId) {
+    summaryAutoScrolled = false;
+    lastSessionId = nextSessionId;
+  }
+  if (!currentSession || !allFinished) {
+    summaryAutoScrolled = false;
+  }
 
   updateSetupVisibility();
   updateShareVisibility();
@@ -421,14 +602,39 @@ function handleState(payload) {
   updatePartnerProgress(progressMap, positions.length);
   updateSwipeCard();
   updateSummary(payload.matches || []);
+  updateShareLinks();
 }
 
-async function startSession() {
-  if (!isHost || !roomKey || !participantId || !setupSlider) {
-    return;
+async function startSession(countOverride, options = {}) {
+  if (!roomKey || !participantId) {
+    redirectToSetup();
+    return false;
   }
-  const count = Number(setupSlider.value) || 1;
-  startButton.disabled = true;
+
+  if (!isHost && !currentSession) {
+    if (summaryLead) {
+      summaryLead.textContent = 'Poczekaj, aż gospodarz rozpocznie pierwszą rundę.';
+    }
+    return false;
+  }
+
+  const { triggerButton } = options;
+  const sliderValue = Number(setupSlider?.value) || 1;
+  const previousCount = Number(currentSession?.total_count || positions.length || 0);
+  let count = Number(countOverride);
+  if (!Number.isFinite(count) || count <= 0) {
+    count = isHost && setupSlider ? sliderValue : previousCount || sliderValue || 1;
+  }
+  count = Math.max(1, count);
+  if (availablePool > 0) {
+    count = Math.min(count, availablePool);
+  }
+
+  const buttonToDisable = triggerButton || (isHost ? startButton : null);
+  if (buttonToDisable) {
+    buttonToDisable.disabled = true;
+  }
+
   try {
     const payload = await postJson(startEndpoint, {
       room_key: roomKey,
@@ -439,12 +645,17 @@ async function startSession() {
       throw new Error(payload.error || 'Nie udało się rozpocząć rundy.');
     }
     forceSetupVisible = false;
+    summaryAutoScrolled = false;
     await fetchState();
+    return true;
   } catch (error) {
     console.error(error);
     alert(error.message || 'Nie udało się przygotować nowej rundy.');
+    return false;
   } finally {
-    startButton.disabled = false;
+    if (buttonToDisable) {
+      buttonToDisable.disabled = false;
+    }
   }
 }
 
@@ -513,9 +724,14 @@ function initPlayAgain() {
   if (!playAgainButton) {
     return;
   }
-  playAgainButton.addEventListener('click', () => {
+  playAgainButton.addEventListener('click', async () => {
     if (!isHost) {
-      summaryLead.textContent = 'Poczekaj, aż gospodarz uruchomi kolejną rundę.';
+      summaryLead.textContent = 'Przygotowujemy dla Was nową rundę…';
+      const fallbackCount = currentSession?.total_count || positions.length || Number(setupSlider?.value) || 1;
+      const success = await startSession(fallbackCount, { triggerButton: playAgainButton });
+      if (!success) {
+        summaryLead.textContent = 'Nie udało się przygotować nowej rundy. Spróbuj ponownie albo poproś gospodarza.';
+      }
       return;
     }
     forceSetupVisible = true;
@@ -526,66 +742,136 @@ function initPlayAgain() {
 }
 
 function initSwipeGestures() {
-  if (!swipeStage) {
+  if (!swipeStage || !swipeMedia) {
     return;
   }
   let pointerId = null;
   let startX = 0;
   let currentX = 0;
+  let isDragging = false;
+  let rafId = null;
 
-  const resetTransform = () => {
-    swipeMedia.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
-    swipeMedia.style.transform = 'translateX(0) rotate(0)';
+  const resetTransform = (instant = false) => {
+    if (instant) {
+      swipeMedia.style.transition = 'none';
+      swipeMedia.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+      swipeMedia.style.opacity = '1';
+      requestAnimationFrame(() => {
+        swipeMedia.style.transition = '';
+      });
+      return;
+    }
+    swipeMedia.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+    swipeMedia.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
     swipeMedia.style.opacity = '1';
     setTimeout(() => {
       swipeMedia.style.transition = '';
-    }, 200);
+    }, 260);
+  };
+
+  const stopTracking = () => {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    isDragging = false;
+    pointerId = null;
+  };
+
+  const animateChoice = (choice) => {
+    if (!swipeMedia) {
+      return;
+    }
+    isAnimatingSwipe = true;
+    swipeButtons.forEach((button) => {
+      button.disabled = true;
+    });
+    const direction = choice === 'like' ? 1 : -1;
+    swipeMedia.style.transition = 'transform 0.28s ease, opacity 0.28s ease';
+    swipeMedia.style.transform = `translate3d(${direction * 520}px, 0, 0) rotate(${direction * 24}deg)`;
+    swipeMedia.style.opacity = '0.2';
+    setTimeout(() => {
+      resetTransform(true);
+      isAnimatingSwipe = false;
+      submitSwipe(choice);
+    }, 220);
+  };
+
+  const updateTransform = () => {
+    if (!isDragging) {
+      return;
+    }
+    const deltaX = currentX - startX;
+    const rotation = deltaX / 18;
+    const opacity = Math.max(0.35, 1 - Math.abs(deltaX) / 320);
+    swipeMedia.style.transform = `translate3d(${deltaX}px, 0, 0) rotate(${rotation}deg)`;
+    swipeMedia.style.opacity = `${opacity}`;
+    rafId = requestAnimationFrame(updateTransform);
+  };
+
+  const releasePointer = (event, cancelled) => {
+    if (!isDragging || event.pointerId !== pointerId) {
+      return;
+    }
+    const deltaX = currentX - startX;
+    try {
+      swipeStage.releasePointerCapture(event.pointerId);
+    } catch (error) {
+      // Ignore capture errors
+    }
+    stopTracking();
+    if (cancelled) {
+      resetTransform();
+      return;
+    }
+    if (deltaX > SWIPE_THRESHOLD) {
+      animateChoice('like');
+    } else if (deltaX < -SWIPE_THRESHOLD) {
+      animateChoice('dislike');
+    } else {
+      resetTransform();
+    }
   };
 
   swipeStage.addEventListener('pointerdown', (event) => {
-    if (!everyoneReady || submittingSwipe || !currentSession || swipeMedia.hidden) {
+    if (
+      !event.isPrimary ||
+      pointerId !== null ||
+      !everyoneReady ||
+      submittingSwipe ||
+      !currentSession ||
+      swipeMedia.hidden ||
+      isAnimatingSwipe
+    ) {
       return;
     }
     pointerId = event.pointerId;
     startX = event.clientX;
     currentX = startX;
+    isDragging = true;
+    swipeMedia.style.transition = 'none';
     swipeStage.setPointerCapture(pointerId);
+    updateTransform();
   });
 
   swipeStage.addEventListener('pointermove', (event) => {
-    if (pointerId === null || event.pointerId !== pointerId) {
+    if (!isDragging || event.pointerId !== pointerId) {
       return;
     }
     currentX = event.clientX;
-    const deltaX = currentX - startX;
-    const rotation = deltaX / 20;
-    const opacity = Math.max(0.2, 1 - Math.abs(deltaX) / 300);
-    swipeMedia.style.transform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
-    swipeMedia.style.opacity = `${opacity}`;
   });
 
-  const releasePointer = (event) => {
-    if (pointerId === null || event.pointerId !== pointerId) {
-      return;
-    }
-    const deltaX = currentX - startX;
-    pointerId = null;
-    swipeStage.releasePointerCapture(event.pointerId);
-    resetTransform();
-    if (deltaX > SWIPE_THRESHOLD) {
-      submitSwipe('like');
-    } else if (deltaX < -SWIPE_THRESHOLD) {
-      submitSwipe('dislike');
-    }
-  };
+  swipeStage.addEventListener('pointerup', (event) => {
+    releasePointer(event, false);
+  });
 
-  swipeStage.addEventListener('pointerup', releasePointer);
-  swipeStage.addEventListener('pointercancel', releasePointer);
+  swipeStage.addEventListener('pointercancel', (event) => {
+    releasePointer(event, true);
+  });
+
   swipeStage.addEventListener('pointerleave', (event) => {
-    if (pointerId !== null && event.pointerId === pointerId) {
-      pointerId = null;
-      swipeStage.releasePointerCapture(event.pointerId);
-      resetTransform();
+    if (event.pointerId === pointerId) {
+      releasePointer(event, true);
     }
   });
 }
@@ -605,11 +891,15 @@ function init() {
   }
   updateShareLinks();
   initShareSheet();
+  initShareQrModal();
+  initShareEmailForm();
   initSlider();
   initSwipeButtons();
   initPlayAgain();
   initSwipeGestures();
-  startButton?.addEventListener('click', startSession);
+  startButton?.addEventListener('click', async () => {
+    await startSession(undefined, { triggerButton: startButton });
+  });
   startPolling();
 }
 

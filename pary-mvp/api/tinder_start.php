@@ -22,7 +22,8 @@ if (!$participant) {
     respond(['ok' => false, 'error' => 'Nie znaleziono uczestnika.']);
 }
 
-if (!(bool)($participant['is_host'] ?? 0)) {
+$session = getActiveTinderSession((int)$room['id']);
+if (!(bool)($participant['is_host'] ?? 0) && !$session) {
     respond(['ok' => false, 'error' => 'Tylko gospodarz może rozpocząć nową rundę.']);
 }
 
@@ -31,7 +32,17 @@ if (empty($pool)) {
     respond(['ok' => false, 'error' => 'Brak pozycji do wyświetlenia. Dodaj obrazy do folderu.']);
 }
 
-$count = max(1, min(100, $requestedCount));
+$defaultCount = (int)($session['total_count'] ?? 0);
+if ($defaultCount <= 0) {
+    $defaultCount = 10;
+}
+
+$count = (int)$requestedCount;
+if ($count <= 0) {
+    $count = $defaultCount;
+}
+
+$count = max(1, min(100, $count));
 $count = min($count, count($pool));
 
 $positions = buildTinderPositionsPayload($count);

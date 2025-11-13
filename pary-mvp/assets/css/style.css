@@ -2570,12 +2570,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: pan-y;
+  user-select: none;
 }
 
 .swipe-card__media {
   width: 100%;
   max-width: 520px;
   pointer-events: none;
+  will-change: transform, opacity;
 }
 
 .swipe-card__media img {
