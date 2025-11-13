@@ -4,15 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Pytania dla par – Stwórz pokój</title>
+  <title>Tinder dla sexu – Dołącz do pokoju</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
   <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="assets/js/invite.js"></script>
 </head>
-<body class="page page--game" data-theme="light">
+<body class="page page--invite" data-theme="light">
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
@@ -24,21 +25,21 @@
           />
         </a>
         <div class="hero__text">
-          <h1>Pytania dla par</h1>
-          <p>Stwórz pokój i zaproś partnera, aby rozpocząć grę.</p>
+          <h1>Dołącz do pokoju</h1>
+          <p id="invite-room-label">Trwa pobieranie danych pokoju...</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
           <div class="game-switcher__panel">
             <ul class="game-switcher__list">
-              <li><a class="game-switcher__link" href="pytania-dla-par.html" aria-current="page">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
               <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
-              <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder dla sexu</a></li>
+              <li><a class="game-switcher__link" href="tinder-dla-sexu.html" aria-current="page">Tinder dla sexu</a></li>
             </ul>
           </div>
         </details>
@@ -46,39 +47,18 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--game" id="game-card">
-      <header class="card__header">
-        <h2>Pytania dla par</h2>
-      </header>
-      <form
-        id="join-form"
-        class="form"
-        data-success-active="room.html"
-        data-success-pending="room-waiting.html"
-        data-storage-key="pary.access.pdp"
-        data-access-redirect="pytania-dla-par.html"
-        data-require-room-key="true"
-        data-submit-mode="host"
-      >
-        <input type="hidden" id="room_key" name="room_key" autocomplete="off" />
-        <aside class="form__notice" data-role="room-ready" hidden>
-          <p>
-            Wasz pokój jest już gotowy. Wejdź do środka, aby zaprosić partnera linkiem lub kodem QR. Pokój wygaśnie po 6 godzinach.
-          </p>
-        </aside>
+    <section class="card card--game" id="invite-card">
+      <h2>Powiedz nam, jak się nazywasz</h2>
+      <p class="form__hint" id="invite-hint">Gospodarz zobaczy tylko Twoje imię, żeby potwierdzić obecność.</p>
+      <form id="invite-form" class="form" data-success="tinder-dla-sexu-waiting.html">
         <label class="form__field">
           <span>Twoje imię</span>
-          <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
+          <input type="text" id="invite-display-name" name="display_name" placeholder="np. Kuba" required maxlength="40" autocomplete="off" />
         </label>
-        <button type="submit" class="btn btn--primary btn--enter-room">Wejdź do pokoju</button>
+        <button type="submit" class="btn btn--primary btn--enter-room">Wyślij prośbę o dołączenie</button>
       </form>
+      <p class="form__hint" id="invite-error" hidden></p>
     </section>
-
-    <footer class="footer">
-      <nav class="footer__nav">
-        <a href="index.html">Powrót do wyboru gier</a>
-      </nav>
-    </footer>
   </main>
 </body>
 </html>
