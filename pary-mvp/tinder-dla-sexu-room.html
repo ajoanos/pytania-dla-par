@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Pytania dla par – Stwórz pokój</title>
+  <title>Tinder dla sexu – Stwórz pokój</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,21 +24,21 @@
           />
         </a>
         <div class="hero__text">
-          <h1>Pytania dla par</h1>
-          <p>Stwórz pokój i zaproś partnera, aby rozpocząć grę.</p>
+          <h1>Tinder dla sexu</h1>
+          <p>Stwórz pokój, aby później wysłać link partnerowi i rozpocząć zabawę.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
           <div class="game-switcher__panel">
             <ul class="game-switcher__list">
-              <li><a class="game-switcher__link" href="pytania-dla-par.html" aria-current="page">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
               <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
-              <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder dla sexu</a></li>
+              <li><a class="game-switcher__link" href="tinder-dla-sexu.html" aria-current="page">Tinder dla sexu</a></li>
             </ul>
           </div>
         </details>
@@ -48,24 +48,22 @@
 
     <section class="card card--game" id="game-card">
       <header class="card__header">
-        <h2>Pytania dla par</h2>
+        <h2>Twoja gra</h2>
       </header>
       <form
         id="join-form"
         class="form"
-        data-success-active="room.html"
-        data-success-pending="room-waiting.html"
-        data-storage-key="pary.access.pdp"
-        data-access-redirect="pytania-dla-par.html"
+        data-success-active="tinder-dla-sexu-play.html"
+        data-success-pending="tinder-dla-sexu-waiting.html"
+        data-storage-key="momenty.tinder.access"
+        data-access-redirect="tinder-dla-sexu.html"
         data-require-room-key="true"
         data-submit-mode="host"
       >
-        <input type="hidden" id="room_key" name="room_key" autocomplete="off" />
-        <aside class="form__notice" data-role="room-ready" hidden>
-          <p>
-            Wasz pokój jest już gotowy. Wejdź do środka, aby zaprosić partnera linkiem lub kodem QR. Pokój wygaśnie po 6 godzinach.
-          </p>
-        </aside>
+        <label class="form__field">
+          <span>Kod pokoju</span>
+          <input type="text" id="room_key" name="room_key" placeholder="np. OGIEŃ" maxlength="6" required autocomplete="off" />
+        </label>
         <label class="form__field">
           <span>Twoje imię</span>
           <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
