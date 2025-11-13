@@ -44,6 +44,7 @@ const elements = {
   players: document.getElementById('planszowka-players'),
   diceButtons: rollButtons,
   diceContainer: document.querySelector('.planszowka-dice'),
+  diceRollButton: document.getElementById('planszowka-dice-roll'),
   diceReviewActions: document.getElementById('planszowka-dice-review'),
   diceTaskContainer: document.getElementById('planszowka-dice-task'),
   diceTaskTitle: document.getElementById('planszowka-dice-task-title'),
@@ -1063,6 +1064,12 @@ function renderTaskCard() {
     elements.taskSection.hidden = floatingTasks;
   }
   elements.taskActions.hidden = floatingTasks;
+  if (elements.diceContainer instanceof HTMLElement) {
+    elements.diceContainer.hidden = !floatingTasks;
+  }
+  if (elements.diceRollButton instanceof HTMLButtonElement) {
+    elements.diceRollButton.hidden = !floatingTasks;
+  }
 
   if (field) {
     elements.taskTitle.textContent = field.label;

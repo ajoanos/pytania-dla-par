@@ -54,12 +54,21 @@
 
     <section class="planszowka-players" id="planszowka-players"></section>
 
-    <section class="planszowka-dice" data-floating="false">
+    <section class="planszowka-dice" data-floating="false" hidden>
       <div class="planszowka-dice__task" id="planszowka-dice-task" aria-live="polite" hidden>
         <h3 id="planszowka-dice-task-title"></h3>
         <p id="planszowka-dice-task-body"></p>
       </div>
       <div class="planszowka-dice__actions">
+        <button
+          type="button"
+          class="btn btn--primary planszowka-dice__action"
+          id="planszowka-dice-roll"
+          data-role="roll-button"
+          hidden
+        >
+          Rzuć kostką 🎲
+        </button>
         <div class="planszowka-dice__review" id="planszowka-dice-review" hidden>
           <button type="button" class="btn btn--primary" data-action="confirm">Dodaj serduszko ❤️</button>
           <button type="button" class="btn btn--ghost" data-action="skip">Nie wykonał</button>
