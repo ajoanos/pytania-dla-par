@@ -68,7 +68,12 @@ let activeParticipantCount = 0;
 let isCurrentUserHost = false;
 
 const waitingRoomPath = 'room-waiting.html';
+const shareEmailForm = document.getElementById('share-email');
+const shareEmailInput = document.getElementById('share-email-input');
+const shareEmailFeedback = document.getElementById('share-email-feedback');
 const shareLinkUrl = buildShareUrl();
+const EMAIL_ENDPOINT = 'api/send_positions_email.php';
+const SHARE_EMAIL_SUBJECT = 'Pytania dla par – dołącz do mnie';
 
 let currentQuestion = null;
 let pollTimer;
@@ -99,6 +104,7 @@ shareSheetController = initializeShareSheet({
 });
 
 initializeShareChannels();
+initializeShareEmailForm();
 
 nextQuestionButton?.addEventListener('click', async () => {
   try {
@@ -859,19 +865,19 @@ function buildShareLinks(url) {
 }
 
 function initializeShareChannels() {
+  const hasLink = Boolean(shareLinkUrl);
+
   if (shareCopyButton) {
-    const hasLink = Boolean(shareLinkUrl);
     shareCopyButton.hidden = !hasLink;
     shareCopyButton.disabled = !hasLink;
   }
 
   if (shareQrButton) {
-    const hasLink = Boolean(shareLinkUrl);
     shareQrButton.hidden = !hasLink;
     shareQrButton.disabled = !hasLink;
   }
 
-  if (shareHint && !shareLinkUrl) {
+  if (shareHint && !hasLink) {
     shareHint.textContent = 'Nie udało się przygotować linku do udostępnienia. Odśwież stronę i spróbuj ponownie.';
   }
 
@@ -884,7 +890,7 @@ function initializeShareChannels() {
     return;
   }
 
-  if (!shareLinkUrl) {
+  if (!hasLink) {
     links.forEach((link) => {
       if (!(link instanceof HTMLAnchorElement)) {
         return;
@@ -908,6 +914,104 @@ function initializeShareChannels() {
     link.removeAttribute('aria-disabled');
     link.removeAttribute('tabindex');
     link.classList.remove('share-link--disabled');
+  });
+
+  configureShareEmailForm(hasLink);
+}
+
+function configureShareEmailForm(hasLink) {
+  if (!shareEmailForm || !(shareEmailInput instanceof HTMLInputElement)) {
+    return;
+  }
+  if (!hasLink) {
+    shareEmailForm.hidden = true;
+    shareEmailForm.dataset.shareUrl = '';
+    shareEmailForm.dataset.shareMessage = '';
+    shareEmailInput.value = '';
+    resetShareEmailFeedback();
+    return;
+  }
+  shareEmailForm.hidden = false;
+  shareEmailForm.dataset.shareUrl = shareLinkUrl;
+  shareEmailForm.dataset.shareMessage = buildShareMessage(shareLinkUrl);
+  resetShareEmailFeedback();
+}
+
+function resetShareEmailFeedback() {
+  if (!shareEmailFeedback) {
+    return;
+  }
+  shareEmailFeedback.hidden = true;
+  shareEmailFeedback.textContent = '';
+  delete shareEmailFeedback.dataset.tone;
+}
+
+function initializeShareEmailForm() {
+  if (!shareEmailForm || !(shareEmailInput instanceof HTMLInputElement)) {
+    return;
+  }
+  const submitButton = shareEmailForm.querySelector('button[type="submit"]');
+  shareEmailForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!shareEmailInput.checkValidity()) {
+      shareEmailInput.reportValidity();
+      return;
+    }
+    const email = shareEmailInput.value.trim();
+    if (!email) {
+      shareEmailInput.reportValidity();
+      return;
+    }
+    const shareUrl = shareEmailForm.dataset.shareUrl || shareLinkUrl;
+    if (!shareUrl) {
+      resetShareEmailFeedback();
+      if (shareEmailFeedback) {
+        shareEmailFeedback.hidden = false;
+        shareEmailFeedback.dataset.tone = 'error';
+        shareEmailFeedback.textContent = 'Nie udało się przygotować linku do udostępnienia. Odśwież stronę.';
+      }
+      return;
+    }
+    const message = shareEmailForm.dataset.shareMessage || buildShareMessage(shareUrl);
+    const payload = {
+      partner_email: email,
+      share_url: shareUrl,
+      subject: SHARE_EMAIL_SUBJECT,
+      sender_name: (selfInfo?.display_name || '').trim(),
+      message,
+    };
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+    if (shareEmailFeedback) {
+      shareEmailFeedback.hidden = false;
+      shareEmailFeedback.textContent = 'Wysyłamy wiadomość…';
+      shareEmailFeedback.removeAttribute('data-tone');
+    }
+    try {
+      const response = await postJson(EMAIL_ENDPOINT, payload);
+      if (!response?.ok) {
+        throw new Error(response?.error || 'Nie udało się wysłać wiadomości.');
+      }
+      if (shareEmailFeedback) {
+        shareEmailFeedback.hidden = false;
+        shareEmailFeedback.dataset.tone = 'success';
+        shareEmailFeedback.textContent = 'Wiadomość wysłana! Powiedz partnerowi, żeby zajrzał do skrzynki.';
+      }
+      shareEmailInput.value = '';
+    } catch (error) {
+      console.error(error);
+      if (shareEmailFeedback) {
+        shareEmailFeedback.hidden = false;
+        shareEmailFeedback.dataset.tone = 'error';
+        shareEmailFeedback.textContent =
+          error instanceof Error && error.message ? error.message : 'Nie udało się wysłać wiadomości.';
+      }
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
+    }
   });
 }
 

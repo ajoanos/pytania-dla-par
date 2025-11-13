@@ -15,6 +15,12 @@ const colorPalette = ['rose', 'mint', 'violet', 'sun', 'sea'];
 const storagePrefix = boardConfig && boardConfig.storagePrefix ? boardConfig.storagePrefix : 'momenty.planszowka';
 const fallbackStorageKey = `${storagePrefix}.state.${roomKey}`;
 const shareLinkUrl = buildShareUrl();
+const EMAIL_ENDPOINT = 'api/send_positions_email.php';
+const boardVariantSlug = (document.body?.dataset?.boardVariant || '').toLowerCase();
+const SHARE_EMAIL_SUBJECT =
+  boardVariantSlug === 'romantic'
+    ? 'Planszówka romantyczna – dołącz do mnie'
+    : 'Planszówka dla dwojga – dołącz do mnie';
 
 const rollButtons = Array.from(document.querySelectorAll('[data-role="roll-button"]'));
 const floatingDiceMediaQuery = window.matchMedia('(min-width: 1024px)');
@@ -38,6 +44,7 @@ const elements = {
   players: document.getElementById('planszowka-players'),
   diceButtons: rollButtons,
   diceContainer: document.querySelector('.planszowka-dice'),
+  diceRollButton: document.getElementById('planszowka-dice-roll'),
   diceReviewActions: document.getElementById('planszowka-dice-review'),
   diceTaskContainer: document.getElementById('planszowka-dice-task'),
   diceTaskTitle: document.getElementById('planszowka-dice-task-title'),
@@ -72,6 +79,9 @@ const shareElements = {
   modalImage: document.getElementById('share-qr-image'),
   modalUrl: document.getElementById('share-qr-url'),
   modalClose: document.getElementById('share-qr-close'),
+  emailForm: document.getElementById('share-email'),
+  emailInput: document.getElementById('share-email-input'),
+  emailFeedback: document.getElementById('share-email-feedback'),
 };
 
 let gameState = createEmptyState();
@@ -88,6 +98,7 @@ let shareSheetController = initializeShareSheet(shareElements);
 setupFloatingDiceObservers();
 
 initializeShareChannels();
+initializeShareEmailForm();
 
 updateShareVisibility();
 
@@ -1053,6 +1064,12 @@ function renderTaskCard() {
     elements.taskSection.hidden = floatingTasks;
   }
   elements.taskActions.hidden = floatingTasks;
+  if (elements.diceContainer instanceof HTMLElement) {
+    elements.diceContainer.hidden = !floatingTasks;
+  }
+  if (elements.diceRollButton instanceof HTMLButtonElement) {
+    elements.diceRollButton.hidden = !floatingTasks;
+  }
 
   if (field) {
     elements.taskTitle.textContent = field.label;
@@ -1754,6 +1771,107 @@ function initializeShareChannels() {
     link.removeAttribute('aria-disabled');
     link.removeAttribute('tabindex');
     link.classList.remove('share-link--disabled');
+  });
+
+  configureShareEmailForm(hasLink);
+}
+
+function configureShareEmailForm(hasLink) {
+  const { emailForm, emailInput } = shareElements;
+  if (!emailForm || !(emailInput instanceof HTMLInputElement)) {
+    return;
+  }
+  if (!hasLink) {
+    emailForm.hidden = true;
+    emailForm.dataset.shareUrl = '';
+    emailForm.dataset.shareMessage = '';
+    emailInput.value = '';
+    resetShareEmailFeedback();
+    return;
+  }
+  emailForm.hidden = false;
+  emailForm.dataset.shareUrl = shareLinkUrl;
+  emailForm.dataset.shareMessage = buildShareMessage(shareLinkUrl);
+  resetShareEmailFeedback();
+}
+
+function resetShareEmailFeedback() {
+  const { emailFeedback } = shareElements;
+  if (!emailFeedback) {
+    return;
+  }
+  emailFeedback.hidden = true;
+  emailFeedback.textContent = '';
+  delete emailFeedback.dataset.tone;
+}
+
+function initializeShareEmailForm() {
+  const { emailForm, emailInput } = shareElements;
+  if (!emailForm || !(emailInput instanceof HTMLInputElement)) {
+    return;
+  }
+  const submitButton = emailForm.querySelector('button[type="submit"]');
+  emailForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!emailInput.checkValidity()) {
+      emailInput.reportValidity();
+      return;
+    }
+    const email = emailInput.value.trim();
+    if (!email) {
+      emailInput.reportValidity();
+      return;
+    }
+    const shareUrl = emailForm.dataset.shareUrl || shareLinkUrl;
+    if (!shareUrl) {
+      resetShareEmailFeedback();
+      if (shareElements.emailFeedback) {
+        shareElements.emailFeedback.hidden = false;
+        shareElements.emailFeedback.dataset.tone = 'error';
+        shareElements.emailFeedback.textContent = 'Nie udało się przygotować linku do udostępnienia. Odśwież stronę.';
+      }
+      return;
+    }
+    const message = emailForm.dataset.shareMessage || buildShareMessage(shareUrl);
+    const payload = {
+      partner_email: email,
+      share_url: shareUrl,
+      subject: SHARE_EMAIL_SUBJECT,
+      sender_name: localPlayerName,
+      message,
+    };
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+    if (shareElements.emailFeedback) {
+      shareElements.emailFeedback.hidden = false;
+      shareElements.emailFeedback.textContent = 'Wysyłamy wiadomość…';
+      shareElements.emailFeedback.removeAttribute('data-tone');
+    }
+    try {
+      const response = await postJson(EMAIL_ENDPOINT, payload);
+      if (!response?.ok) {
+        throw new Error(response?.error || 'Nie udało się wysłać wiadomości.');
+      }
+      if (shareElements.emailFeedback) {
+        shareElements.emailFeedback.hidden = false;
+        shareElements.emailFeedback.dataset.tone = 'success';
+        shareElements.emailFeedback.textContent = 'Wiadomość wysłana! Powiedz partnerowi, żeby zajrzał do skrzynki.';
+      }
+      emailInput.value = '';
+    } catch (error) {
+      console.error(error);
+      if (shareElements.emailFeedback) {
+        shareElements.emailFeedback.hidden = false;
+        shareElements.emailFeedback.dataset.tone = 'error';
+        shareElements.emailFeedback.textContent =
+          error instanceof Error && error.message ? error.message : 'Nie udało się wysłać wiadomości.';
+      }
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
+    }
   });
 }
 
