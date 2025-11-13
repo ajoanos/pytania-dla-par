@@ -2954,6 +2954,39 @@ body.share-layer-open .share-bar {
   gap: 0.5rem;
 }
 
+.planszowka-dice__task {
+  display: none;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.planszowka-dice__task h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.planszowka-dice__task p {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.planszowka-dice__notice {
+  display: none;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.planszowka-dice__action {
+  width: 100%;
+}
+
+.planszowka-dice__review {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .planszowka-task {
   grid-area: task;
   background: var(--color-card);
