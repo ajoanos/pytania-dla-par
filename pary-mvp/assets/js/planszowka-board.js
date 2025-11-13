@@ -17,18 +17,38 @@ const fallbackStorageKey = `${storagePrefix}.state.${roomKey}`;
 const shareLinkUrl = buildShareUrl();
 
 const rollButtons = Array.from(document.querySelectorAll('[data-role="roll-button"]'));
+const floatingDiceMediaQuery = window.matchMedia('(min-width: 1024px)');
+const MOVEMENT_INITIAL_DELAY_MS = 600;
+const MOVEMENT_STEP_DELAY_MS = 450;
+const MOVEMENT_RECENT_THRESHOLD_MS = 20000;
+
+const visualPositions = {};
+let movementAnimation = null;
+let dicePositionFrame = null;
+let suppressAutoFocusScroll = false;
+let focusScrollReleaseHandle = null;
+let lastDiceFloatingState = null;
+
+const lastRollSignatureStorageKey = `${storagePrefix}.lastRollSignature.${roomKey}`;
+let lastAnimatedRollSignature = loadAnimatedRollSignature();
 
 const elements = {
   turnLabel: document.getElementById('planszowka-turn-label'),
   waitHint: document.getElementById('planszowka-wait-hint'),
   players: document.getElementById('planszowka-players'),
   diceButtons: rollButtons,
-  lastRoll: document.getElementById('planszowka-last-roll'),
+  diceContainer: document.querySelector('.planszowka-dice'),
+  diceReviewActions: document.getElementById('planszowka-dice-review'),
+  diceTaskContainer: document.getElementById('planszowka-dice-task'),
+  diceTaskTitle: document.getElementById('planszowka-dice-task-title'),
+  diceTaskBody: document.getElementById('planszowka-dice-task-body'),
+  diceTaskNotice: document.getElementById('planszowka-dice-task-notice'),
   taskTitle: document.getElementById('planszowka-task-title'),
   taskBody: document.getElementById('planszowka-task-body'),
   taskActions: document.getElementById('planszowka-task-actions'),
-  taskRollButton: document.getElementById('planszowka-roll-inline'),
+  taskSection: document.querySelector('.planszowka-task'),
   board: document.getElementById('planszowka-board'),
+  boardWrapper: document.getElementById('planszowka-board-wrapper'),
   finishPanel: document.getElementById('planszowka-finish'),
   finishScores: document.getElementById('planszowka-finish-scores'),
   resetButton: document.getElementById('planszowka-reset'),
@@ -64,6 +84,8 @@ let lastParticipantsSignature = '';
 let lastFocusedFieldIndex = null;
 let isCurrentUserHost = false;
 let shareSheetController = initializeShareSheet(shareElements);
+
+setupFloatingDiceObservers();
 
 initializeShareChannels();
 
@@ -231,22 +253,8 @@ function bindEvents() {
     });
   });
 
-  elements.taskActions?.addEventListener('click', (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-    const button = target.closest('button[data-action]');
-    if (!(button instanceof HTMLButtonElement)) {
-      return;
-    }
-    const action = button.dataset.action;
-    if (action === 'confirm') {
-      resolveTaskResult(true);
-    } else if (action === 'skip') {
-      resolveTaskResult(false);
-    }
-  });
+  elements.taskActions?.addEventListener('click', handleTaskActionClick);
+  elements.diceReviewActions?.addEventListener('click', handleTaskActionClick);
 
   shareElements.copyButton?.addEventListener('click', () => {
     copyShareLink();
@@ -271,6 +279,23 @@ function bindEvents() {
       closeQrModal();
     }
   });
+}
+
+function handleTaskActionClick(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+  const button = target.closest('button[data-action]');
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
+  const action = button.dataset.action;
+  if (action === 'confirm') {
+    resolveTaskResult(true);
+  } else if (action === 'skip') {
+    resolveTaskResult(false);
+  }
 }
 
 function setupRealtimeBridge() {
@@ -343,11 +368,15 @@ function handleRollRequest() {
 
     draft.positions[playerId] = targetIndex;
     draft.focusField = targetIndex;
+    const rollTimestamp = Date.now();
+    const rollId = `${playerId}-${rollTimestamp}-${Math.floor(Math.random() * 1000)}`;
     draft.lastRoll = {
       value: roll,
       playerId,
       from: startIndex,
       to: targetIndex,
+      id: rollId,
+      createdAt: rollTimestamp,
     };
 
     if (specialResult.notice) {
@@ -366,26 +395,61 @@ function handleRollRequest() {
       steps.push(`${playerName} dotarł(a) na metę!`);
     } else {
       const field = boardFields[targetIndex];
-      if (field?.type === 'task') {
-        const reviewerCandidate = determineNextTurn(draft, playerId);
-        const reviewerId = reviewerCandidate && reviewerCandidate !== playerId
-          ? reviewerCandidate
-          : null;
+      const awaitingMode = getAwaitingModeForField(field);
+      const nextTurnCandidate = determineNextTurn(draft, playerId);
+      const reviewerId = awaitingMode && nextTurnCandidate && nextTurnCandidate !== playerId
+        ? nextTurnCandidate
+        : null;
+
+      if (awaitingMode && reviewerId) {
         draft.awaitingConfirmation = {
           playerId,
           fieldIndex: targetIndex,
           reviewerId,
+          mode: awaitingMode,
         };
         draft.nextTurn = reviewerId;
       } else {
         draft.awaitingConfirmation = null;
-        draft.currentTurn = determineNextTurn(draft, playerId);
         draft.nextTurn = null;
+        draft.currentTurn = nextTurnCandidate || null;
+        if (awaitingMode && !reviewerId) {
+          const extraNotice = buildNoReviewerNotice(field);
+          if (extraNotice) {
+            draft.notice = [draft.notice, extraNotice].filter(Boolean).join(' ').trim();
+          }
+        }
       }
     }
 
     steps.forEach((message) => addHistoryEntry(draft, message));
   });
+}
+
+function getAwaitingModeForField(field) {
+  if (!field) {
+    return null;
+  }
+  if (field.type === 'task') {
+    return 'task';
+  }
+  if (field.type === 'safe') {
+    return 'safe';
+  }
+  return null;
+}
+
+function buildNoReviewerNotice(field) {
+  if (!field) {
+    return '';
+  }
+  if (field.type === 'safe') {
+    return 'Partner pauzuje – serduszko z bezpiecznego pola dodacie, gdy wróci do gry.';
+  }
+  if (field.type === 'task') {
+    return 'Partner jest w więzieniu, więc masz dwa rzuty z rzędu i możesz pominąć zadanie oraz serduszko.';
+  }
+  return '';
 }
 
 function resolveSpecialTiles(draft, playerId, startIndex) {
@@ -427,9 +491,16 @@ function resolveSpecialTiles(draft, playerId, startIndex) {
       const penalty = Number.isFinite(field.penaltyTurns) ? Math.max(1, Number(field.penaltyTurns)) : 2;
       draft.jail[playerId] = penalty;
       messages.push(field.label || `Lądujesz w więzieniu – pauzujesz ${describeTurns(penalty)}.`);
+      notice = 'Więzienie! Drugi partner rzuca teraz dwa razy i może pominąć zadania oraz serduszka, dopóki nie wrócisz do gry.';
     }
     if (field.type === 'safe') {
-      notice = field.label || 'Bezpieczne pole – chwilka oddechu 😌';
+      const baseSafe = (field.label || 'Bezpieczne pole – chwilka oddechu 😌').trim();
+      if (baseSafe.toLowerCase().includes('serdusz')) {
+        notice = baseSafe;
+      } else {
+        const connector = baseSafe.endsWith('.') ? ' ' : '. ';
+        notice = `${baseSafe}${connector}Partner może dodać Ci serduszko.`;
+      }
     }
     break;
   }
@@ -505,17 +576,28 @@ function resolveTaskResult(completed) {
     const reviewer = record.reviewerId ? draft.players[record.reviewerId] : null;
     const performerName = performer?.name || 'Gracz';
     const reviewerName = reviewer?.name || 'Partner';
-    const taskLabel = field?.label || 'zadanie';
+    const awaitingMode = record.mode === 'safe' ? 'safe' : 'task';
+    const taskLabel = field?.label || (awaitingMode === 'safe' ? 'bezpieczne pole' : 'zadanie');
 
     draft.awaitingConfirmation = null;
 
     if (completed) {
       draft.hearts[record.playerId] = (draft.hearts[record.playerId] ?? 0) + 1;
-      addHistoryEntry(draft, `${reviewerName} przyznaje ${performerName} serduszko za "${taskLabel}".`);
-      draft.notice = `${performerName} zdobywa serduszko ❤️.`;
+      if (awaitingMode === 'safe') {
+        addHistoryEntry(draft, `${reviewerName} przyznaje ${performerName} serduszko na bezpiecznym polu "${taskLabel}".`);
+        draft.notice = `${performerName} zdobywa serduszko na bezpiecznym polu.`;
+      } else {
+        addHistoryEntry(draft, `${reviewerName} przyznaje ${performerName} serduszko za "${taskLabel}".`);
+        draft.notice = `${performerName} zdobywa serduszko ❤️.`;
+      }
     } else {
-      addHistoryEntry(draft, `${reviewerName} nie przyznaje serduszka ${performerName} za "${taskLabel}".`);
-      draft.notice = `${performerName} nie zdobywa serduszka tym razem.`;
+      if (awaitingMode === 'safe') {
+        addHistoryEntry(draft, `${reviewerName} rezygnuje z serduszka dla ${performerName} na bezpiecznym polu "${taskLabel}".`);
+        draft.notice = `${performerName} zostaje bez serduszka na bezpiecznym polu.`;
+      } else {
+        addHistoryEntry(draft, `${reviewerName} nie przyznaje serduszka ${performerName} za "${taskLabel}".`);
+        draft.notice = `${performerName} nie zdobywa serduszka tym razem.`;
+      }
     }
 
     const next = draft.nextTurn || determineNextTurn(draft, record.playerId);
@@ -682,6 +764,8 @@ function sanitizeState(state, participants = []) {
       playerId: String(source.awaitingConfirmation.playerId || ''),
       fieldIndex: clampFieldIndex(source.awaitingConfirmation.fieldIndex),
     };
+    const awaitingMode = source.awaitingConfirmation.mode === 'safe' ? 'safe' : 'task';
+    awaiting.mode = awaitingMode;
     const reviewerId = source.awaitingConfirmation.reviewerId
       ? String(source.awaitingConfirmation.reviewerId)
       : '';
@@ -697,11 +781,15 @@ function sanitizeState(state, participants = []) {
     const rollPlayerId = String(source.lastRoll.playerId || source.lastRoll.rolled_by || '');
     if (rollPlayerId) {
       const rollValue = clampDiceValue(source.lastRoll.value ?? source.lastRoll.roll);
+      const rollId = String(source.lastRoll.id || source.lastRoll.roll_id || '');
+      const rollCreatedAt = clampTimestamp(source.lastRoll.createdAt ?? source.lastRoll.created_at);
       next.lastRoll = {
         playerId: rollPlayerId,
         value: rollValue,
         from: clampFieldIndex(source.lastRoll.from ?? source.lastRoll.previous_position),
         to: clampFieldIndex(source.lastRoll.to ?? source.lastRoll.new_position),
+        id: rollId || `${rollPlayerId}-${rollValue}-${rollCreatedAt || ''}`,
+        createdAt: rollCreatedAt,
       };
     }
   }
@@ -759,6 +847,14 @@ function clampNonNegative(value) {
   return Math.max(0, Math.trunc(numeric));
 }
 
+function clampTimestamp(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+  return Math.trunc(numeric);
+}
+
 function clampDiceValue(value) {
   const numeric = Number.isFinite(value) ? Number(value) : Number(value ?? 0);
   if (!Number.isFinite(numeric)) {
@@ -811,9 +907,11 @@ function render() {
   renderPlayers();
   renderDice();
   renderTaskCard();
+  syncVisualPositions();
   renderBoard();
   renderFinishPanel();
   renderInfo();
+  maybeStartMovementAnimation();
 }
 
 function renderTurn() {
@@ -911,9 +1009,6 @@ function renderPlayers() {
 }
 
 function renderDice() {
-  if (!elements.lastRoll) {
-    return;
-  }
   const canRoll = canCurrentPlayerRoll();
   if (Array.isArray(elements.diceButtons)) {
     elements.diceButtons.forEach((button) => {
@@ -922,13 +1017,21 @@ function renderDice() {
       }
     });
   }
-  const roll = gameState.lastRoll;
-  if (roll && roll.value) {
-    const name = gameState.players[roll.playerId]?.name || 'Gracz';
-    elements.lastRoll.textContent = `${name} wyrzucił(a) ${roll.value} i stoi na polu ${roll.to}.`;
-  } else {
-    elements.lastRoll.textContent = 'Jeszcze nikt nie rzucał kostką.';
-  }
+}
+
+function getTaskActionButtons(action) {
+  const containers = [elements.taskActions, elements.diceReviewActions];
+  const buttons = [];
+  containers.forEach((container) => {
+    if (!(container instanceof HTMLElement)) {
+      return;
+    }
+    const button = container.querySelector(`button[data-action="${action}"]`);
+    if (button instanceof HTMLButtonElement) {
+      buttons.push(button);
+    }
+  });
+  return buttons;
 }
 
 function renderTaskCard() {
@@ -940,14 +1043,16 @@ function renderTaskCard() {
   const field = boardFields[focusIndex] || boardFields[0];
   const performer = awaiting ? gameState.players[awaiting.playerId] : null;
   const reviewer = awaiting?.reviewerId ? gameState.players[awaiting.reviewerId] : null;
-  const confirmButton = elements.taskActions.querySelector('[data-action="confirm"]');
-  const skipButton = elements.taskActions.querySelector('[data-action="skip"]');
-  const inlineRollButton = elements.taskRollButton instanceof HTMLButtonElement
-    ? elements.taskRollButton
-    : elements.taskActions.querySelector('#planszowka-roll-inline');
-  const canRoll = canCurrentPlayerRoll();
+  const confirmButtons = getTaskActionButtons('confirm');
+  const skipButtons = getTaskActionButtons('skip');
+  const floatingTasks = isFloatingDiceActive();
+  let noticeText = '';
+  let noticeHidden = true;
 
-  elements.taskActions.hidden = false;
+  if (elements.taskSection instanceof HTMLElement) {
+    elements.taskSection.hidden = floatingTasks;
+  }
+  elements.taskActions.hidden = floatingTasks;
 
   if (field) {
     elements.taskTitle.textContent = field.label;
@@ -957,59 +1062,102 @@ function renderTaskCard() {
 
   elements.taskBody.textContent = getFieldDescription(field);
 
-  if (inlineRollButton) {
-    inlineRollButton.hidden = false;
-    inlineRollButton.disabled = !canRoll;
-  }
-
   if (awaiting) {
     const localId = String(localPlayerId);
     const isPerformer = awaiting.playerId === localId;
     const isReviewer = reviewer ? reviewer.id === localId : !isPerformer;
     const performerName = performer?.name || 'partner';
 
-    if (confirmButton) {
-      confirmButton.textContent = 'Dodaj serduszko ❤️';
-      confirmButton.hidden = !isReviewer;
-      confirmButton.disabled = !isReviewer;
-    }
-    if (skipButton) {
-      skipButton.textContent = 'Nie wykonał';
-      skipButton.hidden = !isReviewer;
-      skipButton.disabled = !isReviewer;
-    }
-    if (inlineRollButton) {
-      inlineRollButton.disabled = !canRoll;
+    confirmButtons.forEach((button) => {
+      button.textContent = 'Dodaj serduszko ❤️';
+      button.hidden = !isReviewer;
+      button.disabled = !isReviewer;
+    });
+    skipButtons.forEach((button) => {
+      button.textContent = 'Nie wykonał';
+      button.hidden = !isReviewer;
+      button.disabled = !isReviewer;
+    });
+    const showDiceReview = floatingTasks && isReviewer;
+    if (elements.diceReviewActions) {
+      elements.diceReviewActions.hidden = !showDiceReview;
     }
 
-    elements.taskNotice.hidden = false;
-
+    noticeHidden = false;
     if (isReviewer) {
-      elements.taskNotice.textContent = `${performerName} czeka na Twoją decyzję.`;
+      noticeText = `${performerName} czeka na Twoją decyzję.`;
     } else if (isPerformer) {
-      elements.taskNotice.textContent = reviewer
+      noticeText = reviewer
         ? `Czekaj, aż ${reviewer.name} zdecyduje o serduszku.`
         : 'Czekaj na potwierdzenie zadania przez partnera.';
     } else {
-      elements.taskNotice.textContent = reviewer
+      noticeText = reviewer
         ? `Czekamy na decyzję ${reviewer.name}.`
         : 'Czekamy na decyzję partnera.';
     }
   } else {
-    if (confirmButton) {
-      confirmButton.hidden = true;
-      confirmButton.disabled = true;
+    confirmButtons.forEach((button) => {
+      button.textContent = 'Zrobione – dodaj serduszko ❤️';
+      button.hidden = true;
+      button.disabled = true;
+    });
+    skipButtons.forEach((button) => {
+      button.textContent = 'Pomiń – bez punktu';
+      button.hidden = true;
+      button.disabled = true;
+    });
+    if (elements.diceReviewActions) {
+      elements.diceReviewActions.hidden = true;
     }
-    if (skipButton) {
-      skipButton.hidden = true;
-      skipButton.disabled = true;
-    }
-    elements.taskNotice.hidden = false;
     if (gameState.turnOrder.length < 2) {
-      elements.taskNotice.textContent = 'Poczekajcie, aż dołączy druga osoba.';
+      noticeText = 'Poczekajcie, aż dołączy druga osoba.';
+      noticeHidden = false;
+    } else if (gameState.finished || field?.type === 'finish') {
+      noticeText = '';
+      noticeHidden = true;
     } else {
-      elements.taskNotice.textContent = 'Rzuć kostką i zobacz, co czeka na kolejnym polu.';
+      noticeText = 'Rzuć kostką i zobacz, co czeka na kolejnym polu.';
+      noticeHidden = false;
     }
+  }
+
+  elements.taskNotice.hidden = noticeHidden;
+  elements.taskNotice.textContent = noticeHidden ? '' : noticeText;
+
+  updateDiceTaskDetails({
+    title: elements.taskTitle.textContent,
+    body: elements.taskBody.textContent,
+    notice: noticeText,
+    noticeHidden,
+  });
+}
+
+function updateDiceTaskDetails({ title = '', body = '', notice = '', noticeHidden = true }) {
+  const container = elements.diceTaskContainer;
+  const titleEl = elements.diceTaskTitle;
+  const bodyEl = elements.diceTaskBody;
+  const noticeEl = elements.diceTaskNotice;
+  const trimmedTitle = (title || '').trim();
+  const trimmedBody = (body || '').trim();
+  const trimmedNotice = (notice || '').trim();
+  const shouldShow = Boolean(container) && isFloatingDiceActive() && Boolean(trimmedTitle || trimmedBody);
+
+  if (container) {
+    container.hidden = !shouldShow;
+  }
+  if (titleEl) {
+    titleEl.textContent = shouldShow ? trimmedTitle : '';
+    titleEl.hidden = !shouldShow || !trimmedTitle;
+  }
+  if (bodyEl) {
+    bodyEl.textContent = shouldShow ? trimmedBody : '';
+    bodyEl.hidden = !shouldShow || !trimmedBody;
+  }
+
+  const showNotice = shouldShow && !noticeHidden && Boolean(trimmedNotice);
+  if (noticeEl) {
+    noticeEl.hidden = !showNotice;
+    noticeEl.textContent = showNotice ? trimmedNotice : '';
   }
 }
 
@@ -1020,10 +1168,30 @@ function renderBoard() {
   const focusIndex = clampFieldIndex(gameState.focusField);
   const focusChanged = focusIndex !== lastFocusedFieldIndex;
   const tokens = new Map();
-  Object.entries(gameState.positions).forEach(([id, index]) => {
-    const fieldTokens = tokens.get(index) || [];
-    fieldTokens.push(gameState.players[id]);
-    tokens.set(index, fieldTokens);
+  const handledPlayers = new Set();
+  (gameState.turnOrder || []).forEach((id) => {
+    const player = gameState.players[id];
+    if (!player) {
+      return;
+    }
+    handledPlayers.add(id);
+    const displayIndex = getDisplayPosition(id, gameState.positions[id]);
+    const fieldTokens = tokens.get(displayIndex) || [];
+    fieldTokens.push(player);
+    tokens.set(displayIndex, fieldTokens);
+  });
+  Object.keys(gameState.players).forEach((id) => {
+    if (handledPlayers.has(id)) {
+      return;
+    }
+    const player = gameState.players[id];
+    if (!player) {
+      return;
+    }
+    const displayIndex = getDisplayPosition(id, gameState.positions[id]);
+    const fieldTokens = tokens.get(displayIndex) || [];
+    fieldTokens.push(player);
+    tokens.set(displayIndex, fieldTokens);
   });
 
   elements.board.querySelectorAll('.board-field').forEach((tile) => {
@@ -1033,7 +1201,7 @@ function renderBoard() {
     const index = Number(tile.dataset.index || '0');
     if (index === focusIndex) {
       tile.classList.add('board-field--active');
-      if (focusChanged) {
+      if (focusChanged && !suppressAutoFocusScroll) {
         scrollFieldIntoView(tile);
       }
     } else {
@@ -1054,17 +1222,19 @@ function renderBoard() {
     });
   });
   lastFocusedFieldIndex = focusIndex;
+  scheduleDicePositionUpdate();
 }
 
-function scrollFieldIntoView(tile) {
-  if (!tile) {
+function scrollFieldIntoView(tile, options = {}) {
+  if (!tile || typeof tile.scrollIntoView !== 'function') {
     return;
   }
+  const { behavior = 'smooth', block = 'center', inline = 'nearest' } = options;
   window.requestAnimationFrame(() => {
     tile.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-      inline: 'nearest',
+      behavior,
+      block,
+      inline,
     });
   });
 }
@@ -1123,6 +1293,315 @@ function renderInfo() {
   }, 4000);
 }
 
+function syncVisualPositions() {
+  const positions = gameState.positions || {};
+  const pendingRoll = hasPendingAnimatedMovement(gameState.lastRoll) ? gameState.lastRoll : null;
+  Object.keys(gameState.players || {}).forEach((playerId) => {
+    if (movementAnimation && movementAnimation.playerId === playerId) {
+      return;
+    }
+    if (pendingRoll && pendingRoll.playerId === playerId) {
+      if (!Number.isFinite(visualPositions[playerId])) {
+        visualPositions[playerId] = clampFieldIndex(pendingRoll.from);
+      }
+      return;
+    }
+    const nextIndex = clampFieldIndex(positions[playerId]);
+    visualPositions[playerId] = nextIndex;
+  });
+  Object.keys(visualPositions).forEach((playerId) => {
+    if (!gameState.players[playerId]) {
+      delete visualPositions[playerId];
+    }
+  });
+}
+
+function getDisplayPosition(playerId, fallbackIndex) {
+  if (Number.isFinite(visualPositions[playerId])) {
+    return clampFieldIndex(visualPositions[playerId]);
+  }
+  const fallback = clampFieldIndex(fallbackIndex);
+  visualPositions[playerId] = fallback;
+  return fallback;
+}
+
+function isFloatingDiceActive() {
+  return Boolean(document.body?.classList?.contains('has-floating-dice'));
+}
+
+function scheduleDicePositionUpdate() {
+  if (dicePositionFrame) {
+    return;
+  }
+  dicePositionFrame = window.requestAnimationFrame(() => {
+    dicePositionFrame = null;
+    updateFloatingDicePosition();
+  });
+}
+
+function updateFloatingDicePosition() {
+  const dice = elements.diceContainer;
+  const body = document.body;
+  if (!dice || !body) {
+    return;
+  }
+  const anchorTile = getActivePlayerTileElement();
+  const shouldFloat = Boolean(anchorTile) && Boolean(floatingDiceMediaQuery?.matches);
+  body.classList.toggle('has-floating-dice', shouldFloat);
+  dice.dataset.floating = shouldFloat ? 'true' : 'false';
+  if (lastDiceFloatingState !== shouldFloat) {
+    lastDiceFloatingState = shouldFloat;
+    renderTaskCard();
+  }
+  if (!shouldFloat || !anchorTile) {
+    dice.style.removeProperty('top');
+    dice.style.removeProperty('left');
+    dice.style.removeProperty('opacity');
+    return;
+  }
+  const rect = anchorTile.getBoundingClientRect();
+  const width = dice.offsetWidth || 280;
+  const height = dice.offsetHeight || 140;
+  const margin = 16;
+  let left = rect.left + rect.width / 2 - width / 2;
+  left = Math.min(Math.max(margin, left), window.innerWidth - width - margin);
+  let top = rect.top - height - margin;
+  if (top < margin) {
+    top = rect.bottom + margin;
+  }
+  dice.style.left = `${left}px`;
+  dice.style.top = `${top}px`;
+  dice.style.opacity = '1';
+}
+
+function setupFloatingDiceObservers() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const handler = () => {
+    scheduleDicePositionUpdate();
+  };
+  if (floatingDiceMediaQuery?.addEventListener) {
+    floatingDiceMediaQuery.addEventListener('change', handler);
+  } else if (floatingDiceMediaQuery?.addListener) {
+    floatingDiceMediaQuery.addListener(handler);
+  }
+  window.addEventListener('resize', handler);
+  window.addEventListener('scroll', handler, { passive: true });
+  elements.boardWrapper?.addEventListener('scroll', handler, { passive: true });
+  scheduleDicePositionUpdate();
+}
+
+function getActivePlayerTileElement() {
+  if (!gameState.currentTurn) {
+    return null;
+  }
+  const index = getDisplayPosition(gameState.currentTurn, gameState.positions[gameState.currentTurn]);
+  return getBoardTileElement(index);
+}
+
+function getBoardTileElement(index) {
+  if (!elements.board) {
+    return null;
+  }
+  return elements.board.querySelector(`.board-field[data-index="${index}"]`);
+}
+
+function scrollPlayerIntoView(playerId, indexOverride) {
+  const index = Number.isFinite(indexOverride)
+    ? clampFieldIndex(indexOverride)
+    : getDisplayPosition(playerId, gameState.positions[playerId]);
+  const tile = getBoardTileElement(index);
+  if (tile) {
+    scrollFieldIntoView(tile);
+  }
+}
+
+function setFocusScrollSuppressed(duration = 1200) {
+  suppressAutoFocusScroll = true;
+  if (focusScrollReleaseHandle) {
+    window.clearTimeout(focusScrollReleaseHandle);
+  }
+  focusScrollReleaseHandle = window.setTimeout(() => {
+    suppressAutoFocusScroll = false;
+    focusScrollReleaseHandle = null;
+  }, duration);
+}
+
+function releaseFocusScrollSuppression() {
+  suppressAutoFocusScroll = false;
+  if (focusScrollReleaseHandle) {
+    window.clearTimeout(focusScrollReleaseHandle);
+    focusScrollReleaseHandle = null;
+  }
+}
+
+function maybeStartMovementAnimation() {
+  const roll = gameState.lastRoll;
+  if (!roll || !roll.playerId) {
+    return;
+  }
+  const signature = buildRollSignature(roll);
+  if (!signature || signature === lastAnimatedRollSignature) {
+    return;
+  }
+  if (!isRollRecent(roll)) {
+    rememberAnimatedRoll(signature);
+    return;
+  }
+  if (movementAnimation && movementAnimation.signature === signature) {
+    return;
+  }
+  const startIndex = clampFieldIndex(roll.from);
+  const targetIndex = clampFieldIndex(roll.to);
+  if (startIndex === targetIndex) {
+    setFocusScrollSuppressed(MOVEMENT_INITIAL_DELAY_MS + 200);
+    scrollPlayerIntoView(roll.playerId, startIndex);
+    rememberAnimatedRoll(signature);
+    return;
+  }
+  startMovementAnimation(roll, signature);
+}
+
+function startMovementAnimation(roll, signature) {
+  cancelMovementAnimation();
+  const startIndex = clampFieldIndex(roll.from);
+  const targetIndex = clampFieldIndex(roll.to);
+  const path = buildMovementPath(startIndex, targetIndex);
+  if (!path.length) {
+    rememberAnimatedRoll(signature);
+    return;
+  }
+  movementAnimation = {
+    signature,
+    playerId: roll.playerId,
+    path,
+    stepIndex: 0,
+    timer: null,
+  };
+  setFocusScrollSuppressed(MOVEMENT_INITIAL_DELAY_MS + path.length * MOVEMENT_STEP_DELAY_MS + 600);
+  visualPositions[roll.playerId] = startIndex;
+  renderBoard();
+  scrollPlayerIntoView(roll.playerId, startIndex);
+  movementAnimation.timer = window.setTimeout(runNextMovementStep, MOVEMENT_INITIAL_DELAY_MS);
+}
+
+function runNextMovementStep() {
+  if (!movementAnimation) {
+    return;
+  }
+  const { path, stepIndex, playerId } = movementAnimation;
+  visualPositions[playerId] = path[stepIndex];
+  renderBoard();
+  if (!isFloatingDiceActive()) {
+    scrollPlayerIntoView(playerId, path[stepIndex]);
+  }
+  movementAnimation.stepIndex += 1;
+  if (movementAnimation.stepIndex < path.length) {
+    movementAnimation.timer = window.setTimeout(runNextMovementStep, MOVEMENT_STEP_DELAY_MS);
+  } else {
+    finishMovementAnimation();
+  }
+}
+
+function finishMovementAnimation() {
+  if (!movementAnimation) {
+    return;
+  }
+  const { signature, path, playerId } = movementAnimation;
+  visualPositions[playerId] = path[path.length - 1];
+  movementAnimation = null;
+  renderBoard();
+  releaseFocusScrollSuppression();
+  rememberAnimatedRoll(signature);
+  const focusTile = getBoardTileElement(clampFieldIndex(gameState.focusField));
+  if (focusTile) {
+    scrollFieldIntoView(focusTile);
+  }
+}
+
+function cancelMovementAnimation() {
+  if (movementAnimation?.timer) {
+    window.clearTimeout(movementAnimation.timer);
+  }
+  movementAnimation = null;
+  releaseFocusScrollSuppression();
+}
+
+function buildMovementPath(startIndex, targetIndex) {
+  const path = [];
+  if (startIndex === targetIndex) {
+    return path;
+  }
+  const step = startIndex < targetIndex ? 1 : -1;
+  for (let index = startIndex + step; step > 0 ? index <= targetIndex : index >= targetIndex; index += step) {
+    path.push(clampFieldIndex(index));
+  }
+  return path;
+}
+
+function hasPendingAnimatedMovement(roll) {
+  if (!roll || !roll.playerId) {
+    return false;
+  }
+  const startIndex = clampFieldIndex(roll.from);
+  const targetIndex = clampFieldIndex(roll.to);
+  if (startIndex === targetIndex) {
+    return false;
+  }
+  if (!isRollRecent(roll)) {
+    return false;
+  }
+  const signature = buildRollSignature(roll);
+  if (!signature || signature === lastAnimatedRollSignature) {
+    return false;
+  }
+  return true;
+}
+
+function isRollRecent(roll) {
+  if (!roll?.createdAt) {
+    return true;
+  }
+  const age = Date.now() - Number(roll.createdAt);
+  return age <= MOVEMENT_RECENT_THRESHOLD_MS;
+}
+
+function buildRollSignature(roll) {
+  if (!roll) {
+    return '';
+  }
+  const parts = [
+    String(roll.playerId || ''),
+    String(clampFieldIndex(roll.from)),
+    String(clampFieldIndex(roll.to)),
+    String(roll.value ?? ''),
+    String(roll.id || roll.createdAt || ''),
+  ];
+  return parts.join(':');
+}
+
+function rememberAnimatedRoll(signature) {
+  if (!signature) {
+    return;
+  }
+  lastAnimatedRollSignature = signature;
+  try {
+    sessionStorage.setItem(lastRollSignatureStorageKey, signature);
+  } catch (error) {
+    console.warn('Nie udało się zapisać informacji o ostatnim rzucie.', error);
+  }
+}
+
+function loadAnimatedRollSignature() {
+  try {
+    return sessionStorage.getItem(lastRollSignatureStorageKey) || '';
+  } catch (error) {
+    console.warn('Nie udało się odczytać informacji o ostatnim rzucie.', error);
+    return '';
+  }
+}
+
 function displayInfo(message) {
   if (!elements.infoBanner) {
     return;
@@ -1148,7 +1627,7 @@ function getFieldDescription(field) {
     return 'Wykonajcie zadanie, a partner może nagrodzić Cię serduszkiem.';
   }
   if (field.type === 'safe') {
-    return field.label || 'Bezpieczne pole – złapcie oddech i przygotujcie się na kolejne wyzwanie.';
+    return field.label || 'Bezpieczne pole – złapcie oddech, a partner może przyznać Ci serduszko.';
   }
   if (field.type === 'jail') {
     const penalty = Number.isFinite(field.penaltyTurns) ? Math.max(1, Number(field.penaltyTurns)) : 2;
@@ -1166,10 +1645,13 @@ function getFieldDescription(field) {
     return field.label || 'Wracasz na najbliższe bezpieczne pole.';
   }
   if (field.type === 'finish') {
-    return field.label || 'Meta! Wygrany wybiera zadanie dla przegranego.';
+    return 'Wygrany wybiera jedno czułe lub miłe zadanie dla przegranego.';
   }
   if (field.type === 'start') {
-    return field.label || 'Start – przygotujcie się do wspólnej zabawy.';
+    if (field.label && field.label.trim() && field.label.trim().toLowerCase() !== 'start') {
+      return field.label.trim();
+    }
+    return 'Przygotujcie się do wspólnej zabawy.';
   }
   return 'Rzućcie kostką i przesuwajcie pionki, aby odkryć kolejne zadania.';
 }
