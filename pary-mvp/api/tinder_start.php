@@ -56,6 +56,9 @@ try {
     $deleteStmt = $db->prepare('DELETE FROM tinder_sessions WHERE room_id = :room_id');
     $deleteStmt->execute(['room_id' => $room['id']]);
 
+    $deleteVotesStmt = $db->prepare('DELETE FROM tinder_replay_votes WHERE room_id = :room_id');
+    $deleteVotesStmt->execute(['room_id' => $room['id']]);
+
     $insertStmt = $db->prepare('INSERT INTO tinder_sessions (room_id, positions_json, total_count, status, updated_at) VALUES (:room_id, :positions_json, :total_count, :status, CURRENT_TIMESTAMP)');
     $insertStmt->execute([
         'room_id' => $room['id'],

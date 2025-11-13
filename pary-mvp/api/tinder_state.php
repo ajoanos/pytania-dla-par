@@ -29,6 +29,8 @@ $participants = array_map(static function (array $item): array {
 $session = getActiveTinderSession((int)$room['id']);
 $sessionData = null;
 $positions = [];
+$replayVotes = [];
+$replayReady = false;
 if ($session) {
     $positions = is_array($session['positions']) ? $session['positions'] : [];
     $sessionData = [
@@ -37,6 +39,14 @@ if ($session) {
         'status' => (string)($session['status'] ?? 'active'),
         'positions' => $positions,
     ];
+
+    $votesStmt = db()->prepare('SELECT participant_id FROM tinder_replay_votes WHERE room_id = :room_id AND session_id = :session_id');
+    $votesStmt->execute([
+        'room_id' => $room['id'],
+        'session_id' => $session['id'],
+    ]);
+    $replayVotes = array_map('intval', array_column($votesStmt->fetchAll(), 'participant_id'));
+    $replayReady = !empty($participants) && count(array_unique($replayVotes)) >= count($participants);
 }
 
 $self = [
@@ -128,6 +138,10 @@ respond([
     'progress' => $progressMap,
     'all_finished' => $allFinished,
     'everyone_ready' => count($participants) >= 2,
+    'replay_votes' => [
+        'participant_ids' => $replayVotes,
+        'ready' => $replayReady,
+    ],
     'position_pool_size' => $poolSize,
     'matches' => $matches,
 ]);

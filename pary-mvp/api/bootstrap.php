@@ -131,6 +131,17 @@ function initializeDatabase(PDO $pdo): void
         FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
     )');
 
+    $pdo->exec('CREATE TABLE IF NOT EXISTS tinder_replay_votes (
+        room_id INTEGER NOT NULL,
+        session_id INTEGER NOT NULL,
+        participant_id INTEGER NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (room_id, session_id, participant_id),
+        FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+        FOREIGN KEY (session_id) REFERENCES tinder_sessions(id) ON DELETE CASCADE,
+        FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
+    )');
+
     $pdo->exec('CREATE TABLE IF NOT EXISTS plan_invites (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         room_id INTEGER NOT NULL,
