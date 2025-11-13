@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Poznaj wszystkie pozycje – Hasło dostępu</title>
+  <title>Tinder z pozycjami – Stwórz pokój</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
   <script type="module" src="assets/js/app.js"></script>
 </head>
-<body class="page page--access" data-theme="dark">
+<body class="page page--game" data-theme="light">
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
@@ -24,8 +24,8 @@
           />
         </a>
         <div class="hero__text">
-          <h1>Poznaj wszystkie pozycje</h1>
-          <p>Podaj hasło, aby zobaczyć całą kolekcję pozycji dla par.</p>
+          <h1>Tinder z pozycjami</h1>
+          <p>Stwórz pokój, aby później wysłać link partnerowi i rozpocząć zabawę.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
@@ -37,8 +37,8 @@
               <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
-              <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html" aria-current="page">Poznaj wszystkie pozycje</a></li>
-              <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder z pozycjami</a></li>
+              <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
+              <li><a class="game-switcher__link" href="tinder-dla-sexu.html" aria-current="page">Tinder z pozycjami</a></li>
             </ul>
           </div>
         </details>
@@ -46,25 +46,30 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--password" id="password-card">
-      <h2>Podaj hasło dostępu</h2>
+    <section class="card card--game" id="game-card">
+      <header class="card__header">
+        <h2>Twoja gra</h2>
+      </header>
       <form
-        id="password-form"
-        class="form form--inline"
-        data-storage-key="momenty.positions.access"
-        data-success="poznaj-wszystkie-pozycje-play.html"
-        data-skip-room-key="true"
+        id="join-form"
+        class="form"
+        data-success-active="tinder-dla-sexu-play.html"
+        data-success-pending="tinder-dla-sexu-waiting.html"
+        data-storage-key="momenty.tinder.access"
+        data-access-redirect="tinder-dla-sexu.html"
+        data-require-room-key="true"
+        data-submit-mode="host"
       >
+        <input type="hidden" id="room_key" name="room_key" autocomplete="off" />
+        <aside class="form__notice" data-role="room-ready" hidden>
+          <p>Pokój jest gotowy. Podaj swoje imię, aby wejść do środka i wysłać link partnerowi.</p>
+        </aside>
         <label class="form__field">
-          <span>Hasło</span>
-          <input type="password" id="access-password" name="access_password" placeholder="••••" autocomplete="current-password" required />
+          <span>Twoje imię</span>
+          <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
         </label>
-        <div class="form__actions">
-          <button type="submit" class="btn btn--primary">Potwierdź</button>
-          <button type="button" class="btn btn--ghost" id="password-cancel" data-back="index.html">Wróć</button>
-        </div>
+        <button type="submit" class="btn btn--primary btn--enter-room">Wejdź do pokoju</button>
       </form>
-      <p class="form__hint" id="password-error" hidden>Niepoprawne hasło. Spróbuj ponownie.</p>
     </section>
 
     <footer class="footer">

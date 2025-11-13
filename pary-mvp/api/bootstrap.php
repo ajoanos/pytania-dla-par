@@ -108,6 +108,42 @@ function initializeDatabase(PDO $pdo): void
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
     )');
 
+    $pdo->exec('CREATE TABLE IF NOT EXISTS tinder_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL,
+        positions_json TEXT NOT NULL,
+        total_count INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT "active",
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+    )');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS tinder_swipes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        participant_id INTEGER NOT NULL,
+        position_id TEXT NOT NULL,
+        choice TEXT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(session_id, participant_id, position_id),
+        FOREIGN KEY (session_id) REFERENCES tinder_sessions(id) ON DELETE CASCADE,
+        FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
+    )');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS tinder_rematch_votes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL,
+        session_id INTEGER NOT NULL,
+        participant_id INTEGER NOT NULL,
+        vote TEXT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(room_id, session_id, participant_id),
+        FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+        FOREIGN KEY (session_id) REFERENCES tinder_sessions(id) ON DELETE CASCADE,
+        FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
+    )');
+
     $pdo->exec('CREATE TABLE IF NOT EXISTS plan_invites (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         room_id INTEGER NOT NULL,
@@ -586,6 +622,205 @@ function getRoomByKeyOrFail(string $roomKey): array
 }
 
 const BOARD_MAX_INDEX = 38;
+
+const TINDER_POSITIONS_PATH = '/../obrazy/zdrapki';
+
+function listTinderPositions(): array
+{
+    static $cache = null;
+    if (is_array($cache)) {
+        return $cache;
+    }
+
+    $directory = realpath(__DIR__ . TINDER_POSITIONS_PATH);
+    if ($directory === false || !is_dir($directory)) {
+        $cache = [];
+        return $cache;
+    }
+
+    $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
+    $entries = scandir($directory);
+    if ($entries === false) {
+        $cache = [];
+        return $cache;
+    }
+
+    $files = [];
+    foreach ($entries as $entry) {
+        if ($entry === '.' || $entry === '..') {
+            continue;
+        }
+        $path = $directory . DIRECTORY_SEPARATOR . $entry;
+        if (!is_file($path)) {
+            continue;
+        }
+        $extension = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
+        if (!in_array($extension, $allowedExtensions, true)) {
+            continue;
+        }
+        $files[] = 'obrazy/zdrapki/' . $entry;
+    }
+
+    natsort($files);
+    $cache = array_values($files);
+    return $cache;
+}
+
+function normalizeTinderPositionId(string $path): string
+{
+    $filename = basename($path);
+    $id = preg_replace('/\.[^.]+$/', '', $filename);
+    $id = strtolower((string)$id);
+    $id = preg_replace('/[^a-z0-9]+/', '-', (string)$id);
+    return trim($id ?: $filename);
+}
+
+function formatTinderPositionTitle(string $path): string
+{
+    $filename = basename($path);
+    $id = preg_replace('/\.[^.]+$/', '', $filename) ?: $filename;
+    $clean = preg_replace('/[_-]+/', ' ', (string)$id);
+    $clean = trim((string)$clean);
+    if ($clean === '') {
+        return 'Pozycja';
+    }
+    $parts = preg_split('/\s+/', $clean) ?: [];
+    $parts = array_map(static function ($word) {
+        $word = (string)$word;
+        if ($word === '') {
+            return $word;
+        }
+        return mb_strtoupper(mb_substr($word, 0, 1)) . mb_substr($word, 1);
+    }, $parts);
+    return implode(' ', $parts);
+}
+
+function buildTinderPositionsPayload(int $count): array
+{
+    $files = listTinderPositions();
+    if (empty($files)) {
+        return [];
+    }
+
+    if ($count > count($files)) {
+        $count = count($files);
+    }
+
+    shuffle($files);
+    $selected = array_slice($files, 0, max(1, $count));
+    $result = [];
+    foreach ($selected as $file) {
+        $result[] = [
+            'id' => normalizeTinderPositionId($file),
+            'title' => formatTinderPositionTitle($file),
+            'image' => $file,
+        ];
+    }
+    return $result;
+}
+
+function getActiveTinderSession(int $roomId): ?array
+{
+    $stmt = db()->prepare('SELECT * FROM tinder_sessions WHERE room_id = :room_id ORDER BY id DESC LIMIT 1');
+    $stmt->execute(['room_id' => $roomId]);
+    $session = $stmt->fetch();
+    if (!$session) {
+        return null;
+    }
+    $session['positions'] = json_decode((string)($session['positions_json'] ?? '[]'), true);
+    if (!is_array($session['positions'])) {
+        $session['positions'] = [];
+    }
+    return $session;
+}
+
+function getTinderSessionProgressMap(int $sessionId): array
+{
+    $stmt = db()->prepare('SELECT participant_id, COUNT(*) AS total FROM tinder_swipes WHERE session_id = :session_id GROUP BY participant_id');
+    $stmt->execute(['session_id' => $sessionId]);
+    $rows = $stmt->fetchAll();
+    $progress = [];
+    foreach ($rows as $row) {
+        $participantId = (int)($row['participant_id'] ?? 0);
+        if ($participantId <= 0) {
+            continue;
+        }
+        $progress[$participantId] = (int)($row['total'] ?? 0);
+    }
+    return $progress;
+}
+
+function haveParticipantsFinishedTinderSession(array $participants, array $progressMap, int $totalCount): bool
+{
+    if ($totalCount <= 0 || count($participants) < 2) {
+        return false;
+    }
+    foreach ($participants as $participant) {
+        $participantId = (int)($participant['id'] ?? 0);
+        if ($participantId <= 0) {
+            return false;
+        }
+        $count = $progressMap[$participantId] ?? 0;
+        if ($count < $totalCount) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function getTinderRematchVotes(int $roomId, int $sessionId): array
+{
+    $stmt = db()->prepare('SELECT participant_id, vote FROM tinder_rematch_votes WHERE room_id = :room_id AND session_id = :session_id');
+    $stmt->execute([
+        'room_id' => $roomId,
+        'session_id' => $sessionId,
+    ]);
+    $rows = $stmt->fetchAll();
+    $votes = [];
+    foreach ($rows as $row) {
+        $participantId = (int)($row['participant_id'] ?? 0);
+        if ($participantId <= 0) {
+            continue;
+        }
+        $votes[$participantId] = trim((string)($row['vote'] ?? '')) !== '';
+    }
+    return $votes;
+}
+
+function haveParticipantsApprovedRematch(array $participants, array $votes): bool
+{
+    if (count($participants) < 2) {
+        return false;
+    }
+    foreach ($participants as $participant) {
+        $participantId = (int)($participant['id'] ?? 0);
+        if ($participantId <= 0) {
+            return false;
+        }
+        if (empty($votes[$participantId])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function saveTinderRematchVote(int $roomId, int $sessionId, int $participantId, string $vote): void
+{
+    $stmt = db()->prepare('INSERT INTO tinder_rematch_votes (room_id, session_id, participant_id, vote) VALUES (:room_id, :session_id, :participant_id, :vote)
+        ON CONFLICT(room_id, session_id, participant_id) DO UPDATE SET vote = excluded.vote, created_at = CURRENT_TIMESTAMP');
+    $stmt->execute([
+        'room_id' => $roomId,
+        'session_id' => $sessionId,
+        'participant_id' => $participantId,
+        'vote' => $vote,
+    ]);
+}
+
+function deleteTinderRematchVotes(int $roomId): void
+{
+    $stmt = db()->prepare('DELETE FROM tinder_rematch_votes WHERE room_id = :room_id');
+    $stmt->execute(['room_id' => $roomId]);
+}
 
 function defaultBoardState(): array
 {

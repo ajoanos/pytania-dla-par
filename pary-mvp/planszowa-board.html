@@ -38,6 +38,7 @@
               <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
+              <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder z pozycjami</a></li>
             </ul>
           </div>
         </details>
@@ -53,7 +54,7 @@
 
     <section class="planszowka-players" id="planszowka-players"></section>
 
-    <section class="planszowka-dice" data-floating="false">
+    <section class="planszowka-dice" data-floating="false" hidden>
       <div class="planszowka-dice__task" id="planszowka-dice-task" aria-live="polite" hidden>
         <h3 id="planszowka-dice-task-title"></h3>
         <p id="planszowka-dice-task-body"></p>
@@ -62,8 +63,9 @@
         <button
           type="button"
           class="btn btn--primary planszowka-dice__action"
+          id="planszowka-dice-roll"
           data-role="roll-button"
-          id="planszowka-roll-floating"
+          hidden
         >
           Rzuć kostką 🎲
         </button>
@@ -79,6 +81,9 @@
       <h3 id="planszowka-task-title">Wybierz pole na planszy</h3>
       <p id="planszowka-task-body">Rzućcie kostką i przesuwajcie pionki, aby odkryć kolejne zadania.</p>
       <div id="planszowka-task-actions" class="planszowka-task__actions">
+        <button type="button" class="btn btn--primary" data-role="roll-button">
+          Rzuć kostką 🎲
+        </button>
         <button type="button" class="btn btn--primary" data-action="confirm">Zrobione – dodaj serduszko ❤️</button>
         <button type="button" class="btn btn--ghost" data-action="skip">Pomiń – bez punktu</button>
       </div>
@@ -131,14 +136,22 @@
           <p id="share-hint">Wyślij partnerowi link, aby dołączył do planszówki.</p>
           <p class="share-feedback" id="share-feedback" hidden role="status" aria-live="polite"></p>
           <div class="share__actions">
-            <button type="button" class="btn btn--ghost" id="share-copy" hidden disabled>Kopiuj link</button>
-            <button type="button" class="btn btn--ghost" id="share-show-qr" hidden disabled>Zeskanuj QR dla partnera</button>
+            <button type="button" class="btn btn--ghost" id="share-copy" disabled>Kopiuj link</button>
+            <button type="button" class="btn btn--ghost" id="share-show-qr" disabled>Zeskanuj QR dla partnera</button>
             <div class="share-links" id="share-links">
               <a class="share-link" data-share-channel="messenger" href="#" aria-disabled="true" tabindex="-1">Messenger</a>
               <a class="share-link" data-share-channel="whatsapp" href="#" aria-disabled="true" tabindex="-1">WhatsApp</a>
               <a class="share-link" data-share-channel="sms" href="#" aria-disabled="true" tabindex="-1">SMS</a>
             </div>
           </div>
+          <form class="share-email" id="share-email">
+            <label class="share-email__field" for="share-email-input">
+              <span class="share-email__label">Adres e-mail partnera</span>
+              <input type="email" id="share-email-input" name="partner_email" placeholder="partner@przyklad.pl" autocomplete="email" required />
+            </label>
+            <button type="submit" class="btn btn--primary">Wyślij</button>
+            <p class="share-email__feedback" id="share-email-feedback" hidden role="status"></p>
+          </form>
         </div>
       </section>
     </section>
