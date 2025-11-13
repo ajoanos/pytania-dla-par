@@ -701,7 +701,8 @@ function normalizeBoardState(array $state, array $participants): array
         }
     }
 
-    foreach ($participantMap as $id => $participant) {
+    foreach ($participantMap as $participantKey => $participant) {
+        $id = (string)$participantKey;
         $existing = $incomingPlayers[$id] ?? null;
         $color = $existing['color'] ?? pickBoardColor($usedColors);
         if (!in_array($color, $usedColors, true)) {
@@ -722,7 +723,8 @@ function normalizeBoardState(array $state, array $participants): array
             $turnOrder[] = $id;
         }
     }
-    foreach (array_keys($normalized['players']) as $id) {
+    foreach (array_keys($normalized['players']) as $playerKey) {
+        $id = (string)$playerKey;
         if (!in_array($id, $turnOrder, true)) {
             $turnOrder[] = $id;
         }
@@ -738,7 +740,8 @@ function normalizeBoardState(array $state, array $participants): array
             $normalized['positions'][$id] = clampBoardIndexValue($value);
         }
     }
-    foreach ($normalized['players'] as $id => $_) {
+    foreach ($normalized['players'] as $playerKey => $_) {
+        $id = (string)$playerKey;
         if (!array_key_exists($id, $normalized['positions'])) {
             $normalized['positions'][$id] = 0;
         }
@@ -753,7 +756,8 @@ function normalizeBoardState(array $state, array $participants): array
             $normalized['hearts'][$id] = clampNonNegativeInt($value);
         }
     }
-    foreach ($normalized['players'] as $id => $_) {
+    foreach ($normalized['players'] as $playerKey => $_) {
+        $id = (string)$playerKey;
         if (!array_key_exists($id, $normalized['hearts'])) {
             $normalized['hearts'][$id] = 0;
         }
@@ -768,7 +772,8 @@ function normalizeBoardState(array $state, array $participants): array
             $normalized['jail'][$id] = clampNonNegativeInt($value);
         }
     }
-    foreach ($normalized['players'] as $id => $_) {
+    foreach ($normalized['players'] as $playerKey => $_) {
+        $id = (string)$playerKey;
         if (!array_key_exists($id, $normalized['jail'])) {
             $normalized['jail'][$id] = 0;
         }
@@ -793,22 +798,45 @@ function normalizeBoardState(array $state, array $participants): array
         $awaitingPlayer = (string)($state['awaitingConfirmation']['playerId'] ?? '');
         $awaitingField = clampBoardIndexValue($state['awaitingConfirmation']['fieldIndex'] ?? 0);
         if ($awaitingPlayer !== '' && isset($normalized['players'][$awaitingPlayer])) {
-            $normalized['awaitingConfirmation'] = [
+            $mode = (string)($state['awaitingConfirmation']['mode'] ?? '');
+            $mode = $mode === 'safe' ? 'safe' : 'task';
+
+            $record = [
                 'playerId' => $awaitingPlayer,
                 'fieldIndex' => $awaitingField,
+                'mode' => $mode,
             ];
+
+            $reviewerId = (string)($state['awaitingConfirmation']['reviewerId'] ?? '');
+            if ($reviewerId !== '' && isset($normalized['players'][$reviewerId])) {
+                $record['reviewerId'] = $reviewerId;
+            }
+
+            $normalized['awaitingConfirmation'] = $record;
         }
     }
 
     if (isset($state['lastRoll']) && is_array($state['lastRoll'])) {
         $rollPlayer = (string)($state['lastRoll']['playerId'] ?? '');
         if ($rollPlayer !== '' && isset($normalized['players'][$rollPlayer])) {
-            $normalized['lastRoll'] = [
+            $roll = [
                 'playerId' => $rollPlayer,
                 'value' => clampDiceValueInt($state['lastRoll']['value'] ?? 0),
                 'from' => clampBoardIndexValue($state['lastRoll']['from'] ?? 0),
                 'to' => clampBoardIndexValue($state['lastRoll']['to'] ?? 0),
             ];
+
+            $rollId = (string)($state['lastRoll']['id'] ?? '');
+            if ($rollId !== '') {
+                $roll['id'] = $rollId;
+            }
+
+            $createdAt = (string)($state['lastRoll']['createdAt'] ?? '');
+            if ($createdAt !== '') {
+                $roll['createdAt'] = $createdAt;
+            }
+
+            $normalized['lastRoll'] = $roll;
         }
     }
 
