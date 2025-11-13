@@ -1034,21 +1034,6 @@ function getTaskActionButtons(action) {
   return buttons;
 }
 
-function getTaskActionButtons(action) {
-  const containers = [elements.taskActions, elements.diceReviewActions];
-  const buttons = [];
-  containers.forEach((container) => {
-    if (!(container instanceof HTMLElement)) {
-      return;
-    }
-    const button = container.querySelector(`button[data-action="${action}"]`);
-    if (button instanceof HTMLButtonElement) {
-      buttons.push(button);
-    }
-  });
-  return buttons;
-}
-
 function renderTaskCard() {
   if (!elements.taskTitle || !elements.taskBody || !elements.taskActions || !elements.taskNotice) {
     return;
