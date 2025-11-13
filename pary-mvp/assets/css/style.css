@@ -2910,11 +2910,18 @@ body.share-layer-open .share-bar {
   border-radius: 1.5rem;
   padding: 1.2rem 1.4rem;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
 }
 
 .planszowka-dice__info {
   margin: 0;
   color: var(--color-muted);
+}
+
+.planszowka-dice__action {
+  width: 100%;
 }
 
 .planszowka-task {
@@ -3046,6 +3053,29 @@ body.share-layer-open .share-bar {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
+}
+
+body.has-floating-dice .planszowka-dice {
+  position: fixed;
+  width: min(320px, calc(100vw - 2rem));
+  max-width: 360px;
+  z-index: 40;
+  left: 1rem;
+  top: 1rem;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  pointer-events: auto;
+}
+
+body.has-floating-dice .planszowka-dice[data-floating='false'] {
+  position: static;
+  width: auto;
+  max-width: none;
+  left: auto;
+  top: auto;
+}
+
+body.has-floating-dice .planszowka-task__roll {
+  display: none;
 }
 
 .board-field--start { --field-accent: #4ecdc4; }
