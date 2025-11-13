@@ -1,7 +1,7 @@
 import { getJson, postJson } from './app.js';
 
 const EMAIL_ENDPOINT = 'api/send_positions_email.php';
-const SHARE_EMAIL_SUBJECT = 'Tinder dla sexu – dołącz do mnie';
+const SHARE_EMAIL_SUBJECT = 'Tinder z pozycjami – dołącz do mnie';
 
 const params = new URLSearchParams(window.location.search);
 const roomKey = (params.get('room_key') || '').toUpperCase();
@@ -11,6 +11,7 @@ const participantNumericId = Number(participantId || 0);
 const stateEndpoint = 'api/tinder_state.php';
 const startEndpoint = 'api/tinder_start.php';
 const swipeEndpoint = 'api/tinder_swipe.php';
+const replayVoteEndpoint = 'api/tinder_replay_vote.php';
 const hostSetupCard = document.getElementById('host-setup');
 const setupSlider = document.getElementById('setup-count');
 const setupValue = document.getElementById('setup-count-value');
@@ -31,6 +32,10 @@ const summaryLead = document.getElementById('summary-lead');
 const summaryEmpty = document.getElementById('summary-empty');
 const matchList = document.getElementById('match-list');
 const playAgainButton = document.getElementById('play-again');
+const playAgainDefaultLabel = playAgainButton?.textContent?.trim() || 'Gramy jeszcze raz?';
+if (playAgainButton) {
+  playAgainButton.disabled = true;
+}
 const shareBar = document.getElementById('share-bar');
 const shareLayer = document.getElementById('share-layer');
 const shareCard = document.getElementById('share-card');
@@ -67,6 +72,8 @@ let selfDisplayName = '';
 let summaryAutoScrolled = false;
 let lastSessionId = null;
 let isAnimatingSwipe = false;
+let replayVotes = new Set();
+let replayReady = false;
 
 function redirectToSetup() {
   window.location.replace('tinder-dla-sexu-room.html');
@@ -88,9 +95,9 @@ function buildShareMessage(url) {
   }
   const trimmedName = selfDisplayName.trim();
   if (trimmedName) {
-    return `${trimmedName} zaprasza Cię do wspólnej gry w Tinder dla sexu. Kliknij, aby dołączyć: ${safeUrl}`;
+    return `${trimmedName} zaprasza Cię do wspólnej gry w Tinder z pozycjami. Kliknij, aby dołączyć: ${safeUrl}`;
   }
-  return `Dołącz do mnie w Tinder dla sexu. Kliknij, aby dołączyć: ${safeUrl}`;
+  return `Dołącz do mnie w Tinder z pozycjami. Kliknij, aby dołączyć: ${safeUrl}`;
 }
 
 function updateShareLinks() {
@@ -518,13 +525,86 @@ function maybeScrollToSummary() {
   });
 }
 
+function selfHasRequestedReplay() {
+  return replayVotes.has(participantNumericId);
+}
+
+function updatePlayAgainButtonState() {
+  if (!playAgainButton) {
+    return;
+  }
+  if (!currentSession || !allFinished) {
+    playAgainButton.disabled = true;
+    if (playAgainDefaultLabel) {
+      playAgainButton.textContent = playAgainDefaultLabel;
+    }
+    return;
+  }
+  if (replayReady) {
+    playAgainButton.disabled = true;
+    playAgainButton.textContent = isHost ? 'Wybierz liczbę pozycji' : 'Czekamy na gospodarza…';
+    return;
+  }
+  if (selfHasRequestedReplay()) {
+    playAgainButton.disabled = true;
+    playAgainButton.textContent = 'Czekamy na partnera…';
+    return;
+  }
+  playAgainButton.disabled = false;
+  if (playAgainDefaultLabel) {
+    playAgainButton.textContent = playAgainDefaultLabel;
+  }
+}
+
+async function submitReplayVote() {
+  if (!playAgainButton || !currentSession || !roomKey || !participantId) {
+    return;
+  }
+  if (selfHasRequestedReplay()) {
+    return;
+  }
+  playAgainButton.disabled = true;
+  playAgainButton.textContent = 'Dajemy znać partnerowi…';
+  try {
+    const payload = await postJson(replayVoteEndpoint, {
+      room_key: roomKey,
+      participant_id: participantId,
+      session_id: currentSession.id,
+    });
+    if (!payload.ok) {
+      throw new Error(payload.error || 'Nie udało się wysłać zgody na kolejną rundę.');
+    }
+    if (summaryLead) {
+      summaryLead.textContent = isHost
+        ? 'Daliśmy znać partnerowi. Czekamy na jego decyzję.'
+        : 'Czekamy na gospodarza, aż potwierdzi nową rundę.';
+    }
+    await fetchState();
+  } catch (error) {
+    console.error(error);
+    alert(error.message || 'Nie udało się wysłać zgody na kolejną rundę.');
+  } finally {
+    updatePlayAgainButtonState();
+  }
+}
+
 function updateSummary(matches) {
   if (!summaryCard || !summaryLead) {
     return;
   }
   if (allFinished) {
     summaryCard.hidden = false;
-    summaryLead.textContent = 'Wybraliśmy dla Was wszystkie wspólne typy. Zainspirujcie się nimi dziś wieczorem!';
+    let summaryText = 'Wybraliśmy dla Was wszystkie wspólne typy. Zainspirujcie się nimi dziś wieczorem!';
+    if (replayReady) {
+      summaryText = isHost
+        ? 'Oboje chcecie grać dalej. Wybierz liczbę pozycji i zacznijcie od nowa.'
+        : 'Oboje chcecie grać dalej. Czekamy na gospodarza, aż wybierze liczbę pozycji.';
+    } else if (selfHasRequestedReplay()) {
+      summaryText = 'Daliśmy znać, że chcemy grać dalej. Czekamy na zgodę partnera.';
+    } else if (replayVotes.size > 0) {
+      summaryText = 'Partner ma ochotę na kolejną rundę. Kliknij „Gramy jeszcze raz?”, jeśli też chcesz kontynuować.';
+    }
+    summaryLead.textContent = summaryText;
     renderMatches(matches);
     maybeScrollToSummary();
   } else {
@@ -580,6 +660,12 @@ function handleState(payload) {
   currentSession = payload.session || null;
   positions = Array.isArray(currentSession?.positions) ? currentSession.positions : [];
   selfSwipes = new Map(Object.entries(payload.self_swipes || {}));
+  const replayIdsRaw = Array.isArray(payload.replay_votes?.participant_ids) ? payload.replay_votes.participant_ids : [];
+  const normalizedReplayIds = replayIdsRaw
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  replayVotes = new Set(normalizedReplayIds);
+  replayReady = Boolean(payload.replay_votes?.ready);
   const progressMap = payload.progress || {};
 
   const nextSessionId = currentSession?.id || null;
@@ -591,8 +677,10 @@ function handleState(payload) {
     summaryAutoScrolled = false;
   }
 
+  forceSetupVisible = Boolean(currentSession && replayReady && isHost);
   updateSetupVisibility();
   updateShareVisibility();
+  updatePlayAgainButtonState();
 
   if (!currentSession) {
     summaryCard.hidden = true;
@@ -607,8 +695,6 @@ function handleState(payload) {
     return;
   }
 
-  forceSetupVisible = false;
-  updateSetupVisibility();
   updatePartnerProgress(progressMap, positions.length);
   updateSwipeCard();
   updateSummary(payload.matches || []);
@@ -734,20 +820,8 @@ function initPlayAgain() {
   if (!playAgainButton) {
     return;
   }
-  playAgainButton.addEventListener('click', async () => {
-    if (!isHost) {
-      summaryLead.textContent = 'Przygotowujemy dla Was nową rundę…';
-      const fallbackCount = currentSession?.total_count || positions.length || Number(setupSlider?.value) || 1;
-      const success = await startSession(fallbackCount, { triggerButton: playAgainButton });
-      if (!success) {
-        summaryLead.textContent = 'Nie udało się przygotować nowej rundy. Spróbuj ponownie albo poproś gospodarza.';
-      }
-      return;
-    }
-    forceSetupVisible = true;
-    summaryLead.textContent = 'Wybierz liczbę kart i zacznijcie od nowa.';
-    updateSetupVisibility();
-    hostSetupCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  playAgainButton.addEventListener('click', () => {
+    submitReplayVote();
   });
 }
 
