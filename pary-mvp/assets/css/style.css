@@ -2915,6 +2915,12 @@ body.share-layer-open .share-bar {
   gap: 0.85rem;
 }
 
+.planszowka-dice__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .planszowka-dice__info {
   margin: 0;
   color: var(--color-muted);
@@ -2922,6 +2928,12 @@ body.share-layer-open .share-bar {
 
 .planszowka-dice__action {
   width: 100%;
+}
+
+.planszowka-dice__review {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .planszowka-task {

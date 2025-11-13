@@ -38,6 +38,7 @@ const elements = {
   players: document.getElementById('planszowka-players'),
   diceButtons: rollButtons,
   diceContainer: document.querySelector('.planszowka-dice'),
+  diceReviewActions: document.getElementById('planszowka-dice-review'),
   lastRoll: document.getElementById('planszowka-last-roll'),
   taskTitle: document.getElementById('planszowka-task-title'),
   taskBody: document.getElementById('planszowka-task-body'),
@@ -249,22 +250,8 @@ function bindEvents() {
     });
   });
 
-  elements.taskActions?.addEventListener('click', (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-    const button = target.closest('button[data-action]');
-    if (!(button instanceof HTMLButtonElement)) {
-      return;
-    }
-    const action = button.dataset.action;
-    if (action === 'confirm') {
-      resolveTaskResult(true);
-    } else if (action === 'skip') {
-      resolveTaskResult(false);
-    }
-  });
+  elements.taskActions?.addEventListener('click', handleTaskActionClick);
+  elements.diceReviewActions?.addEventListener('click', handleTaskActionClick);
 
   shareElements.copyButton?.addEventListener('click', () => {
     copyShareLink();
@@ -289,6 +276,23 @@ function bindEvents() {
       closeQrModal();
     }
   });
+}
+
+function handleTaskActionClick(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+  const button = target.closest('button[data-action]');
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
+  const action = button.dataset.action;
+  if (action === 'confirm') {
+    resolveTaskResult(true);
+  } else if (action === 'skip') {
+    resolveTaskResult(false);
+  }
 }
 
 function setupRealtimeBridge() {
@@ -967,6 +971,21 @@ function renderDice() {
   }
 }
 
+function getTaskActionButtons(action) {
+  const containers = [elements.taskActions, elements.diceReviewActions];
+  const buttons = [];
+  containers.forEach((container) => {
+    if (!(container instanceof HTMLElement)) {
+      return;
+    }
+    const button = container.querySelector(`button[data-action="${action}"]`);
+    if (button instanceof HTMLButtonElement) {
+      buttons.push(button);
+    }
+  });
+  return buttons;
+}
+
 function renderTaskCard() {
   if (!elements.taskTitle || !elements.taskBody || !elements.taskActions || !elements.taskNotice) {
     return;
@@ -976,8 +995,8 @@ function renderTaskCard() {
   const field = boardFields[focusIndex] || boardFields[0];
   const performer = awaiting ? gameState.players[awaiting.playerId] : null;
   const reviewer = awaiting?.reviewerId ? gameState.players[awaiting.reviewerId] : null;
-  const confirmButton = elements.taskActions.querySelector('[data-action="confirm"]');
-  const skipButton = elements.taskActions.querySelector('[data-action="skip"]');
+  const confirmButtons = getTaskActionButtons('confirm');
+  const skipButtons = getTaskActionButtons('skip');
   const inlineRollButton = elements.taskRollButton instanceof HTMLButtonElement
     ? elements.taskRollButton
     : elements.taskActions.querySelector('#planszowka-roll-inline');
@@ -1005,15 +1024,18 @@ function renderTaskCard() {
     const isReviewer = reviewer ? reviewer.id === localId : !isPerformer;
     const performerName = performer?.name || 'partner';
 
-    if (confirmButton) {
-      confirmButton.textContent = 'Dodaj serduszko ❤️';
-      confirmButton.hidden = !isReviewer;
-      confirmButton.disabled = !isReviewer;
-    }
-    if (skipButton) {
-      skipButton.textContent = 'Nie wykonał';
-      skipButton.hidden = !isReviewer;
-      skipButton.disabled = !isReviewer;
+    confirmButtons.forEach((button) => {
+      button.textContent = 'Dodaj serduszko ❤️';
+      button.hidden = !isReviewer;
+      button.disabled = !isReviewer;
+    });
+    skipButtons.forEach((button) => {
+      button.textContent = 'Nie wykonał';
+      button.hidden = !isReviewer;
+      button.disabled = !isReviewer;
+    });
+    if (elements.diceReviewActions) {
+      elements.diceReviewActions.hidden = !isReviewer;
     }
     if (inlineRollButton) {
       inlineRollButton.disabled = !canRoll;
@@ -1033,13 +1055,18 @@ function renderTaskCard() {
         : 'Czekamy na decyzję partnera.';
     }
   } else {
-    if (confirmButton) {
-      confirmButton.hidden = true;
-      confirmButton.disabled = true;
-    }
-    if (skipButton) {
-      skipButton.hidden = true;
-      skipButton.disabled = true;
+    confirmButtons.forEach((button) => {
+      button.textContent = 'Zrobione – dodaj serduszko ❤️';
+      button.hidden = true;
+      button.disabled = true;
+    });
+    skipButtons.forEach((button) => {
+      button.textContent = 'Pomiń – bez punktu';
+      button.hidden = true;
+      button.disabled = true;
+    });
+    if (elements.diceReviewActions) {
+      elements.diceReviewActions.hidden = true;
     }
     elements.taskNotice.hidden = false;
     if (gameState.turnOrder.length < 2) {
