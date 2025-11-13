@@ -39,6 +39,10 @@ const elements = {
   diceButtons: rollButtons,
   diceContainer: document.querySelector('.planszowka-dice'),
   diceReviewActions: document.getElementById('planszowka-dice-review'),
+  diceTaskContainer: document.getElementById('planszowka-dice-task'),
+  diceTaskTitle: document.getElementById('planszowka-dice-task-title'),
+  diceTaskBody: document.getElementById('planszowka-dice-task-body'),
+  diceTaskNotice: document.getElementById('planszowka-dice-task-notice'),
   lastRoll: document.getElementById('planszowka-last-roll'),
   taskTitle: document.getElementById('planszowka-task-title'),
   taskBody: document.getElementById('planszowka-task-body'),
@@ -392,26 +396,61 @@ function handleRollRequest() {
       steps.push(`${playerName} dotarł(a) na metę!`);
     } else {
       const field = boardFields[targetIndex];
-      if (field?.type === 'task') {
-        const reviewerCandidate = determineNextTurn(draft, playerId);
-        const reviewerId = reviewerCandidate && reviewerCandidate !== playerId
-          ? reviewerCandidate
-          : null;
+      const awaitingMode = getAwaitingModeForField(field);
+      const nextTurnCandidate = determineNextTurn(draft, playerId);
+      const reviewerId = awaitingMode && nextTurnCandidate && nextTurnCandidate !== playerId
+        ? nextTurnCandidate
+        : null;
+
+      if (awaitingMode && reviewerId) {
         draft.awaitingConfirmation = {
           playerId,
           fieldIndex: targetIndex,
           reviewerId,
+          mode: awaitingMode,
         };
         draft.nextTurn = reviewerId;
       } else {
         draft.awaitingConfirmation = null;
-        draft.currentTurn = determineNextTurn(draft, playerId);
         draft.nextTurn = null;
+        draft.currentTurn = nextTurnCandidate || null;
+        if (awaitingMode && !reviewerId) {
+          const extraNotice = buildNoReviewerNotice(field);
+          if (extraNotice) {
+            draft.notice = [draft.notice, extraNotice].filter(Boolean).join(' ').trim();
+          }
+        }
       }
     }
 
     steps.forEach((message) => addHistoryEntry(draft, message));
   });
+}
+
+function getAwaitingModeForField(field) {
+  if (!field) {
+    return null;
+  }
+  if (field.type === 'task') {
+    return 'task';
+  }
+  if (field.type === 'safe') {
+    return 'safe';
+  }
+  return null;
+}
+
+function buildNoReviewerNotice(field) {
+  if (!field) {
+    return '';
+  }
+  if (field.type === 'safe') {
+    return 'Partner pauzuje – serduszko z bezpiecznego pola dodacie, gdy wróci do gry.';
+  }
+  if (field.type === 'task') {
+    return 'Partner jest w więzieniu, więc masz dwa rzuty z rzędu i możesz pominąć zadanie oraz serduszko.';
+  }
+  return '';
 }
 
 function resolveSpecialTiles(draft, playerId, startIndex) {
@@ -453,9 +492,16 @@ function resolveSpecialTiles(draft, playerId, startIndex) {
       const penalty = Number.isFinite(field.penaltyTurns) ? Math.max(1, Number(field.penaltyTurns)) : 2;
       draft.jail[playerId] = penalty;
       messages.push(field.label || `Lądujesz w więzieniu – pauzujesz ${describeTurns(penalty)}.`);
+      notice = 'Więzienie! Drugi partner rzuca teraz dwa razy i może pominąć zadania oraz serduszka, dopóki nie wrócisz do gry.';
     }
     if (field.type === 'safe') {
-      notice = field.label || 'Bezpieczne pole – chwilka oddechu 😌';
+      const baseSafe = (field.label || 'Bezpieczne pole – chwilka oddechu 😌').trim();
+      if (baseSafe.toLowerCase().includes('serdusz')) {
+        notice = baseSafe;
+      } else {
+        const connector = baseSafe.endsWith('.') ? ' ' : '. ';
+        notice = `${baseSafe}${connector}Partner może dodać Ci serduszko.`;
+      }
     }
     break;
   }
@@ -531,17 +577,28 @@ function resolveTaskResult(completed) {
     const reviewer = record.reviewerId ? draft.players[record.reviewerId] : null;
     const performerName = performer?.name || 'Gracz';
     const reviewerName = reviewer?.name || 'Partner';
-    const taskLabel = field?.label || 'zadanie';
+    const awaitingMode = record.mode === 'safe' ? 'safe' : 'task';
+    const taskLabel = field?.label || (awaitingMode === 'safe' ? 'bezpieczne pole' : 'zadanie');
 
     draft.awaitingConfirmation = null;
 
     if (completed) {
       draft.hearts[record.playerId] = (draft.hearts[record.playerId] ?? 0) + 1;
-      addHistoryEntry(draft, `${reviewerName} przyznaje ${performerName} serduszko za "${taskLabel}".`);
-      draft.notice = `${performerName} zdobywa serduszko ❤️.`;
+      if (awaitingMode === 'safe') {
+        addHistoryEntry(draft, `${reviewerName} przyznaje ${performerName} serduszko na bezpiecznym polu "${taskLabel}".`);
+        draft.notice = `${performerName} zdobywa serduszko na bezpiecznym polu.`;
+      } else {
+        addHistoryEntry(draft, `${reviewerName} przyznaje ${performerName} serduszko za "${taskLabel}".`);
+        draft.notice = `${performerName} zdobywa serduszko ❤️.`;
+      }
     } else {
-      addHistoryEntry(draft, `${reviewerName} nie przyznaje serduszka ${performerName} za "${taskLabel}".`);
-      draft.notice = `${performerName} nie zdobywa serduszka tym razem.`;
+      if (awaitingMode === 'safe') {
+        addHistoryEntry(draft, `${reviewerName} rezygnuje z serduszka dla ${performerName} na bezpiecznym polu "${taskLabel}".`);
+        draft.notice = `${performerName} zostaje bez serduszka na bezpiecznym polu.`;
+      } else {
+        addHistoryEntry(draft, `${reviewerName} nie przyznaje serduszka ${performerName} za "${taskLabel}".`);
+        draft.notice = `${performerName} nie zdobywa serduszka tym razem.`;
+      }
     }
 
     const next = draft.nextTurn || determineNextTurn(draft, record.playerId);
@@ -708,6 +765,8 @@ function sanitizeState(state, participants = []) {
       playerId: String(source.awaitingConfirmation.playerId || ''),
       fieldIndex: clampFieldIndex(source.awaitingConfirmation.fieldIndex),
     };
+    const awaitingMode = source.awaitingConfirmation.mode === 'safe' ? 'safe' : 'task';
+    awaiting.mode = awaitingMode;
     const reviewerId = source.awaitingConfirmation.reviewerId
       ? String(source.awaitingConfirmation.reviewerId)
       : '';
@@ -1001,6 +1060,8 @@ function renderTaskCard() {
     ? elements.taskRollButton
     : elements.taskActions.querySelector('#planszowka-roll-inline');
   const canRoll = canCurrentPlayerRoll();
+  let noticeText = '';
+  let noticeHidden = true;
 
   elements.taskActions.hidden = false;
 
@@ -1041,16 +1102,15 @@ function renderTaskCard() {
       inlineRollButton.disabled = !canRoll;
     }
 
-    elements.taskNotice.hidden = false;
-
+    noticeHidden = false;
     if (isReviewer) {
-      elements.taskNotice.textContent = `${performerName} czeka na Twoją decyzję.`;
+      noticeText = `${performerName} czeka na Twoją decyzję.`;
     } else if (isPerformer) {
-      elements.taskNotice.textContent = reviewer
+      noticeText = reviewer
         ? `Czekaj, aż ${reviewer.name} zdecyduje o serduszku.`
         : 'Czekaj na potwierdzenie zadania przez partnera.';
     } else {
-      elements.taskNotice.textContent = reviewer
+      noticeText = reviewer
         ? `Czekamy na decyzję ${reviewer.name}.`
         : 'Czekamy na decyzję partnera.';
     }
@@ -1068,12 +1128,55 @@ function renderTaskCard() {
     if (elements.diceReviewActions) {
       elements.diceReviewActions.hidden = true;
     }
-    elements.taskNotice.hidden = false;
     if (gameState.turnOrder.length < 2) {
-      elements.taskNotice.textContent = 'Poczekajcie, aż dołączy druga osoba.';
+      noticeText = 'Poczekajcie, aż dołączy druga osoba.';
+      noticeHidden = false;
+    } else if (gameState.finished || field?.type === 'finish') {
+      noticeText = '';
+      noticeHidden = true;
     } else {
-      elements.taskNotice.textContent = 'Rzuć kostką i zobacz, co czeka na kolejnym polu.';
+      noticeText = 'Rzuć kostką i zobacz, co czeka na kolejnym polu.';
+      noticeHidden = false;
     }
+  }
+
+  elements.taskNotice.hidden = noticeHidden;
+  elements.taskNotice.textContent = noticeHidden ? '' : noticeText;
+
+  updateDiceTaskDetails({
+    title: elements.taskTitle.textContent,
+    body: elements.taskBody.textContent,
+    notice: noticeText,
+    noticeHidden,
+  });
+}
+
+function updateDiceTaskDetails({ title = '', body = '', notice = '', noticeHidden = true }) {
+  const container = elements.diceTaskContainer;
+  const titleEl = elements.diceTaskTitle;
+  const bodyEl = elements.diceTaskBody;
+  const noticeEl = elements.diceTaskNotice;
+  const trimmedTitle = (title || '').trim();
+  const trimmedBody = (body || '').trim();
+  const trimmedNotice = (notice || '').trim();
+  const shouldShow = Boolean(container) && isFloatingDiceActive() && Boolean(trimmedTitle || trimmedBody);
+
+  if (container) {
+    container.hidden = !shouldShow;
+  }
+  if (titleEl) {
+    titleEl.textContent = shouldShow ? trimmedTitle : '';
+    titleEl.hidden = !shouldShow || !trimmedTitle;
+  }
+  if (bodyEl) {
+    bodyEl.textContent = shouldShow ? trimmedBody : '';
+    bodyEl.hidden = !shouldShow || !trimmedBody;
+  }
+
+  const showNotice = shouldShow && !noticeHidden && Boolean(trimmedNotice);
+  if (noticeEl) {
+    noticeEl.hidden = !showNotice;
+    noticeEl.textContent = showNotice ? trimmedNotice : '';
   }
 }
 
@@ -1409,6 +1512,9 @@ function runNextMovementStep() {
   const { path, stepIndex, playerId } = movementAnimation;
   visualPositions[playerId] = path[stepIndex];
   renderBoard();
+  if (!isFloatingDiceActive()) {
+    scrollPlayerIntoView(playerId, path[stepIndex]);
+  }
   movementAnimation.stepIndex += 1;
   if (movementAnimation.stepIndex < path.length) {
     movementAnimation.timer = window.setTimeout(runNextMovementStep, MOVEMENT_STEP_DELAY_MS);
@@ -1540,7 +1646,7 @@ function getFieldDescription(field) {
     return 'Wykonajcie zadanie, a partner może nagrodzić Cię serduszkiem.';
   }
   if (field.type === 'safe') {
-    return field.label || 'Bezpieczne pole – złapcie oddech i przygotujcie się na kolejne wyzwanie.';
+    return field.label || 'Bezpieczne pole – złapcie oddech, a partner może przyznać Ci serduszko.';
   }
   if (field.type === 'jail') {
     const penalty = Number.isFinite(field.penaltyTurns) ? Math.max(1, Number(field.penaltyTurns)) : 2;
@@ -1558,7 +1664,7 @@ function getFieldDescription(field) {
     return field.label || 'Wracasz na najbliższe bezpieczne pole.';
   }
   if (field.type === 'finish') {
-    return field.label || 'Meta! Wygrany wybiera zadanie dla przegranego.';
+    return 'Wygrany wybiera jedno czułe lub miłe zadanie dla przegranego.';
   }
   if (field.type === 'start') {
     return field.label || 'Start – przygotujcie się do wspólnej zabawy.';

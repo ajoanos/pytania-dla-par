@@ -2926,6 +2926,29 @@ body.share-layer-open .share-bar {
   color: var(--color-muted);
 }
 
+.planszowka-dice__task {
+  display: none;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.planszowka-dice__task h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.planszowka-dice__task p {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.planszowka-dice__notice {
+  display: none;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
 .planszowka-dice__action {
   width: 100%;
 }
@@ -3076,6 +3099,14 @@ body.has-floating-dice .planszowka-dice {
   top: 1rem;
   transition: transform 0.3s ease, opacity 0.3s ease;
   pointer-events: auto;
+}
+
+body.has-floating-dice .planszowka-dice__task {
+  display: flex;
+}
+
+body.has-floating-dice .planszowka-dice__notice {
+  display: block;
 }
 
 body.has-floating-dice .planszowka-dice[data-floating='false'] {
