@@ -5,6 +5,9 @@ const ACCESS_PAGE = 'pozycje-na-czas.html';
 const LIST_ENDPOINT = 'api/list_scratchcards.php';
 const DEFAULT_DURATION = 60;
 const ALERT_THRESHOLD = 5; // seconds
+const FINAL_COUNTDOWN_START = 10; // seconds
+const CELEBRATION_DURATION = 3000; // ms
+const CELEBRATION_DELAY = 400; // ms to briefly show "0"
 
 function ensureAccess() {
   const params = new URLSearchParams(window.location.search);
@@ -59,6 +62,10 @@ function initTimerGame() {
   const startButton = document.getElementById('start-timer');
   const skipButton = document.getElementById('skip-position');
   const durationRadios = document.querySelectorAll('input[name="timer_duration"]');
+  const overlay = document.getElementById('timer-overlay');
+  const countdownOverlay = document.getElementById('timer-countdown');
+
+  const hasOverlaySupport = overlay && countdownOverlay;
 
   if (!timerCard || !timerStatus || !timerImage || !timerMedia || !progressBar || !timerRemaining || !startButton || !skipButton) {
     return;
@@ -70,6 +77,59 @@ function initTimerGame() {
   let timerEndsAt = 0;
   let timerTotal = DEFAULT_DURATION;
   let countdownActive = false;
+  let lastFinalCountdownValue = null;
+  let celebrationTimeoutId = null;
+  let celebrationDelayId = null;
+
+  function clearCelebrationDelay() {
+    if (celebrationDelayId) {
+      window.clearTimeout(celebrationDelayId);
+      celebrationDelayId = null;
+    }
+  }
+
+  function hideCelebration() {
+    if (celebrationTimeoutId) {
+      window.clearTimeout(celebrationTimeoutId);
+      celebrationTimeoutId = null;
+    }
+    if (overlay?.dataset?.mode === 'celebration') {
+      overlay.dataset.mode = 'hidden';
+    }
+  }
+
+  function hideFinalCountdown() {
+    lastFinalCountdownValue = null;
+    if (overlay?.dataset?.mode === 'countdown') {
+      overlay.dataset.mode = 'hidden';
+    }
+    if (countdownOverlay) {
+      countdownOverlay.textContent = '';
+    }
+  }
+
+  function showFinalCountdown(value) {
+    if (!hasOverlaySupport) {
+      return;
+    }
+    overlay.dataset.mode = 'countdown';
+    countdownOverlay.textContent = String(value);
+  }
+
+  function triggerCelebration() {
+    if (!overlay) {
+      return;
+    }
+    hideFinalCountdown();
+    hideCelebration();
+    overlay.dataset.mode = 'celebration';
+    celebrationTimeoutId = window.setTimeout(() => {
+      if (overlay.dataset.mode === 'celebration') {
+        overlay.dataset.mode = 'hidden';
+      }
+      celebrationTimeoutId = null;
+    }, CELEBRATION_DURATION);
+  }
 
   function getSelectedDuration() {
     for (const radio of durationRadios) {
@@ -81,7 +141,7 @@ function initTimerGame() {
     return DEFAULT_DURATION;
   }
 
-  function stopCountdown({ silent = false } = {}) {
+  function stopCountdown({ silent = false, preserveCountdownOverlay = false } = {}) {
     if (timerId) {
       window.clearInterval(timerId);
       timerId = null;
@@ -92,6 +152,11 @@ function initTimerGame() {
     progressBar.max = timerTotal;
     timerRemaining.textContent = formatTime(0);
     document.body.classList.remove('timer-alert');
+    clearCelebrationDelay();
+    hideCelebration();
+    if (!preserveCountdownOverlay) {
+      hideFinalCountdown();
+    }
     if (!silent) {
       startButton.textContent = 'Zaczynamy zabawę';
     }
@@ -115,13 +180,29 @@ function initTimerGame() {
       document.body.classList.remove('timer-alert');
     }
 
+    if (remainingSeconds > 0 && remainingSeconds <= FINAL_COUNTDOWN_START) {
+      const displayValue = Math.ceil(remainingSeconds);
+      if (displayValue !== lastFinalCountdownValue) {
+        lastFinalCountdownValue = displayValue;
+        showFinalCountdown(displayValue);
+      }
+    } else if (lastFinalCountdownValue !== null) {
+      hideFinalCountdown();
+    }
+
     if (remainingMs <= 0) {
-      stopCountdown({ silent: true });
+      stopCountdown({ silent: true, preserveCountdownOverlay: true });
       timerRemaining.textContent = '00:00';
       timerStatus.textContent = 'Czas minął!';
       startButton.textContent = 'Uruchom ponownie';
       document.body.classList.remove('timer-alert');
       countdownActive = false;
+      lastFinalCountdownValue = 0;
+      showFinalCountdown(0);
+      clearCelebrationDelay();
+      celebrationDelayId = window.setTimeout(() => {
+        triggerCelebration();
+      }, CELEBRATION_DELAY);
     }
   }
 
@@ -129,6 +210,9 @@ function initTimerGame() {
     if (!availableCards.length) {
       return;
     }
+    clearCelebrationDelay();
+    hideCelebration();
+    hideFinalCountdown();
     timerTotal = getSelectedDuration();
     progressBar.value = 0;
     progressBar.max = timerTotal;
