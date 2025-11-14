@@ -3077,6 +3077,7 @@ body.share-layer-open .share-bar {
   color: #fff;
   pointer-events: none;
   opacity: 0;
+  visibility: hidden;
   transition: opacity 0.3s ease;
   z-index: 25;
 }
@@ -3089,6 +3090,7 @@ body.share-layer-open .share-bar {
 .timer-overlay[data-mode="countdown"],
 .timer-overlay[data-mode="celebration"] {
   opacity: 1;
+  visibility: visible;
 }
 
 .timer-overlay[data-mode="countdown"] .timer-overlay__countdown {
@@ -3118,35 +3120,6 @@ body.share-layer-open .share-bar {
   text-transform: uppercase;
   text-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
   z-index: 1;
-}
-
-.timer-overlay__confetti {
-  position: absolute;
-  inset: -20%;
-  background-image:
-    radial-gradient(circle, rgba(255, 215, 0, 0.9) 30%, transparent 31%),
-    radial-gradient(circle, rgba(255, 105, 180, 0.9) 30%, transparent 31%),
-    radial-gradient(circle, rgba(65, 105, 225, 0.9) 30%, transparent 31%),
-    radial-gradient(circle, rgba(144, 238, 144, 0.9) 30%, transparent 31%);
-  background-size: 60px 60px;
-  background-position:
-    0% 0%,
-    25% 25%,
-    50% 50%,
-    75% 75%;
-  opacity: 0.7;
-  animation: timer-confetti 2s linear infinite;
-  filter: blur(0.2px);
-  z-index: 0;
-}
-
-@keyframes timer-confetti {
-  from {
-    transform: translateY(-8%) rotate(0deg);
-  }
-  to {
-    transform: translateY(8%) rotate(5deg);
-  }
 }
 
 .timer-card__progress {
