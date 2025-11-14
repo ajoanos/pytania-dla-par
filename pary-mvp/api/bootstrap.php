@@ -758,7 +758,7 @@ function defaultTrioChallengeState(): array
 {
     return [
         'board' => array_fill(0, 16, ''),
-        'currentSymbol' => 'X',
+        'currentSymbol' => randomTrioStartingSymbol(),
         'assignments' => ['x' => null, 'o' => null],
         'winner' => null,
         'winningLine' => [],
@@ -769,6 +769,15 @@ function defaultTrioChallengeState(): array
         'lastMoveBy' => null,
         'updatedAt' => '',
     ];
+}
+
+function randomTrioStartingSymbol(): string
+{
+    try {
+        return random_int(0, 1) === 0 ? 'X' : 'O';
+    } catch (Exception $exception) {
+        return mt_rand(0, 1) === 0 ? 'X' : 'O';
+    }
 }
 
 function getBoardSession(int $roomId): ?array

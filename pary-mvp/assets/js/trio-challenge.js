@@ -144,8 +144,6 @@ function applySnapshot(snapshot) {
   const participants = normalizeParticipants(snapshot.participants);
   currentParticipants = participants;
   isCurrentUserHost = Boolean(snapshot.self?.is_host);
-  elements.roomLabel.textContent = roomKey ? `Pokój ${roomKey}` : '';
-
   const state = snapshot.state && typeof snapshot.state === 'object' ? snapshot.state : {};
   ensureTrioState(state);
   gameState = state;
@@ -171,9 +169,7 @@ function ensureTrioState(state) {
     trio.board = Array.from({ length: BOARD_CELLS }, (_, index) => String(trio.board[index] || ''));
   }
   trio.board = trio.board.map((value) => (value === 'X' || value === 'O' ? value : ''));
-  if (trio.currentSymbol !== 'O') {
-    trio.currentSymbol = 'X';
-  }
+  trio.currentSymbol = trio.currentSymbol === 'O' ? 'O' : 'X';
   if (!trio.assignments || typeof trio.assignments !== 'object') {
     trio.assignments = { x: '', o: '' };
   } else {
@@ -205,6 +201,10 @@ function defaultTrioState() {
     lastMoveBy: '',
     updatedAt: '',
   };
+}
+
+function drawStartingSymbol() {
+  return Math.random() < 0.5 ? 'X' : 'O';
 }
 
 function normalizeChallenge(challenge) {
@@ -239,6 +239,10 @@ function renderPlayers() {
     return;
   }
   const trio = getTrioState();
+  const roundLabel = Math.max(1, Number(trio.round) || 1);
+  if (elements.roomLabel) {
+    elements.roomLabel.textContent = `Runda ${roundLabel}`;
+  }
   const assignments = trio.assignments || { x: '', o: '' };
   const items = [
     { symbol: 'X', label: 'Partner 1 (X)', playerId: assignments.x },
@@ -263,14 +267,29 @@ function renderPlayers() {
 
   const activeCount = currentParticipants.length;
   if (elements.waitingHint) {
-    elements.waitingHint.hidden = activeCount >= 2;
+    if (activeCount >= 2) {
+      elements.waitingHint.hidden = true;
+    } else {
+      elements.waitingHint.hidden = false;
+      elements.waitingHint.textContent = 'Użyj przycisku „Udostępnij pokój”, aby wysłać zaproszenie.';
+    }
   }
+  const boardHasMoves = Array.isArray(trio.board) && trio.board.some((value) => Boolean(value));
   if (elements.turnLabel) {
     if (trio.winner) {
-      const winnerName = symbolName(trio.winner);
-      elements.turnLabel.textContent = winnerName ? `${winnerName} wygrał(a)!` : 'Gra zakończona.';
+      if (trio.winner === 'draw') {
+        elements.turnLabel.textContent = 'Remis! Wylosujcie zadania.';
+      } else {
+        const winnerName = symbolName(trio.winner);
+        elements.turnLabel.textContent = winnerName ? `${winnerName} wygrał(a)!` : 'Gra zakończona.';
+      }
     } else if (activeCount < 2) {
       elements.turnLabel.textContent = 'Czekamy na graczy…';
+    } else if (!boardHasMoves) {
+      const starter = symbolName(trio.currentSymbol);
+      elements.turnLabel.textContent = starter
+        ? `Losowanie: ${starter} zaczyna rundę (${trio.currentSymbol}).`
+        : 'Losujemy, kto rozpocznie rundę…';
     } else {
       const symbolOwner = symbolName(trio.currentSymbol);
       elements.turnLabel.textContent = symbolOwner
@@ -285,6 +304,7 @@ function renderBoard() {
     return;
   }
   const trio = getTrioState();
+  const boardHasMoves = Array.isArray(trio.board) && trio.board.some((value) => Boolean(value));
   const cells = elements.board.querySelectorAll('[data-index]');
   cells.forEach((cell) => {
     const index = Number(cell.dataset.index);
@@ -304,10 +324,19 @@ function renderBoard() {
   if (elements.moveHint) {
     if (trio.winner) {
       elements.moveHint.textContent = 'Kliknij „Zacznij nową grę”, żeby rozpocząć kolejną rundę.';
-    } else if (canMove) {
-      elements.moveHint.textContent = 'Wybierz dowolne wolne pole i postaw swój symbol.';
     } else if (currentParticipants.length < 2) {
       elements.moveHint.textContent = 'Poczekaj, aż partner dołączy do pokoju.';
+    } else if (!boardHasMoves) {
+      const starter = symbolName(trio.currentSymbol);
+      if (canMove) {
+        elements.moveHint.textContent = 'Los przydzielił Ci pierwszy ruch – wybierz dowolne pole.';
+      } else {
+        elements.moveHint.textContent = starter
+          ? `${starter} rozpoczyna tę rundę. Zaczekaj na pierwszy ruch.`
+          : 'Losujemy pierwszego gracza…';
+      }
+    } else if (canMove) {
+      elements.moveHint.textContent = 'Wybierz dowolne wolne pole i postaw swój symbol.';
     } else {
       const owner = symbolName(trio.currentSymbol);
       elements.moveHint.textContent = owner ? `Ruch: ${owner}.` : 'Czekamy na kolejny ruch.';
@@ -472,12 +501,13 @@ function handleReset() {
   }
   const nextState = cloneState(gameState);
   nextState.trioChallenge.board = Array.from({ length: BOARD_CELLS }, () => '');
-  nextState.trioChallenge.currentSymbol = 'X';
+  nextState.trioChallenge.currentSymbol = drawStartingSymbol();
   nextState.trioChallenge.winner = null;
   nextState.trioChallenge.winningLine = [];
   nextState.trioChallenge.challenge = null;
   nextState.trioChallenge.drawChallenges = [];
   nextState.trioChallenge.round += 1;
+  nextState.trioChallenge.lastMoveBy = '';
   nextState.trioChallenge.updatedAt = new Date().toISOString();
   persistState(nextState);
   applySnapshot({ state: nextState, participants: currentParticipants, self: { is_host: isCurrentUserHost } });
@@ -746,34 +776,106 @@ function buildShareUrl() {
   return url.toString();
 }
 
+function resetShareFeedback() {
+  if (shareFeedbackTimer) {
+    window.clearTimeout(shareFeedbackTimer);
+    shareFeedbackTimer = null;
+  }
+  if (shareElements.feedback) {
+    shareElements.feedback.hidden = true;
+    shareElements.feedback.textContent = '';
+    delete shareElements.feedback.dataset.tone;
+  }
+  if (shareElements.emailFeedback) {
+    shareElements.emailFeedback.hidden = true;
+    shareElements.emailFeedback.textContent = '';
+    delete shareElements.emailFeedback.dataset.tone;
+  }
+}
+
 function initializeShareSheet(elementsMap) {
-  if (!elementsMap.bar || !elementsMap.openButton || !elementsMap.layer || !elementsMap.card) {
+  const { bar, openButton, layer, card, closeButton, backdrop } = elementsMap || {};
+  if (!layer || !card || !openButton || !closeButton) {
+    if (bar) {
+      bar.hidden = true;
+    }
     return null;
   }
-  function open() {
-    elementsMap.layer.hidden = false;
-    elementsMap.layer.dataset.open = 'true';
-    elementsMap.layer.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('share-layer-open');
-    elementsMap.openButton.setAttribute('aria-expanded', 'true');
-    elementsMap.card.focus();
+
+  layer.hidden = false;
+  layer.dataset.open = 'false';
+  layer.setAttribute('aria-hidden', 'true');
+  if (!card.hasAttribute('tabindex')) {
+    card.tabIndex = -1;
   }
-  function close() {
-    elementsMap.layer.dataset.open = 'false';
-    elementsMap.layer.setAttribute('aria-hidden', 'true');
+  openButton.disabled = true;
+  openButton.setAttribute('aria-expanded', 'false');
+  openButton.setAttribute('tabindex', '-1');
+
+  let activeTrigger = null;
+
+  const close = () => {
+    if (layer.dataset.open !== 'true') {
+      return;
+    }
+    layer.dataset.open = 'false';
+    layer.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('share-layer-open');
-    elementsMap.openButton.setAttribute('aria-expanded', 'false');
-    window.setTimeout(() => {
-      elementsMap.layer.hidden = true;
-    }, 300);
-  }
-  elementsMap.openButton.addEventListener('click', () => {
-    elementsMap.layer.hidden = false;
-    open();
+    openButton.setAttribute('aria-expanded', 'false');
+    resetShareFeedback();
+    if (activeTrigger && typeof activeTrigger.focus === 'function') {
+      activeTrigger.focus({ preventScroll: true });
+    }
+    activeTrigger = null;
+  };
+
+  const open = () => {
+    if (layer.dataset.open === 'true' || openButton.disabled) {
+      return;
+    }
+    activeTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : openButton;
+    layer.dataset.open = 'true';
+    layer.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('share-layer-open');
+    openButton.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => {
+      card.focus({ preventScroll: true });
+    });
+  };
+
+  openButton.addEventListener('click', () => {
+    if (layer.dataset.open === 'true') {
+      close();
+    } else {
+      open();
+    }
   });
-  elementsMap.closeButton?.addEventListener('click', close);
-  elementsMap.backdrop?.addEventListener('click', close);
+
+  closeButton.addEventListener('click', close);
+  backdrop?.addEventListener('click', close);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && layer.dataset.open === 'true') {
+      event.preventDefault();
+      close();
+    }
+  });
+
   return { open, close };
+}
+
+function closeShareSheet() {
+  if (shareSheetController && typeof shareSheetController.close === 'function') {
+    shareSheetController.close();
+    return;
+  }
+  if (!shareElements.layer) {
+    return;
+  }
+  shareElements.layer.dataset.open = 'false';
+  shareElements.layer.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('share-layer-open');
+  shareElements.openButton?.setAttribute('aria-expanded', 'false');
+  resetShareFeedback();
 }
 
 function initializeShareChannels() {
@@ -852,8 +954,26 @@ function updateShareVisibility() {
   if (!shareElements.bar) {
     return;
   }
-  const shouldShow = currentParticipants.length < 2;
+  const shouldShow = isCurrentUserHost && currentParticipants.length < 2;
+  if (!shouldShow) {
+    closeShareSheet();
+    closeQrModal();
+  }
   shareElements.bar.hidden = !shouldShow;
+  if (shareElements.openButton) {
+    shareElements.openButton.disabled = !shouldShow;
+    shareElements.openButton.setAttribute('aria-expanded', 'false');
+    if (shouldShow) {
+      shareElements.openButton.removeAttribute('tabindex');
+    } else {
+      shareElements.openButton.setAttribute('tabindex', '-1');
+    }
+  }
+  if (shareElements.hint) {
+    shareElements.hint.textContent = shouldShow
+      ? 'Skopiuj link, QR lub e-mail i wyślij go partnerowi. Pokój wygasa po 6 godzinach.'
+      : 'Gdy tylko partner dołączy, przycisk udostępniania zniknie sam.';
+  }
 }
 
 async function copyShareLink() {
