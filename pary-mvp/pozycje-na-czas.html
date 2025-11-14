@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Tinder z pozycjami – Hasło dostępu</title>
+  <title>Pozycje na czas – Hasło dostępu</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
   <script type="module" src="assets/js/app.js"></script>
 </head>
-<body class="page page--access" data-theme="light">
+<body class="page page--access" data-theme="dark">
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
@@ -24,8 +24,8 @@
           />
         </a>
         <div class="hero__text">
-          <h1>Tinder z pozycjami</h1>
-          <p>Podaj hasło, aby stworzyć prywatny pokój i zaprosić partnera.</p>
+          <h1>Pozycje na czas</h1>
+          <p>Podaj hasło, aby uruchomić losową pozycję i wspólne odliczanie.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
@@ -36,10 +36,10 @@
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
               <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
-              <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
+              <li><a class="game-switcher__link" href="pozycje-na-czas.html" aria-current="page">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
-              <li><a class="game-switcher__link" href="tinder-dla-sexu.html" aria-current="page">Tinder z pozycjami</a></li>
+              <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder z pozycjami</a></li>
             </ul>
           </div>
         </details>
@@ -52,8 +52,9 @@
       <form
         id="password-form"
         class="form form--inline"
-        data-success="tinder-dla-sexu-room.html"
-        data-storage-key="momenty.tinder.access"
+        data-storage-key="momenty.timer.access"
+        data-success="pozycje-na-czas-play.html"
+        data-skip-room-key="true"
       >
         <label class="form__field">
           <span>Hasło</span>
