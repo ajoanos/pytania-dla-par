@@ -4,29 +4,31 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Planszówka dla dwojga (dla dorosłych) – Dołącz do pokoju</title>
-  <link rel="manifest" href="manifest.webmanifest">
+  <title>Kółko i krzyżyk Wyzwanie – Poczekalnia</title>
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet" />
   <script type="module" src="assets/js/app.js"></script>
-  <script type="module" src="assets/js/invite.js"></script>
+  <script type="module" src="assets/js/waiting-room.js"></script>
 </head>
-<body class="page page--invite" data-theme="light">
+<body
+  class="page page--waiting"
+  data-theme="light"
+  data-host-page="trio-challenge-room.html"
+  data-home-page="trio-challenge.html"
+  data-room-page="trio-challenge-board.html"
+>
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
-          <img
-            class="hero__logo"
-            src="https://sklep.allemedia.pl/momenty/logo.png"
-            alt="Momenty"
-          />
+          <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
         </a>
         <div class="hero__text">
-          <h1>Dołącz do planszówki (dla dorosłych)</h1>
-          <p id="invite-room-label">Trwa pobieranie danych pokoju...</p>
+          <h1>Poczekalnia Kółko i krzyżyk Wyzwanie</h1>
+          <p id="waiting-room-label"></p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
@@ -34,9 +36,9 @@
             <ul class="game-switcher__list">
               <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
-              <li><a class="game-switcher__link" href="planszowa.html" aria-current="page">Planszówka dla dwojga (dla dorosłych)</a></li>
+              <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
               <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
-              <li><a class="game-switcher__link" href="trio-challenge.html">Kółko i krzyżyk Wyzwanie</a></li>
+              <li><a class="game-switcher__link" href="trio-challenge.html" aria-current="page">Kółko i krzyżyk Wyzwanie</a></li>
               <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
@@ -49,17 +51,14 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--game" id="invite-card">
-      <h2>Wpisz swoje imię</h2>
-      <p class="form__hint" id="invite-hint">Dołącz do rozgrywki, podając tylko swoje imię.</p>
-      <form id="invite-form" class="form" data-success="planszowa-board.html">
-        <label class="form__field">
-          <span>Twoje imię</span>
-          <input type="text" id="invite-display-name" name="display_name" placeholder="np. Kuba" required maxlength="40" autocomplete="off" />
-        </label>
-        <button type="submit" class="btn btn--primary btn--enter-room">Wejdź do pokoju</button>
-      </form>
-      <p class="form__hint" id="invite-error" hidden></p>
+    <section class="waiting-room">
+      <div class="card card--game waiting-room__card">
+        <h2 id="waiting-title">Oczekiwanie na dołączenie</h2>
+        <p id="waiting-message">Twoja prośba została wysłana. Gdy gospodarz zaakceptuje zgłoszenie, natychmiast wejdziesz do gry.</p>
+        <div class="waiting-room__actions">
+          <button type="button" class="btn btn--ghost" id="waiting-leave">Wróć do tworzenia pokoju</button>
+        </div>
+      </div>
     </section>
   </main>
 </body>
