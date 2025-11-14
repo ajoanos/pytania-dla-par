@@ -1,7 +1,11 @@
-const CACHE_NAME = 'pary-mvp-v17';
+const CACHE_NAME = 'pary-mvp-v18';
 const ASSETS = [
   '/pary-mvp/',
   '/pary-mvp/index.html',
+  '/pary-mvp/trio-challenge.html',
+  '/pary-mvp/trio-challenge-room.html',
+  '/pary-mvp/trio-challenge-waiting.html',
+  '/pary-mvp/trio-challenge-board.html',
   '/pary-mvp/zdrapka-pozycji.html',
   '/pary-mvp/zdrapka-pozycji-play.html',
   '/pary-mvp/pozycje-na-czas.html',
@@ -22,6 +26,7 @@ const ASSETS = [
   '/pary-mvp/assets/js/room.js',
   '/pary-mvp/assets/js/invite.js',
   '/pary-mvp/assets/js/waiting-room.js',
+  '/pary-mvp/assets/js/trio-challenge.js',
   '/pary-mvp/assets/js/import.js',
   '/pary-mvp/assets/js/zdrapka-pozycji.js',
   '/pary-mvp/assets/js/pozycje-na-czas.js',
