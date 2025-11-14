@@ -136,28 +136,34 @@
           <div class="share__actions">
             <button type="button" class="btn btn--ghost" id="share-copy">Kopiuj link</button>
             <button type="button" class="btn btn--ghost" id="share-show-qr">Pokaż kod QR</button>
+            <div class="share-links" id="share-links">
+              <a class="share-link" data-share-channel="messenger" href="#" aria-disabled="true" tabindex="-1">Messenger</a>
+              <a class="share-link" data-share-channel="whatsapp" href="#" aria-disabled="true" tabindex="-1">WhatsApp</a>
+              <a class="share-link" data-share-channel="sms" href="#" aria-disabled="true" tabindex="-1">SMS</a>
+            </div>
           </div>
-          <div class="share__channels" id="share-links"></div>
           <form id="share-email" class="share-email">
-            <label class="form__field">
-              <span>Wyślij link e-mailem</span>
-              <input type="email" id="share-email-input" name="email" placeholder="np. partner@adres.pl" autocomplete="off" />
+            <label class="share-email__field" for="share-email-input">
+              <span class="share-email__label">Wyślij link e-mailem</span>
+              <input type="email" id="share-email-input" name="email" placeholder="np. partner@adres.pl" autocomplete="email" required />
             </label>
             <button type="submit" class="btn btn--primary">Wyślij</button>
-            <p id="share-email-feedback" class="share-email__feedback" hidden></p>
+            <p id="share-email-feedback" class="share-email__feedback" hidden role="status"></p>
           </form>
         </div>
       </section>
     </section>
 
-    <section class="share-qr" id="share-qr-modal" hidden aria-hidden="true" role="dialog" aria-labelledby="share-qr-title">
-      <div class="share-qr__content">
+    <div id="share-qr-modal" class="qr-modal" hidden aria-hidden="true">
+      <div class="qr-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="share-qr-title">
         <h2 id="share-qr-title">Zeskanuj kod QR</h2>
-        <img id="share-qr-image" src="" alt="Kod QR z linkiem do pokoju" />
-        <p><a id="share-qr-url" href="#" target="_blank" rel="noopener">Otwórz link w nowej karcie</a></p>
+        <img id="share-qr-image" class="qr-modal__image" alt="Kod QR z linkiem do pokoju" loading="lazy" />
+        <p class="qr-modal__link">
+          <a id="share-qr-url" href="#" target="_blank" rel="noopener">Otwórz link w nowej karcie</a>
+        </p>
         <button type="button" class="btn btn--ghost" id="share-qr-close">Zamknij</button>
       </div>
-    </section>
+    </div>
   </main>
 </body>
 </html>
