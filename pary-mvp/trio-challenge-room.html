@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Tinder z pozycjami – Stwórz pokój</title>
-  <link rel="manifest" href="manifest.webmanifest">
+  <title>TRIO Challenge – Stwórz pokój</title>
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet" />
   <script type="module" src="assets/js/app.js"></script>
 </head>
 <body class="page page--game" data-theme="light">
@@ -17,15 +17,11 @@
     <header class="hero">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
-          <img
-            class="hero__logo"
-            src="https://sklep.allemedia.pl/momenty/logo.png"
-            alt="Momenty"
-          />
+          <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
         </a>
         <div class="hero__text">
-          <h1>Tinder z pozycjami</h1>
-          <p>Stwórz pokój, aby później wysłać link partnerowi i rozpocząć zabawę.</p>
+          <h1>TRIO Challenge</h1>
+          <p>Stwórz pokój, wybierz sekretny tryb zadań i zaproś partnera do gry 4×4.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
@@ -35,12 +31,12 @@
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
               <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
-              <li><a class="game-switcher__link" href="trio-challenge.html">TRIO Challenge</a></li>
+              <li><a class="game-switcher__link" href="trio-challenge.html" aria-current="page">TRIO Challenge</a></li>
               <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
-              <li><a class="game-switcher__link" href="tinder-dla-sexu.html" aria-current="page">Tinder z pozycjami</a></li>
+              <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder z pozycjami</a></li>
             </ul>
           </div>
         </details>
@@ -50,21 +46,21 @@
 
     <section class="card card--game" id="game-card">
       <header class="card__header">
-        <h2>Twoja gra</h2>
+        <h2>Wejdź do pokoju TRIO Challenge</h2>
       </header>
       <form
         id="join-form"
         class="form"
-        data-success-active="tinder-dla-sexu-play.html"
-        data-success-pending="tinder-dla-sexu-waiting.html"
-        data-storage-key="momenty.tinder.access"
-        data-access-redirect="tinder-dla-sexu.html"
+        data-success-active="trio-challenge-board.html"
+        data-success-pending="trio-challenge-waiting.html"
+        data-storage-key="momenty.trio.access"
+        data-access-redirect="trio-challenge.html"
         data-require-room-key="true"
         data-submit-mode="host"
       >
         <input type="hidden" id="room_key" name="room_key" autocomplete="off" />
         <aside class="form__notice" data-role="room-ready" hidden>
-          <p>Pokój jest gotowy. Podaj swoje imię, aby wejść do środka i wysłać link partnerowi.</p>
+          <p>Pokój jest gotowy. Skopiuj link lub kod i wyślij go partnerowi. Pokój wygaśnie po 6 godzinach.</p>
         </aside>
         <label class="form__field">
           <span>Twoje imię</span>

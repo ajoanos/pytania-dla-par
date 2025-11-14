@@ -750,6 +750,24 @@ function defaultBoardState(): array
         'winnerId' => null,
         'version' => 0,
         'history' => [],
+        'trioChallenge' => defaultTrioChallengeState(),
+    ];
+}
+
+function defaultTrioChallengeState(): array
+{
+    return [
+        'board' => array_fill(0, 16, ''),
+        'currentSymbol' => 'X',
+        'assignments' => ['x' => null, 'o' => null],
+        'winner' => null,
+        'winningLine' => [],
+        'challenge' => null,
+        'drawChallenges' => [],
+        'mode' => 'soft',
+        'round' => 1,
+        'lastMoveBy' => null,
+        'updatedAt' => '',
     ];
 }
 
@@ -1009,7 +1027,133 @@ function normalizeBoardState(array $state, array $participants): array
         $normalized['history'] = $history;
     }
 
+    $normalized['trioChallenge'] = normalizeTrioChallengeState($state['trioChallenge'] ?? null, $participants);
+
     return $normalized;
+}
+
+function normalizeTrioChallengeState($state, array $participants): array
+{
+    $normalized = defaultTrioChallengeState();
+    if (!is_array($state)) {
+        return $normalized;
+    }
+
+    $board = array_fill(0, 16, '');
+    if (isset($state['board']) && is_array($state['board'])) {
+        foreach ($state['board'] as $index => $value) {
+            $idx = (int)$index;
+            if ($idx < 0 || $idx >= 16) {
+                continue;
+            }
+            $symbol = strtoupper((string)$value);
+            if ($symbol !== 'X' && $symbol !== 'O') {
+                $symbol = '';
+            }
+            $board[$idx] = $symbol;
+        }
+    }
+    $normalized['board'] = $board;
+
+    $currentSymbol = strtoupper((string)($state['currentSymbol'] ?? 'X'));
+    $normalized['currentSymbol'] = $currentSymbol === 'O' ? 'O' : 'X';
+
+    $participantIds = array_map(static function ($item): string {
+        return (string)((int)($item['id'] ?? 0));
+    }, $participants);
+
+    $assignments = ['x' => null, 'o' => null];
+    if (isset($state['assignments']) && is_array($state['assignments'])) {
+        foreach (['x', 'o'] as $slot) {
+            $value = (string)($state['assignments'][$slot] ?? '');
+            $assignments[$slot] = ($value !== '' && in_array($value, $participantIds, true)) ? $value : null;
+        }
+    }
+    $normalized['assignments'] = $assignments;
+
+    $winner = strtolower((string)($state['winner'] ?? ''));
+    if ($winner === 'draw') {
+        $normalized['winner'] = 'draw';
+    } elseif ($winner === 'x' || $winner === 'o') {
+        $normalized['winner'] = strtoupper($winner);
+    } else {
+        $normalized['winner'] = null;
+    }
+
+    $winningLine = [];
+    if (isset($state['winningLine']) && is_array($state['winningLine'])) {
+        foreach ($state['winningLine'] as $value) {
+            $index = (int)$value;
+            if ($index >= 0 && $index < 16) {
+                $winningLine[] = $index;
+            }
+        }
+    }
+    $normalized['winningLine'] = $winningLine;
+
+    $normalized['challenge'] = normalizeTrioChallengePayload($state['challenge'] ?? null);
+
+    $drawChallenges = [];
+    if (isset($state['drawChallenges']) && is_array($state['drawChallenges'])) {
+        foreach ($state['drawChallenges'] as $value) {
+            $text = trim((string)$value);
+            if ($text !== '') {
+                $drawChallenges[] = $text;
+            }
+            if (count($drawChallenges) >= 2) {
+                break;
+            }
+        }
+    }
+    $normalized['drawChallenges'] = $drawChallenges;
+
+    $mode = strtolower((string)($state['mode'] ?? 'soft'));
+    $normalized['mode'] = $mode === 'extreme' ? 'extreme' : 'soft';
+
+    $round = (int)($state['round'] ?? 1);
+    $normalized['round'] = $round > 0 ? $round : 1;
+
+    $lastMove = (string)($state['lastMoveBy'] ?? '');
+    $normalized['lastMoveBy'] = ($lastMove !== '' && in_array($lastMove, $participantIds, true)) ? $lastMove : null;
+
+    $normalized['updatedAt'] = (string)($state['updatedAt'] ?? '');
+
+    return $normalized;
+}
+
+function normalizeTrioChallengePayload($value): ?array
+{
+    if (!is_array($value)) {
+        return null;
+    }
+    $type = ($value['type'] ?? '') === 'draw' ? 'draw' : 'single';
+    $assignedSymbol = strtoupper((string)($value['assignedSymbol'] ?? 'O'));
+    if ($assignedSymbol !== 'O') {
+        $assignedSymbol = 'X';
+    }
+    $tasks = [];
+    if (isset($value['tasks']) && is_array($value['tasks'])) {
+        foreach ($value['tasks'] as $task) {
+            $text = trim((string)$task);
+            if ($text !== '') {
+                $tasks[] = $text;
+            }
+            if ($type === 'single' && count($tasks) >= 1) {
+                break;
+            }
+            if ($type === 'draw' && count($tasks) >= 2) {
+                break;
+            }
+        }
+    }
+    if (empty($tasks)) {
+        return null;
+    }
+    return [
+        'type' => $type,
+        'assignedSymbol' => $assignedSymbol,
+        'tasks' => $tasks,
+    ];
 }
 
 function clampBoardIndexValue($value): int
