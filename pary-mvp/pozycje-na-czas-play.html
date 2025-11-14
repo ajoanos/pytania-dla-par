@@ -4,15 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Tinder z pozycjami – Hasło dostępu</title>
+  <title>Pozycje na czas</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
-  <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="assets/js/pozycje-na-czas.js"></script>
 </head>
-<body class="page page--access" data-theme="light">
+<body class="page page--timer" data-theme="dark">
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
@@ -24,8 +24,8 @@
           />
         </a>
         <div class="hero__text">
-          <h1>Tinder z pozycjami</h1>
-          <p>Podaj hasło, aby stworzyć prywatny pokój i zaprosić partnera.</p>
+          <h1>Pozycje na czas</h1>
+          <p>Losuj pozycję, ustaw odliczanie i bawcie się w rytmie zegara.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
@@ -36,10 +36,10 @@
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
               <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
-              <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
+              <li><a class="game-switcher__link" href="pozycje-na-czas.html" aria-current="page">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
-              <li><a class="game-switcher__link" href="tinder-dla-sexu.html" aria-current="page">Tinder z pozycjami</a></li>
+              <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder z pozycjami</a></li>
             </ul>
           </div>
         </details>
@@ -47,24 +47,33 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--password" id="password-card">
-      <h2>Podaj hasło dostępu</h2>
-      <form
-        id="password-form"
-        class="form form--inline"
-        data-success="tinder-dla-sexu-room.html"
-        data-storage-key="momenty.tinder.access"
-      >
-        <label class="form__field">
-          <span>Hasło</span>
-          <input type="password" id="access-password" name="access_password" placeholder="••••" autocomplete="current-password" required />
-        </label>
-        <div class="form__actions">
-          <button type="submit" class="btn btn--primary">Potwierdź</button>
-          <button type="button" class="btn btn--ghost" id="password-cancel" data-back="index.html">Wróć</button>
+    <section class="card card--timer" id="timer-card">
+      <div class="timer-card__header">
+        <div class="timer-duration" role="group" aria-label="Czas odliczania">
+          <label class="timer-duration__option">
+            <input type="radio" name="timer_duration" value="60" checked />
+            <span>60 s</span>
+          </label>
+          <label class="timer-duration__option">
+            <input type="radio" name="timer_duration" value="120" />
+            <span>120 s</span>
+          </label>
         </div>
-      </form>
-      <p class="form__hint" id="password-error" hidden>Niepoprawne hasło. Spróbuj ponownie.</p>
+        <p class="timer-card__status" id="timer-status" role="status" aria-live="polite">
+          Ładuję pozycję...
+        </p>
+      </div>
+      <div class="timer-card__media" id="timer-media">
+        <img id="timer-image" alt="Losowa pozycja" />
+      </div>
+      <div class="timer-card__progress">
+        <progress id="timer-progress" max="60" value="0" aria-describedby="timer-remaining"></progress>
+        <span id="timer-remaining">00:00</span>
+      </div>
+      <div class="timer-card__actions">
+        <button type="button" class="btn btn--ghost" id="skip-position">Pomiń pozycję</button>
+        <button type="button" class="btn btn--primary" id="start-timer">Zaczynamy zabawę</button>
+      </div>
     </section>
 
     <footer class="footer">
@@ -73,5 +82,17 @@
       </nav>
     </footer>
   </main>
+  <div
+    class="timer-overlay"
+    id="timer-overlay"
+    data-mode="hidden"
+    aria-live="assertive"
+    aria-atomic="true"
+  >
+    <div class="timer-overlay__countdown" id="timer-countdown"></div>
+    <div class="timer-overlay__celebration" id="timer-celebration">
+      <div class="timer-overlay__message">Gratulacje! Udało się!</div>
+    </div>
+  </div>
 </body>
 </html>
