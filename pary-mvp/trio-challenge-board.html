@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>TRIO Challenge – pokój gry</title>
+  <title>Kółko i krzyżyk Wyzwanie – pokój gry</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,7 +21,7 @@
           <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
         </a>
         <div class="hero__text">
-          <h1>TRIO Challenge</h1>
+          <h1>Kółko i krzyżyk Wyzwanie</h1>
           <p>Ułóż trójkę symboli na planszy 4×4, żeby wygrać i wylosować zadanie dla partnera.</p>
         </div>
         <details class="game-switcher">
@@ -32,7 +32,7 @@
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
               <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
-              <li><a class="game-switcher__link" href="trio-challenge.html" aria-current="page">TRIO Challenge</a></li>
+              <li><a class="game-switcher__link" href="trio-challenge.html" aria-current="page">Kółko i krzyżyk Wyzwanie</a></li>
               <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
@@ -48,13 +48,13 @@
     <section class="card trio-status" aria-live="polite">
       <header class="card__header card__header--inline">
         <div>
-          <h2>Partnerzy w pokoju</h2>
-          <p id="trio-room-label" class="card__subtitle"></p>
+          <h2>Aktualni gracze</h2>
+          <p class="card__subtitle">Runda <span id="trio-round-label">1</span></p>
         </div>
         <p id="trio-turn" class="trio-status__turn">Czekamy na graczy…</p>
       </header>
       <ul class="trio-players" id="trio-players"></ul>
-      <p id="trio-waiting" class="trio-status__hint">Udostępnij pokój partnerowi, aby rozpocząć pojedynek.</p>
+      <p id="trio-waiting" class="trio-status__hint">Udostępnij pokój partnerowi, aby rozpocząć partię.</p>
     </section>
 
     <section class="card trio-board-card">
@@ -65,7 +65,7 @@
         </div>
         <button type="button" class="btn btn--ghost" id="trio-reset" disabled>Zacznij nową grę</button>
       </header>
-      <div class="trio-board" id="trio-board" role="grid" aria-label="Plansza TRIO Challenge"></div>
+      <div class="trio-board" id="trio-board" role="grid" aria-label="Plansza Kółko i krzyżyk Wyzwanie"></div>
       <p id="trio-move-hint" class="trio-board__hint"></p>
       <section class="trio-result" id="trio-result" hidden>
         <h3 id="trio-result-title"></h3>
@@ -92,7 +92,7 @@
     <section class="card trio-rules">
       <h2>Jak grać?</h2>
       <ol>
-        <li>Partner 1 gra symbolem „X”, partner 2 gra symbolem „O”.</li>
+        <li>Gracz X gra symbolem „X”, gracz O gra symbolem „O”.</li>
         <li>Ruchy wykonujecie naprzemiennie, klikając pola na planszy 4×4.</li>
         <li>Wygrywa osoba, która jako pierwsza ułoży trzy swoje symbole w linii (poziomo, pionowo lub ukośnie).</li>
         <li>Przegrany losuje mini-wyzwanie, dopasowane do wybranego trybu. Przy remisie każdy otrzymuje własne zadanie.</li>
@@ -131,7 +131,7 @@
           </button>
         </div>
         <div class="share-card__body">
-          <p id="share-hint">Wyślij partnerowi link, aby dołączył do TRIO Challenge.</p>
+          <p id="share-hint">Wyślij partnerowi link, aby dołączył do Kółko i krzyżyk Wyzwanie.</p>
           <p class="share-feedback" id="share-feedback" hidden role="status" aria-live="polite"></p>
           <div class="share__actions">
             <button type="button" class="btn btn--ghost" id="share-copy">Kopiuj link</button>

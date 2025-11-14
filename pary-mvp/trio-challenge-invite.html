@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Planszówka dla dwojga (dla dorosłych) – Dołącz do pokoju</title>
-  <link rel="manifest" href="manifest.webmanifest">
+  <title>Kółko i krzyżyk Wyzwanie – Dołącz do pokoju</title>
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet" />
   <script type="module" src="assets/js/app.js"></script>
   <script type="module" src="assets/js/invite.js"></script>
 </head>
@@ -18,14 +18,10 @@
     <header class="hero">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
-          <img
-            class="hero__logo"
-            src="https://sklep.allemedia.pl/momenty/logo.png"
-            alt="Momenty"
-          />
+          <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
         </a>
         <div class="hero__text">
-          <h1>Dołącz do planszówki (dla dorosłych)</h1>
+          <h1>Dołącz do pojedynku</h1>
           <p id="invite-room-label">Trwa pobieranie danych pokoju...</p>
         </div>
         <details class="game-switcher">
@@ -34,9 +30,9 @@
             <ul class="game-switcher__list">
               <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
-              <li><a class="game-switcher__link" href="planszowa.html" aria-current="page">Planszówka dla dwojga (dla dorosłych)</a></li>
+              <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
               <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
-              <li><a class="game-switcher__link" href="trio-challenge.html">Kółko i krzyżyk Wyzwanie</a></li>
+              <li><a class="game-switcher__link" href="trio-challenge.html" aria-current="page">Kółko i krzyżyk Wyzwanie</a></li>
               <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
@@ -51,11 +47,11 @@
 
     <section class="card card--game" id="invite-card">
       <h2>Wpisz swoje imię</h2>
-      <p class="form__hint" id="invite-hint">Dołącz do rozgrywki, podając tylko swoje imię.</p>
-      <form id="invite-form" class="form" data-success="planszowa-board.html">
+      <p class="form__hint" id="invite-hint">Dołączasz tylko z imieniem – bez hasła.</p>
+      <form id="invite-form" class="form" data-success="trio-challenge-board.html">
         <label class="form__field">
           <span>Twoje imię</span>
-          <input type="text" id="invite-display-name" name="display_name" placeholder="np. Kuba" required maxlength="40" autocomplete="off" />
+          <input type="text" id="invite-display-name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
         </label>
         <button type="submit" class="btn btn--primary btn--enter-room">Wejdź do pokoju</button>
       </form>

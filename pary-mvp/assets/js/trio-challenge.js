@@ -9,10 +9,10 @@ if (!roomKey || !localPlayerId) {
 }
 
 const EMAIL_ENDPOINT = 'api/send_positions_email.php';
-const SHARE_EMAIL_SUBJECT = 'TRIO Challenge – dołącz do mnie';
+const SHARE_EMAIL_SUBJECT = 'Kółko i krzyżyk Wyzwanie – dołącz do mnie';
 
 const elements = {
-  roomLabel: document.getElementById('trio-room-label'),
+  roundLabel: document.getElementById('trio-round-label'),
   playersList: document.getElementById('trio-players'),
   waitingHint: document.getElementById('trio-waiting'),
   turnLabel: document.getElementById('trio-turn'),
@@ -239,14 +239,14 @@ function renderPlayers() {
     return;
   }
   const trio = getTrioState();
-  const roundLabel = Math.max(1, Number(trio.round) || 1);
-  if (elements.roomLabel) {
-    elements.roomLabel.textContent = `Runda ${roundLabel}`;
+  const roundNumber = Math.max(1, Number(trio.round) || 1);
+  if (elements.roundLabel) {
+    elements.roundLabel.textContent = String(roundNumber);
   }
   const assignments = trio.assignments || { x: '', o: '' };
   const items = [
-    { symbol: 'X', label: 'Partner 1 (X)', playerId: assignments.x },
-    { symbol: 'O', label: 'Partner 2 (O)', playerId: assignments.o },
+    { symbol: 'X', label: 'Gracz X', playerId: assignments.x },
+    { symbol: 'O', label: 'Gracz O', playerId: assignments.o },
   ];
 
   elements.playersList.innerHTML = '';
@@ -254,7 +254,7 @@ function renderPlayers() {
     const li = document.createElement('li');
     li.className = 'trio-player';
     const player = currentParticipants.find((entry) => entry.id === slot.playerId);
-    const name = player ? player.name : 'Puste miejsce';
+    const name = player ? player.name : 'Oczekiwanie na gracza';
     li.innerHTML = `
       <div class="trio-player__symbol" data-symbol="${slot.symbol}">${slot.symbol}</div>
       <div>
@@ -681,7 +681,7 @@ function persistState(state) {
     participant_id: localPlayerId,
     state,
   }).catch((error) => {
-    console.error('Nie udało się zapisać stanu TRIO Challenge.', error);
+    console.error('Nie udało się zapisać stanu Kółko i krzyżyk Wyzwanie.', error);
   });
 }
 
@@ -705,7 +705,7 @@ function requestBoardSnapshot() {
       };
     })
     .catch((error) => {
-      console.error('Nie udało się pobrać stanu TRIO Challenge.', error);
+      console.error('Nie udało się pobrać stanu Kółko i krzyżyk Wyzwanie.', error);
       return null;
     });
 }
@@ -769,10 +769,8 @@ function buildShareUrl() {
   if (!roomKey) {
     return '';
   }
-  const url = new URL(window.location.href);
+  const url = new URL('trio-challenge-invite.html', window.location.href);
   url.searchParams.set('room_key', roomKey);
-  url.searchParams.delete('pid');
-  url.searchParams.delete('name');
   return url.toString();
 }
 
