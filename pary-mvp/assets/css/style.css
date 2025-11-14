@@ -2947,7 +2947,7 @@ body.share-layer-open .share-bar {
 
 .page--timer {
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .page--timer.timer-alert::after {
@@ -3038,7 +3038,8 @@ body.share-layer-open .share-bar {
 }
 
 .timer-card__media {
-  width: min(360px, 90vw);
+  width: 100%;
+  max-width: min(360px, 90vw);
   margin: 0 auto;
   aspect-ratio: 1 / 1;
   border-radius: 50%;
