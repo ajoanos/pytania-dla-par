@@ -9,10 +9,10 @@ if (!roomKey || !localPlayerId) {
 }
 
 const EMAIL_ENDPOINT = 'api/send_positions_email.php';
-const SHARE_EMAIL_SUBJECT = 'TRIO Challenge – dołącz do mnie';
+const SHARE_EMAIL_SUBJECT = 'Kółko i krzyżyk Wyzwanie – dołącz do mnie';
 
 const elements = {
-  roomLabel: document.getElementById('trio-room-label'),
+  roundLabel: document.getElementById('trio-round-label'),
   playersList: document.getElementById('trio-players'),
   waitingHint: document.getElementById('trio-waiting'),
   turnLabel: document.getElementById('trio-turn'),
@@ -117,6 +117,7 @@ let lastSnapshotSignature = '';
 let shareSheetController = null;
 let shareFeedbackTimer = null;
 let isCurrentUserHost = false;
+let selfInfo = null;
 
 renderBoardSkeleton();
 bindEvents();
@@ -144,6 +145,7 @@ function applySnapshot(snapshot) {
   const participants = normalizeParticipants(snapshot.participants);
   currentParticipants = participants;
   isCurrentUserHost = Boolean(snapshot.self?.is_host);
+  selfInfo = snapshot.self || null;
   const state = snapshot.state && typeof snapshot.state === 'object' ? snapshot.state : {};
   ensureTrioState(state);
   gameState = state;
@@ -239,14 +241,14 @@ function renderPlayers() {
     return;
   }
   const trio = getTrioState();
-  const roundLabel = Math.max(1, Number(trio.round) || 1);
-  if (elements.roomLabel) {
-    elements.roomLabel.textContent = `Runda ${roundLabel}`;
+  const roundNumber = Math.max(1, Number(trio.round) || 1);
+  if (elements.roundLabel) {
+    elements.roundLabel.textContent = String(roundNumber);
   }
   const assignments = trio.assignments || { x: '', o: '' };
   const items = [
-    { symbol: 'X', label: 'Partner 1 (X)', playerId: assignments.x },
-    { symbol: 'O', label: 'Partner 2 (O)', playerId: assignments.o },
+    { symbol: 'X', label: 'Gracz X', playerId: assignments.x },
+    { symbol: 'O', label: 'Gracz O', playerId: assignments.o },
   ];
 
   elements.playersList.innerHTML = '';
@@ -254,7 +256,7 @@ function renderPlayers() {
     const li = document.createElement('li');
     li.className = 'trio-player';
     const player = currentParticipants.find((entry) => entry.id === slot.playerId);
-    const name = player ? player.name : 'Puste miejsce';
+    const name = player ? player.name : 'Oczekiwanie na gracza';
     li.innerHTML = `
       <div class="trio-player__symbol" data-symbol="${slot.symbol}">${slot.symbol}</div>
       <div>
@@ -681,7 +683,7 @@ function persistState(state) {
     participant_id: localPlayerId,
     state,
   }).catch((error) => {
-    console.error('Nie udało się zapisać stanu TRIO Challenge.', error);
+    console.error('Nie udało się zapisać stanu Kółko i krzyżyk Wyzwanie.', error);
   });
 }
 
@@ -705,7 +707,7 @@ function requestBoardSnapshot() {
       };
     })
     .catch((error) => {
-      console.error('Nie udało się pobrać stanu TRIO Challenge.', error);
+      console.error('Nie udało się pobrać stanu Kółko i krzyżyk Wyzwanie.', error);
       return null;
     });
 }
@@ -769,11 +771,23 @@ function buildShareUrl() {
   if (!roomKey) {
     return '';
   }
-  const url = new URL(window.location.href);
+  const url = new URL('trio-challenge-invite.html', window.location.href);
   url.searchParams.set('room_key', roomKey);
-  url.searchParams.delete('pid');
-  url.searchParams.delete('name');
   return url.toString();
+}
+
+function buildShareMessage(url) {
+  return `Dołącz do mojego pokoju w Momenty: ${url}`;
+}
+
+function buildShareLinks(url) {
+  const message = buildShareMessage(url);
+  const encoded = encodeURIComponent(message);
+  return {
+    messenger: `https://m.me/?text=${encoded}`,
+    whatsapp: `https://wa.me/?text=${encoded}`,
+    sms: `sms:&body=${encoded}`,
+  };
 }
 
 function resetShareFeedback() {
@@ -879,63 +893,131 @@ function closeShareSheet() {
 }
 
 function initializeShareChannels() {
+  const hasLink = Boolean(shareLinkUrl);
+
+  if (shareElements.copyButton) {
+    shareElements.copyButton.hidden = !hasLink;
+    shareElements.copyButton.disabled = !hasLink;
+  }
+
+  if (shareElements.qrButton) {
+    shareElements.qrButton.hidden = !hasLink;
+    shareElements.qrButton.disabled = !hasLink;
+  }
+
+  if (shareElements.hint && !hasLink) {
+    shareElements.hint.textContent = 'Nie udało się przygotować linku do udostępnienia. Odśwież stronę i spróbuj ponownie.';
+  }
+
   if (!shareElements.linksContainer) {
+    configureShareEmailForm(hasLink);
     return;
   }
-  const list = [
-    { label: 'Wyślij na WhatsApp', url: `https://wa.me/?text=${encodeURIComponent(shareLinkUrl)}` },
-    { label: 'Wyślij na Messengerze', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLinkUrl)}` },
-    { label: 'Wyślij SMS', url: `sms:?body=${encodeURIComponent(shareLinkUrl)}` },
-  ];
-  shareElements.linksContainer.innerHTML = '';
-  list.forEach((item) => {
-    const link = document.createElement('a');
-    link.className = 'btn btn--ghost share-channel';
-    link.href = item.url;
+
+  const links = shareElements.linksContainer.querySelectorAll('[data-share-channel]');
+  if (links.length === 0) {
+    configureShareEmailForm(hasLink);
+    return;
+  }
+
+  if (!hasLink) {
+    links.forEach((link) => {
+      if (!(link instanceof HTMLAnchorElement)) {
+        return;
+      }
+      link.href = '#';
+      link.setAttribute('aria-disabled', 'true');
+      link.setAttribute('tabindex', '-1');
+      link.classList.add('share-link--disabled');
+    });
+    configureShareEmailForm(hasLink);
+    return;
+  }
+
+  const hrefs = buildShareLinks(shareLinkUrl);
+  links.forEach((link) => {
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+    const channel = link.dataset.shareChannel || '';
+    const target = hrefs[channel] || shareLinkUrl;
+    link.href = target;
     link.target = '_blank';
     link.rel = 'noopener';
-    link.textContent = item.label;
-    shareElements.linksContainer.appendChild(link);
+    link.removeAttribute('aria-disabled');
+    link.removeAttribute('tabindex');
+    link.classList.remove('share-link--disabled');
   });
+
+  configureShareEmailForm(hasLink);
 }
 
 function initializeShareEmailForm() {
-  if (!shareElements.emailForm) {
+  if (!shareElements.emailForm || !(shareElements.emailInput instanceof HTMLInputElement)) {
     return;
   }
+  const submitButton = shareElements.emailForm.querySelector('button[type="submit"]');
   shareElements.emailForm.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const email = shareElements.emailInput?.value.trim();
-    if (!email) {
-      showShareEmailFeedback('Podaj adres e-mail.', true);
+    if (!shareElements.emailInput.checkValidity()) {
+      shareElements.emailInput.reportValidity();
       return;
     }
+    const email = shareElements.emailInput.value.trim();
+    if (!email) {
+      shareElements.emailInput.reportValidity();
+      return;
+    }
+    const shareUrl = shareElements.emailForm.dataset.shareUrl || shareLinkUrl;
+    if (!shareUrl) {
+      showShareEmailFeedback('Nie udało się przygotować linku do udostępnienia. Odśwież stronę.', true);
+      return;
+    }
+    const message = shareElements.emailForm.dataset.shareMessage || buildShareMessage(shareUrl);
+    const payload = {
+      partner_email: email,
+      share_url: shareUrl,
+      subject: SHARE_EMAIL_SUBJECT,
+      sender_name: (selfInfo?.display_name || '').trim(),
+      message,
+    };
     try {
-      const submitButton = shareElements.emailForm.querySelector('button[type="submit"]');
       if (submitButton) {
         submitButton.disabled = true;
       }
-      const response = await postJson(EMAIL_ENDPOINT, {
-        email,
-        room_key: roomKey,
-        subject: SHARE_EMAIL_SUBJECT,
-        link: shareLinkUrl,
-      });
+      const response = await postJson(EMAIL_ENDPOINT, payload);
       if (!response || !response.ok) {
         throw new Error(response?.error || 'Nie udało się wysłać wiadomości.');
       }
-      showShareEmailFeedback('Wysłano wiadomość.');
+      showShareEmailFeedback('Wiadomość wysłana! Powiedz partnerowi, by zajrzał do skrzynki.');
       shareElements.emailInput.value = '';
     } catch (error) {
       console.error(error);
-      showShareEmailFeedback(error.message || 'Nie udało się wysłać wiadomości.', true);
+      showShareEmailFeedback(error instanceof Error ? error.message : 'Nie udało się wysłać wiadomości.', true);
     } finally {
-      const submitButton = shareElements.emailForm.querySelector('button[type="submit"]');
       if (submitButton) {
         submitButton.disabled = false;
       }
     }
   });
+}
+
+function configureShareEmailForm(hasLink) {
+  if (!shareElements.emailForm || !(shareElements.emailInput instanceof HTMLInputElement)) {
+    return;
+  }
+  if (!hasLink) {
+    shareElements.emailForm.hidden = true;
+    shareElements.emailForm.dataset.shareUrl = '';
+    shareElements.emailForm.dataset.shareMessage = '';
+    shareElements.emailInput.value = '';
+    resetShareEmailFeedback();
+    return;
+  }
+  shareElements.emailForm.hidden = false;
+  shareElements.emailForm.dataset.shareUrl = shareLinkUrl;
+  shareElements.emailForm.dataset.shareMessage = buildShareMessage(shareLinkUrl);
+  resetShareEmailFeedback();
 }
 
 function showShareEmailFeedback(message, isError = false) {
@@ -946,8 +1028,17 @@ function showShareEmailFeedback(message, isError = false) {
   shareElements.emailFeedback.textContent = message;
   shareElements.emailFeedback.dataset.tone = isError ? 'error' : 'success';
   window.setTimeout(() => {
-    shareElements.emailFeedback.hidden = true;
+    resetShareEmailFeedback();
   }, 4000);
+}
+
+function resetShareEmailFeedback() {
+  if (!shareElements.emailFeedback) {
+    return;
+  }
+  shareElements.emailFeedback.hidden = true;
+  shareElements.emailFeedback.textContent = '';
+  delete shareElements.emailFeedback.dataset.tone;
 }
 
 function updateShareVisibility() {
