@@ -3706,3 +3706,184 @@ body.has-floating-dice .planszowka-dice[data-floating='false'] {
   }
 }
 
+
+.trio-shell {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.trio-status__turn {
+  font-weight: 700;
+  margin: 0;
+}
+
+.trio-status__hint {
+  margin-top: var(--space-sm);
+  color: var(--color-text-muted);
+}
+
+.trio-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-md);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.trio-player {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: 14px;
+  background: var(--color-surface-alt);
+}
+
+.trio-player__symbol {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+.trio-player__symbol[data-symbol='O'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.trio-player__label {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.trio-player__name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0.1rem 0 0;
+}
+
+.trio-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.trio-cell {
+  border: 2px solid var(--color-border);
+  border-radius: 20px;
+  min-height: 72px;
+  background: var(--color-surface-alt);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: transform 0.15s ease, border-color 0.2s ease;
+}
+
+.trio-cell[data-filled='true'] {
+  cursor: default;
+}
+
+.trio-cell:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 4px;
+}
+
+.trio-cell__symbol {
+  font-size: 2rem;
+  font-weight: 700;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.trio-cell--x .trio-cell__symbol,
+.trio-cell--o .trio-cell__symbol {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.trio-cell--x {
+  border-color: var(--color-primary);
+}
+
+.trio-cell--o {
+  border-color: var(--color-accent);
+}
+
+.trio-cell--winner {
+  box-shadow: 0 0 0 3px var(--color-success);
+}
+
+.trio-board__hint {
+  margin-top: var(--space-md);
+  color: var(--color-text-muted);
+}
+
+.trio-result {
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  border-radius: 20px;
+  background: var(--color-surface-alt);
+}
+
+.trio-result h3 {
+  margin-top: 0;
+}
+
+.trio-challenges {
+  list-style: disc;
+  padding-left: var(--space-xl);
+  margin: var(--space-md) 0 0;
+}
+
+.trio-mode__actions {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-top: var(--space-md);
+}
+
+.trio-mode__hint {
+  margin-top: var(--space-sm);
+  color: var(--color-text-muted);
+}
+
+.trio-rules ol {
+  padding-left: var(--space-xl);
+  margin: var(--space-md) 0 0;
+}
+
+@media (min-width: 768px) {
+  .trio-board-card {
+    padding: var(--space-xl);
+  }
+
+  .trio-cell {
+    min-height: 110px;
+  }
+
+  .trio-cell__symbol {
+    font-size: 2.6rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .trio-shell {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trio-shell > .card:nth-child(1) {
+    grid-column: span 2;
+  }
+
+  .trio-board-card {
+    grid-column: span 2;
+  }
+}
