@@ -51,6 +51,10 @@
       <div class="timer-card__header">
         <div class="timer-duration" role="group" aria-label="Czas odliczania">
           <label class="timer-duration__option">
+            <input type="radio" name="timer_duration" value="30" />
+            <span>30 s</span>
+          </label>
+          <label class="timer-duration__option">
             <input type="radio" name="timer_duration" value="60" checked />
             <span>60 s</span>
           </label>
@@ -91,7 +95,10 @@
   >
     <div class="timer-overlay__countdown" id="timer-countdown"></div>
     <div class="timer-overlay__celebration" id="timer-celebration">
-      <div class="timer-overlay__message">Gratulacje! Udało się!</div>
+      <div class="timer-overlay__message">
+        <span class="timer-overlay__headline">Gratulacje!</span>
+        <span class="timer-overlay__subline">Udało się!</span>
+      </div>
     </div>
   </div>
 </body>

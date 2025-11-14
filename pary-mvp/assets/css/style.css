@@ -3096,8 +3096,8 @@ body.share-layer-open .share-bar {
 
 .timer-overlay[data-mode="countdown"] .timer-overlay__countdown {
   display: block;
-  font-size: clamp(4rem, 20vw, 9rem);
-  font-weight: 800;
+  font-size: clamp(8rem, 40vw, 18rem);
+  font-weight: 900;
   letter-spacing: 0.05em;
   text-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
 }
@@ -3115,11 +3115,20 @@ body.share-layer-open .share-bar {
 }
 
 .timer-overlay__message {
-  font-size: clamp(2rem, 6vw, 4rem);
-  font-weight: 800;
+  font-size: clamp(4rem, 12vw, 8rem);
+  font-weight: 900;
   text-transform: uppercase;
   text-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  line-height: 1.05;
+}
+
+.timer-overlay__headline,
+.timer-overlay__subline {
+  display: block;
 }
 
 .timer-card__progress {
