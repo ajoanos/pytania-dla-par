@@ -916,6 +916,14 @@ body {
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
+.question__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  align-items: flex-start;
+}
+
 @keyframes questionFadeIn {
   from {
     opacity: 0;
@@ -931,6 +939,40 @@ body {
   animation: questionFadeIn 2s ease;
 }
 
+@keyframes questionBlurIn {
+  from {
+    opacity: 0;
+    filter: blur(18px);
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes questionBlurOut {
+  from {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    filter: blur(18px);
+    transform: translateY(-10px);
+  }
+}
+
+.question--blur-in {
+  animation: questionBlurIn 0.45s ease forwards;
+}
+
+.question--blur-out {
+  animation: questionBlurOut 0.35s ease forwards;
+}
+
 body[data-deck="never"] .card--question {
   align-items: center;
 }
@@ -941,6 +983,11 @@ body[data-deck="never"] .question {
   min-height: 220px;
   width: min(420px, 100%);
   margin: 0 auto;
+  align-items: center;
+  text-align: center;
+}
+
+body[data-deck="never"] .question__content {
   align-items: center;
   text-align: center;
 }
