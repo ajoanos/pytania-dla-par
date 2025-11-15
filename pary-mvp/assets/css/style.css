@@ -3841,7 +3841,8 @@ body.has-floating-dice .planszowka-dice[data-floating='false'] {
 
 .trio-board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(64px, 1fr));
+  justify-content: center;
   gap: clamp(0.45rem, 1.2vw, 0.95rem);
   padding: clamp(0.85rem, 1.8vw, 1.5rem);
   border-radius: 28px;
@@ -3857,7 +3858,6 @@ body.has-floating-dice .planszowka-dice[data-floating='false'] {
 .trio-cell {
   border: 1px solid rgba(242, 109, 111, 0.18);
   border-radius: 22px;
-  min-height: clamp(72px, 20vw, 110px);
   aspect-ratio: 1 / 1;
   background: rgba(255, 255, 255, 0.75);
   cursor: pointer;
@@ -3975,28 +3975,27 @@ body.has-floating-dice .planszowka-dice[data-floating='false'] {
 
 @media (min-width: 1024px) {
   .trio-shell {
-    grid-template-columns: minmax(0, 7fr) minmax(260px, 5fr);
-    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
   }
 
   .trio-shell > .hero,
-  .trio-status,
-  .trio-shell > .share-bar {
+  .trio-shell > .share-bar,
+  .trio-shell > .share-layer,
+  .trio-shell > .share-qr {
     grid-column: 1 / -1;
   }
 
-  .trio-board-card {
-    grid-column: 1 / 2;
-    grid-row: span 2;
+  .trio-status,
+  .trio-board-card,
+  .trio-mode,
+  .trio-rules {
+    grid-column: 1 / -1;
   }
 
   .trio-mode,
   .trio-rules {
-    grid-column: 2 / 3;
-  }
-
-  .trio-rules {
-    align-self: start;
+    align-self: stretch;
   }
 }
 
