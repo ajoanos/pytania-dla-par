@@ -62,11 +62,13 @@
           <button type="button" class="btn btn--primary btn--question" id="next-question">Losuj pytanie</button>
         </div>
         <article id="question-card" class="question" hidden>
-          <header class="question__meta">
-            <span id="question-category" class="question__category"></span>
-            <span id="question-id" class="question__id"></span>
-          </header>
-          <p id="question-text" class="question__text"></p>
+          <div id="question-content" class="question__content">
+            <header class="question__meta">
+              <span id="question-category" class="question__category"></span>
+              <span id="question-id" class="question__id"></span>
+            </header>
+            <p id="question-text" class="question__text"></p>
+          </div>
         </article>
         <div class="question__reactions" id="reaction-buttons" hidden></div>
         <div class="question__filter" id="question-filter">

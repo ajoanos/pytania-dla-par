@@ -20,6 +20,7 @@ const questionEmptyText = document.getElementById('question-empty-text');
 const questionCategory = document.getElementById('question-category');
 const questionId = document.getElementById('question-id');
 const questionText = document.getElementById('question-text');
+const questionContent = document.getElementById('question-content');
 const nextQuestionButton = document.getElementById('next-question');
 const questionFilter = document.getElementById('question-filter');
 const reactionButtons = document.getElementById('reaction-buttons');
@@ -922,13 +923,28 @@ function syncQuestionIdVisibility(identifier = '') {
 }
 
 function triggerQuestionFadeAnimation() {
-  if (!questionCard) {
+  const animationTarget = getQuestionAnimationTarget();
+  if (!animationTarget) {
     return;
   }
-  questionCard.classList.remove('question--fade-in', 'question--blur-in', 'question--blur-out');
+  animationTarget.classList.remove('question--fade-in', 'question--blur-in', 'question--blur-out');
   // Force reflow to allow the animation to restart.
-  void questionCard.offsetWidth;
-  questionCard.classList.add('question--fade-in');
+  void animationTarget.offsetWidth;
+  animationTarget.classList.add('question--fade-in');
+}
+
+function getQuestionAnimationTarget() {
+  return questionContent || questionCard;
+}
+
+function isSameQuestion(prevQuestion, nextQuestion) {
+  if (!prevQuestion || !nextQuestion) {
+    return false;
+  }
+  if (prevQuestion.id && nextQuestion.id) {
+    return prevQuestion.id === nextQuestion.id;
+  }
+  return (prevQuestion.text || '') === (nextQuestion.text || '');
 }
 
 function isSameQuestion(prevQuestion, nextQuestion) {
@@ -1014,31 +1030,32 @@ async function runBlurQuestionTransition(question) {
 
 function playQuestionAnimation(className) {
   return new Promise((resolve) => {
-    if (!questionCard || !className) {
+    const animationTarget = getQuestionAnimationTarget();
+    if (!animationTarget || !className) {
       resolve();
       return;
     }
     const animationClasses = ['question--fade-in', 'question--blur-in', 'question--blur-out'];
-    animationClasses.forEach((name) => questionCard.classList.remove(name));
+    animationClasses.forEach((name) => animationTarget.classList.remove(name));
     // Force reflow before applying the next animation class.
-    void questionCard.offsetWidth;
-    questionCard.classList.add(className);
+    void animationTarget.offsetWidth;
+    animationTarget.classList.add(className);
     let resolved = false;
     const cleanup = () => {
       if (resolved) {
         return;
       }
       resolved = true;
-      questionCard.removeEventListener('animationend', handleAnimationEnd);
+      animationTarget.removeEventListener('animationend', handleAnimationEnd);
       resolve();
     };
     const handleAnimationEnd = (event) => {
-      if (event.target !== questionCard) {
+      if (event.target !== animationTarget) {
         return;
       }
       cleanup();
     };
-    questionCard.addEventListener('animationend', handleAnimationEnd);
+    animationTarget.addEventListener('animationend', handleAnimationEnd);
     setTimeout(cleanup, 700);
   });
 }
@@ -1046,8 +1063,9 @@ function playQuestionAnimation(className) {
 function resetQuestionAnimationState() {
   questionAnimationQueue = Promise.resolve();
   hasShownBlurQuestion = false;
-  if (questionCard) {
-    questionCard.classList.remove('question--blur-in', 'question--blur-out');
+  const animationTarget = getQuestionAnimationTarget();
+  if (animationTarget) {
+    animationTarget.classList.remove('question--blur-in', 'question--blur-out');
   }
 }
 
