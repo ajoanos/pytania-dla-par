@@ -100,11 +100,15 @@ const GAME_VARIANTS = {
     showCatalog: true,
     enableCategoryFilter: true,
     reactionButtons: [
-      { action: 'ok', label: 'OK', className: 'btn btn--ok' },
-      { action: 'skip', label: 'Pomiń', className: 'btn btn--skip' },
-      { action: 'fav', label: 'Ulubione', className: 'btn btn--fav' },
+      { action: 'ok', label: 'Odpowiem Ci na nie', className: 'btn btn--ok' },
+      { action: 'skip', label: 'Nie chcę tego pytania', className: 'btn btn--skip' },
+      { action: 'fav', label: 'Bardzo lubię to pytanie', className: 'btn btn--fav' },
     ],
-    reactionLabels: { ok: 'OK', skip: 'Pomiń', fav: 'Ulubione' },
+    reactionLabels: {
+      ok: 'Odpowiem Ci na nie',
+      skip: 'Nie chcę tego pytania',
+      fav: 'Bardzo lubię to pytanie',
+    },
     highlightClasses: {
       ok: 'question--reaction-ok',
       skip: 'question--reaction-skip',
