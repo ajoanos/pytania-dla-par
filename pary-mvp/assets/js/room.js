@@ -947,6 +947,16 @@ function isSameQuestion(prevQuestion, nextQuestion) {
   return (prevQuestion.text || '') === (nextQuestion.text || '');
 }
 
+function isSameQuestion(prevQuestion, nextQuestion) {
+  if (!prevQuestion || !nextQuestion) {
+    return false;
+  }
+  if (prevQuestion.id && nextQuestion.id) {
+    return prevQuestion.id === nextQuestion.id;
+  }
+  return (prevQuestion.text || '') === (nextQuestion.text || '');
+}
+
 function applyQuestion(question) {
   const isRepeatQuestion = isSameQuestion(currentQuestion, question);
   currentQuestion = question;
