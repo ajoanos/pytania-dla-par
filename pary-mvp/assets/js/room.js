@@ -1023,9 +1023,14 @@ async function runBlurQuestionTransition(question) {
   if (shouldAnimateOut) {
     await playQuestionAnimation('question--blur-out');
   }
+  if (!isSameQuestion(currentQuestion, question)) {
+    return;
+  }
   updateQuestionContent(question);
   await playQuestionAnimation('question--blur-in');
-  hasShownBlurQuestion = true;
+  if (isSameQuestion(currentQuestion, question)) {
+    hasShownBlurQuestion = true;
+  }
 }
 
 function playQuestionAnimation(className) {
