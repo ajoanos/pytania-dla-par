@@ -927,14 +927,31 @@ function triggerQuestionFadeAnimation() {
   questionCard.classList.add('question--fade-in');
 }
 
+function isSameQuestion(prevQuestion, nextQuestion) {
+  if (!prevQuestion || !nextQuestion) {
+    return false;
+  }
+  if (prevQuestion.id && nextQuestion.id) {
+    return prevQuestion.id === nextQuestion.id;
+  }
+  return (prevQuestion.text || '') === (nextQuestion.text || '');
+}
+
 function applyQuestion(question) {
+  const isRepeatQuestion = isSameQuestion(currentQuestion, question);
   currentQuestion = question;
   if (shouldUseBlurTransitions()) {
+    if (isRepeatQuestion) {
+      updateQuestionContent(question);
+      return;
+    }
     queueBlurQuestionUpdate(question);
     return;
   }
   updateQuestionContent(question);
-  triggerQuestionFadeAnimation();
+  if (!isRepeatQuestion) {
+    triggerQuestionFadeAnimation();
+  }
 }
 
 function updateQuestionContent(question) {
