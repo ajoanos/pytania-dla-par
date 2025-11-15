@@ -916,6 +916,21 @@ body {
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
+@keyframes questionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.question--fade-in {
+  animation: questionFadeIn 2s ease;
+}
+
 body[data-deck="never"] .card--question {
   align-items: center;
 }
@@ -932,6 +947,15 @@ body[data-deck="never"] .question {
 
 body[data-deck="never"] .question:not(.question--reaction) {
   background: linear-gradient(180deg, #fff8f2, #ffeef7);
+}
+
+body[data-theme="dark"][data-deck="never"] .question {
+  box-shadow: 0 24px 45px rgba(8, 2, 14, 0.55);
+}
+
+body[data-theme="dark"][data-deck="never"] .question:not(.question--reaction) {
+  background: linear-gradient(180deg, rgba(64, 33, 72, 0.95), rgba(21, 10, 30, 0.92));
+  color: var(--color-text);
 }
 
 .question--reaction {

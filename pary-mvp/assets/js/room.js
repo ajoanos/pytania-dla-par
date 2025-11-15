@@ -187,6 +187,7 @@ async function applyVariant(deckId) {
   } else {
     updateQuestionEmptyState(false);
   }
+  syncQuestionIdVisibility(currentQuestion?.id || '');
 }
 
 function updateShareLink() {
@@ -900,14 +901,35 @@ function setQuestionHighlight(action) {
   }
 }
 
+function shouldShowQuestionIdentifier() {
+  return activeVariant?.id !== 'never';
+}
+
+function syncQuestionIdVisibility(identifier = '') {
+  if (!questionId) {
+    return;
+  }
+  const showId = shouldShowQuestionIdentifier();
+  questionId.hidden = !showId;
+  questionId.textContent = showId ? identifier : '';
+}
+
+function triggerQuestionFadeAnimation() {
+  if (!questionCard) {
+    return;
+  }
+  questionCard.classList.remove('question--fade-in');
+  // Force reflow to allow the animation to restart.
+  void questionCard.offsetWidth;
+  questionCard.classList.add('question--fade-in');
+}
+
 function applyQuestion(question) {
   currentQuestion = question;
   if (questionCategory) {
     questionCategory.textContent = formatCategoryLabel(question.category || '');
   }
-  if (questionId) {
-    questionId.textContent = question.id || '';
-  }
+  syncQuestionIdVisibility(question.id || '');
   if (questionText) {
     questionText.textContent = question.text || '';
   }
@@ -917,6 +939,7 @@ function applyQuestion(question) {
   if (reactionButtons) {
     reactionButtons.hidden = reactionButtons.childElementCount === 0;
   }
+  triggerQuestionFadeAnimation();
 }
 
 function clearQuestion() {
@@ -925,9 +948,7 @@ function clearQuestion() {
   if (questionCategory) {
     questionCategory.textContent = '';
   }
-  if (questionId) {
-    questionId.textContent = '';
-  }
+  syncQuestionIdVisibility('');
   if (questionText) {
     questionText.textContent = '';
   }
@@ -1466,6 +1487,11 @@ const CATEGORY_LABELS = {
   NPN_EKSTRAWAGANCKIE: 'Ekstrawaganckie i zabawne 18+',
 };
 
+function isAdultCategory(category) {
+  const label = CATEGORY_LABELS[category];
+  return typeof label === 'string' && label.includes('18+');
+}
+
 function formatCategoryLabel(category) {
   return CATEGORY_LABELS[category] || category.replace(/_/g, ' ');
 }
@@ -1509,7 +1535,13 @@ async function ensureQuestionsLoaded(deckId) {
 
 function getUniqueCategories(data) {
   const uniqueCategories = [...new Set(data.map((item) => item.category).filter(Boolean))];
-  uniqueCategories.sort();
+  uniqueCategories.sort((a, b) => {
+    const aAdult = isAdultCategory(a);
+    const bAdult = isAdultCategory(b);
+    if (aAdult && !bAdult) return 1;
+    if (!aAdult && bAdult) return -1;
+    return a.localeCompare(b);
+  });
   return uniqueCategories;
 }
 
