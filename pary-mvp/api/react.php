@@ -15,7 +15,7 @@ if ($roomKey === '' || $participantId <= 0 || $questionId === '' || $action === 
     respond(['ok' => false, 'error' => 'Brak wymaganych danych.']);
 }
 
-if (!in_array($action, ['ok', 'skip', 'fav'], true)) {
+if (!in_array($action, ['ok', 'skip', 'fav', 'agree', 'disagree'], true)) {
     respond(['ok' => false, 'error' => 'Nieprawidłowa akcja.']);
 }
 

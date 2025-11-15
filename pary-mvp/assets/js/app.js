@@ -29,8 +29,10 @@ export async function getJson(url) {
   return response.json();
 }
 
-async function requestNewRoomKey() {
-  const payload = await postJson('api/request_room.php', {});
+async function requestNewRoomKey(options = {}) {
+  const payload = await postJson('api/request_room.php', {
+    deck: options.deck || undefined,
+  });
   if (!payload || !payload.ok || !payload.room_key) {
     throw new Error(payload?.error || 'Nie udało się przygotować pokoju. Spróbuj ponownie.');
   }
@@ -107,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const storageKey = passwordForm.dataset.storageKey || ACCESS_STORAGE_KEY;
     const successTarget = passwordForm.dataset.success || 'pytania-dla-par-room.html';
     const skipRoomKey = passwordForm.dataset.skipRoomKey === 'true';
+    const requestedDeck = (passwordForm.dataset.deck || '').trim().toLowerCase();
     const defaultErrorMessage = passwordError?.textContent || 'Niepoprawne hasło. Spróbuj ponownie.';
 
     if (passwordInput) {
@@ -152,12 +155,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         let roomKey = '';
         if (!skipRoomKey) {
-          roomKey = await requestNewRoomKey();
+          roomKey = await requestNewRoomKey({ deck: requestedDeck });
         }
         sessionStorage.setItem(storageKey, 'true');
         const targetUrl = new URL(successTarget, window.location.href);
         if (!skipRoomKey && roomKey) {
           targetUrl.searchParams.set('room_key', roomKey);
+        }
+        if (requestedDeck) {
+          targetUrl.searchParams.set('deck', requestedDeck);
         }
         window.location.href = targetUrl.toString();
       } catch (error) {
@@ -275,8 +281,15 @@ document.addEventListener('DOMContentLoaded', () => {
           pid: payload.participant_id,
           name: displayName,
         });
+        if (payload.deck) {
+          nextParams.set('deck', payload.deck);
+        }
         const target = payload.requires_approval ? successPending : successActive;
-        window.location.href = `${target}?${nextParams.toString()}`;
+        const targetUrl = new URL(target, window.location.href);
+        nextParams.forEach((value, key) => {
+          targetUrl.searchParams.set(key, value);
+        });
+        window.location.href = targetUrl.toString();
       } catch (error) {
         console.error(error);
         alert(error.message);
@@ -360,6 +373,9 @@ document.addEventListener('DOMContentLoaded', () => {
           name: displayName,
           auto: '1',
         });
+        if (joinPayload.deck) {
+          params.set('deck', joinPayload.deck);
+        }
         window.location.href = `${successTarget}?${params.toString()}`;
       } catch (error) {
         console.error(error);

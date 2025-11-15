@@ -25,14 +25,15 @@
           />
         </a>
         <div class="hero__text">
-          <h1>Pytania dla par</h1>
-          <p>Losujcie pytania i rozmawiajcie, żeby zbliżyć się do siebie jeszcze bardziej.</p>
+          <h1 id="hero-title">Pytania dla par</h1>
+          <p id="hero-subtitle">Losujcie pytania i rozmawiajcie, żeby zbliżyć się do siebie jeszcze bardziej.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
           <div class="game-switcher__panel">
             <ul class="game-switcher__list">
               <li><a class="game-switcher__link" href="pytania-dla-par.html" aria-current="page">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="nigdy-przenigdy.html">Nigdy przenigdy</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
               <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
@@ -75,11 +76,7 @@
             </select>
           </label>
         </div>
-        <div class="question__reactions" id="reaction-buttons" hidden>
-          <button class="btn btn--ok" data-action="ok">OK</button>
-          <button class="btn btn--skip" data-action="skip">Pomiń</button>
-          <button class="btn btn--fav" data-action="fav">Ulubione</button>
-        </div>
+        <div class="question__reactions" id="reaction-buttons" hidden></div>
       </section>
 
       <section class="card card--chat" id="chat-card">

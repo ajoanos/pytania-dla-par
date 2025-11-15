@@ -3,9 +3,14 @@ import { postJson, getJson } from './app.js';
 const params = new URLSearchParams(window.location.search);
 const roomKey = (params.get('room_key') || '').toUpperCase();
 const participantId = params.get('pid');
+const initialDeck = (params.get('deck') || '').toLowerCase();
 
 if (!roomKey || !participantId) {
   window.location.replace('index.html');
+}
+
+if (initialDeck) {
+  document.body.dataset.deck = initialDeck;
 }
 
 const participantsList = document.getElementById('participants-list');
@@ -16,6 +21,7 @@ const questionCategory = document.getElementById('question-category');
 const questionId = document.getElementById('question-id');
 const questionText = document.getElementById('question-text');
 const nextQuestionButton = document.getElementById('next-question');
+const questionActions = document.querySelector('.question__actions');
 const reactionButtons = document.getElementById('reaction-buttons');
 const reactionsList = document.getElementById('reactions-list');
 const categorySelect = document.getElementById('category-select');
@@ -45,6 +51,9 @@ const shareQrModal = document.getElementById('share-qr-modal');
 const shareQrImage = document.getElementById('share-qr-image');
 const shareQrUrl = document.getElementById('share-qr-url');
 const shareQrClose = document.getElementById('share-qr-close');
+const heroTitle = document.getElementById('hero-title');
+const heroSubtitle = document.getElementById('hero-subtitle');
+const gameCardTitle = document.getElementById('game-card-title');
 const chatMessagesList = document.getElementById('chat-messages');
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
@@ -67,19 +76,121 @@ let shareSheetController = null;
 let activeParticipantCount = 0;
 let isCurrentUserHost = false;
 
-const waitingRoomPath = 'room-waiting.html';
+const defaultWaitingRoomPath = document.body?.dataset.waitingPage || 'room-waiting.html';
 const shareEmailForm = document.getElementById('share-email');
 const shareEmailInput = document.getElementById('share-email-input');
 const shareEmailFeedback = document.getElementById('share-email-feedback');
-const shareLinkUrl = buildShareUrl();
+let shareLinkUrl = '';
 const EMAIL_ENDPOINT = 'api/send_positions_email.php';
-const SHARE_EMAIL_SUBJECT = 'Pytania dla par – dołącz do mnie';
+const SHARE_EMAIL_SUBJECTS = {
+  default: 'Pytania dla par – dołącz do mnie',
+  never: 'Nigdy przenigdy – dołącz do mnie',
+};
+
+const GAME_VARIANTS = {
+  default: {
+    id: 'default',
+    title: 'Pytania dla par',
+    subtitle: 'Losujcie pytania i rozmawiajcie, żeby zbliżyć się do siebie jeszcze bardziej.',
+    cardTitle: 'Pytania dla par',
+    questionPrompt: 'Wylosuj pytanie, aby rozpocząć rozmowę.',
+    questionButtonLabel: 'Losuj pytanie',
+    questionsPath: 'data/questions.json',
+    showCatalog: true,
+    reactionButtons: [
+      { action: 'ok', label: 'OK', className: 'btn btn--ok' },
+      { action: 'skip', label: 'Pomiń', className: 'btn btn--skip' },
+      { action: 'fav', label: 'Ulubione', className: 'btn btn--fav' },
+    ],
+    reactionLabels: { ok: 'OK', skip: 'Pomiń', fav: 'Ulubione' },
+    highlightClasses: {
+      ok: 'question--reaction-ok',
+      skip: 'question--reaction-skip',
+      fav: 'question--reaction-fav',
+    },
+    pageTitle: 'Pytania dla par – Pokój',
+  },
+  never: {
+    id: 'never',
+    title: 'Nigdy przenigdy',
+    subtitle: 'Losuj zdania i przyznaj, czy już to zrobiłeś/aś.',
+    cardTitle: 'Nigdy przenigdy',
+    questionPrompt: 'Wylosuj zdanie i sprawdź, kto przyzna się pierwszy.',
+    questionButtonLabel: 'Losuj zdanie',
+    questionsPath: 'data/nigdy-przenigdy.json',
+    showCatalog: false,
+    reactionButtons: [
+      { action: 'agree', label: '👍', className: 'btn btn--thumb', ariaLabel: 'Zgadzam się z odpowiedzią' },
+      { action: 'disagree', label: '👎', className: 'btn btn--thumb btn--thumb-down', ariaLabel: 'Nie zgadzam się z odpowiedzią' },
+    ],
+    reactionLabels: {
+      agree: '👍 Zgadzam się',
+      disagree: '👎 Nie zgadzam się',
+    },
+    highlightClasses: {
+      agree: 'question--reaction-agree',
+      disagree: 'question--reaction-disagree',
+    },
+    pageTitle: 'Nigdy przenigdy – Pokój',
+  },
+};
+
+function getVariantConfig(deckId) {
+  return GAME_VARIANTS[deckId] || GAME_VARIANTS.default;
+}
+
+let currentDeck = (document.body.dataset.deck || 'default').toLowerCase();
+document.body.dataset.deck = currentDeck;
+let activeVariant = getVariantConfig(currentDeck);
+let shareEmailSubject = SHARE_EMAIL_SUBJECTS[currentDeck] || SHARE_EMAIL_SUBJECTS.default;
+let questionsLoadedDeck = '';
 
 let currentQuestion = null;
 let pollTimer;
 let presenceTimer;
 let allQuestions = [];
 let activeCategory = '';
+let loadingCategories = false;
+
+async function applyVariant(deckId) {
+  const normalizedDeck = (deckId || '').toLowerCase();
+  const nextDeck = GAME_VARIANTS[normalizedDeck] ? normalizedDeck : 'default';
+  activeVariant = getVariantConfig(nextDeck);
+  currentDeck = nextDeck;
+  document.body.dataset.deck = activeVariant.id;
+  document.title = activeVariant.pageTitle || defaultTitle;
+  if (heroTitle) {
+    heroTitle.textContent = activeVariant.title;
+  }
+  if (heroSubtitle) {
+    heroSubtitle.textContent = activeVariant.subtitle;
+  }
+  if (gameCardTitle) {
+    gameCardTitle.textContent = activeVariant.cardTitle;
+  }
+  if (questionEmptyText && !currentQuestion) {
+    questionEmptyText.textContent = activeVariant.questionPrompt;
+  }
+  if (nextQuestionButton) {
+    nextQuestionButton.textContent = activeVariant.questionButtonLabel;
+  }
+  shareEmailSubject = SHARE_EMAIL_SUBJECTS[activeVariant.id] || SHARE_EMAIL_SUBJECTS.default;
+  renderReactionButtonsUI();
+  await ensureQuestionsLoaded(activeVariant.id);
+  updateQuestionActionsVisibility();
+  updateCatalogVisibility();
+  updateShareLink();
+  if (currentQuestion) {
+    applyQuestion(currentQuestion);
+  } else {
+    updateQuestionEmptyState(false);
+  }
+}
+
+function updateShareLink() {
+  shareLinkUrl = buildShareUrl();
+  initializeShareChannels();
+}
 
 function isActiveParticipant() {
   return (selfInfo?.status || '') === 'active';
@@ -92,8 +203,6 @@ function hasChatAccess() {
   return Boolean(selfInfo.is_host) || selfInfo.status === 'active';
 }
 
-setupCategoryOptions();
-
 shareSheetController = initializeShareSheet({
   bar: shareBar,
   openButton: shareOpenButton,
@@ -103,8 +212,8 @@ shareSheetController = initializeShareSheet({
   backdrop: shareBackdrop,
 });
 
-initializeShareChannels();
 initializeShareEmailForm();
+applyVariant(currentDeck);
 
 nextQuestionButton?.addEventListener('click', async () => {
   try {
@@ -130,6 +239,9 @@ nextQuestionButton?.addEventListener('click', async () => {
 });
 
 catalogCategories?.addEventListener('click', (event) => {
+  if (!activeVariant.showCatalog) {
+    return;
+  }
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
   const button = target.closest('.catalog__category');
@@ -140,6 +252,9 @@ catalogCategories?.addEventListener('click', (event) => {
 });
 
 catalogList?.addEventListener('click', async (event) => {
+  if (!activeVariant.showCatalog) {
+    return;
+  }
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
   const button = target.closest('.catalog__question');
@@ -156,14 +271,16 @@ catalogList?.addEventListener('click', async (event) => {
 reactionButtons?.addEventListener('click', async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
-  const action = target.dataset.action;
+  const button = target.closest('button[data-action]');
+  if (!(button instanceof HTMLButtonElement)) return;
+  const action = button.dataset.action;
   if (!action || !currentQuestion) return;
   if (!isActiveParticipant()) {
     alert('Musisz poczekać na akceptację gospodarza.');
     return;
   }
   try {
-    target.disabled = true;
+    button.disabled = true;
     const payload = await postJson('api/react.php', {
       room_key: roomKey,
       participant_id: participantId,
@@ -179,7 +296,7 @@ reactionButtons?.addEventListener('click', async (event) => {
     console.error(error);
     alert(error.message);
   } finally {
-    target.disabled = false;
+    button.disabled = false;
   }
 });
 
@@ -313,6 +430,10 @@ async function refreshState() {
     if (!payload.ok) {
       throw new Error(payload.error || 'Nie udało się pobrać stanu.');
     }
+    const incomingDeck = (payload.deck || '').toLowerCase();
+    if (incomingDeck && incomingDeck !== currentDeck) {
+      await applyVariant(incomingDeck);
+    }
     selfInfo = payload.self || null;
     if (maybeRedirectToWaiting(selfInfo)) {
       return;
@@ -372,20 +493,35 @@ function renderParticipants(participants) {
   });
 }
 
+function renderReactionButtonsUI() {
+  if (!reactionButtons) {
+    return;
+  }
+  reactionButtons.innerHTML = '';
+  const configs = activeVariant.reactionButtons || [];
+  configs.forEach((config) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = config.className || 'btn';
+    button.dataset.action = config.action;
+    if (config.ariaLabel) {
+      button.setAttribute('aria-label', config.ariaLabel);
+    }
+    button.textContent = config.label;
+    reactionButtons.appendChild(button);
+  });
+  reactionButtons.hidden = !currentQuestion || configs.length === 0;
+}
+
 function renderReactions(reactions) {
   if (!reactionsList) {
     return;
   }
   reactionsList.innerHTML = '';
-  const labels = {
-    ok: 'OK',
-    skip: 'Pomiń',
-    fav: 'Ulubione',
-  };
   reactions.forEach((reaction) => {
     const li = document.createElement('li');
     li.className = 'reactions__item';
-    const label = labels[reaction.action] || reaction.action;
+    const label = getReactionLabel(reaction.action);
     const meta = document.createElement('div');
     meta.className = 'reactions__meta';
 
@@ -411,6 +547,28 @@ function renderReactions(reactions) {
 
     reactionsList.appendChild(li);
   });
+}
+
+function getReactionLabel(action) {
+  if (!action) {
+    return '';
+  }
+  return (
+    (activeVariant.reactionLabels && activeVariant.reactionLabels[action]) ||
+    (GAME_VARIANTS.default.reactionLabels && GAME_VARIANTS.default.reactionLabels[action]) ||
+    action
+  );
+}
+
+function getHighlightClass(action) {
+  if (!action) {
+    return '';
+  }
+  return (
+    (activeVariant.highlightClasses && activeVariant.highlightClasses[action]) ||
+    (GAME_VARIANTS.default.highlightClasses && GAME_VARIANTS.default.highlightClasses[action]) ||
+    ''
+  );
 }
 
 function renderChatMessages(messages) {
@@ -726,16 +884,15 @@ function updateQuestionHighlight(reactions) {
 
 function setQuestionHighlight(action) {
   if (!questionCard) return;
-  questionCard.classList.remove('question--reaction', 'question--reaction-ok', 'question--reaction-skip', 'question--reaction-fav');
+  const reactionClasses = Array.from(questionCard.classList).filter((className) =>
+    className.startsWith('question--reaction-'),
+  );
+  reactionClasses.forEach((className) => questionCard.classList.remove(className));
+  questionCard.classList.remove('question--reaction');
   if (!action) {
     return;
   }
-  const map = {
-    ok: 'question--reaction-ok',
-    skip: 'question--reaction-skip',
-    fav: 'question--reaction-fav',
-  };
-  const className = map[action];
+  const className = getHighlightClass(action);
   if (className) {
     questionCard.classList.add('question--reaction', className);
   }
@@ -743,21 +900,40 @@ function setQuestionHighlight(action) {
 
 function applyQuestion(question) {
   currentQuestion = question;
-  questionCategory.textContent = question.category;
-  questionId.textContent = question.id;
-  questionText.textContent = question.text;
+  if (questionCategory) {
+    questionCategory.textContent = formatCategoryLabel(question.category || '');
+  }
+  if (questionId) {
+    questionId.textContent = question.id || '';
+  }
+  if (questionText) {
+    questionText.textContent = question.text || '';
+  }
   questionCard.hidden = false;
   updateQuestionEmptyState(true);
   setQuestionHighlight(null);
-  reactionButtons.hidden = false;
+  if (reactionButtons) {
+    reactionButtons.hidden = reactionButtons.childElementCount === 0;
+  }
 }
 
 function clearQuestion() {
   currentQuestion = null;
   questionCard.hidden = true;
+  if (questionCategory) {
+    questionCategory.textContent = '';
+  }
+  if (questionId) {
+    questionId.textContent = '';
+  }
+  if (questionText) {
+    questionText.textContent = '';
+  }
   updateQuestionEmptyState(false);
   setQuestionHighlight(null);
-  reactionButtons.hidden = true;
+  if (reactionButtons) {
+    reactionButtons.hidden = true;
+  }
 }
 
 function updateQuestionEmptyState(hasQuestion) {
@@ -767,7 +943,20 @@ function updateQuestionEmptyState(hasQuestion) {
   questionEmpty.classList.toggle('question__empty--has-question', hasQuestion);
   if (questionEmptyText) {
     questionEmptyText.hidden = hasQuestion;
+    if (!hasQuestion) {
+      questionEmptyText.textContent = activeVariant.questionPrompt;
+    }
   }
+}
+
+function resolveWaitingRoomPath() {
+  if (document.body?.dataset.waitingPage) {
+    return document.body.dataset.waitingPage;
+  }
+  if (currentDeck === 'never') {
+    return 'nigdy-przenigdy-waiting.html';
+  }
+  return defaultWaitingRoomPath;
 }
 
 function maybeRedirectToWaiting(participant) {
@@ -786,7 +975,12 @@ function maybeRedirectToWaiting(participant) {
     room_key: roomKey,
     pid: participantId,
   });
-  window.location.replace(`${waitingRoomPath}?${params.toString()}`);
+  if (currentDeck && currentDeck !== 'default') {
+    params.set('deck', currentDeck);
+  }
+  const targetUrl = new URL(resolveWaitingRoomPath(), window.location.href);
+  targetUrl.search = `?${params.toString()}`;
+  window.location.replace(targetUrl.toString());
   return true;
 }
 
@@ -847,6 +1041,9 @@ function buildShareUrl() {
   }
   const url = new URL('room-invite.html', window.location.href);
   url.searchParams.set('room_key', roomKey);
+  if (currentDeck && currentDeck !== 'default') {
+    url.searchParams.set('deck', currentDeck);
+  }
   return url.toString();
 }
 
@@ -877,8 +1074,10 @@ function initializeShareChannels() {
     shareQrButton.disabled = !hasLink;
   }
 
-  if (shareHint && !hasLink) {
-    shareHint.textContent = 'Nie udało się przygotować linku do udostępnienia. Odśwież stronę i spróbuj ponownie.';
+  if (shareHint) {
+    shareHint.textContent = hasLink
+      ? 'Wyślij partnerowi link, aby dołączył do pokoju.'
+      : 'Przygotowujemy link do udostępnienia...';
   }
 
   if (!shareLinksContainer) {
@@ -976,7 +1175,7 @@ function initializeShareEmailForm() {
     const payload = {
       partner_email: email,
       share_url: shareUrl,
-      subject: SHARE_EMAIL_SUBJECT,
+      subject: shareEmailSubject,
       sender_name: (selfInfo?.display_name || '').trim(),
       message,
     };
@@ -1252,38 +1451,94 @@ const CATEGORY_LABELS = {
   GLEBOKIE_PYTANIA: 'Głębokie pytania',
   PYTANIA_O_PRZYSZLOSC_MARZENIA: 'Pytania o przyszłość, marzenia',
   SZCZEROSC: 'Szczerość',
+  NPN_CODZIENNE: 'Codzienne, uniwersalne',
+  NPN_DZIECINSTWO: 'Powrót do dzieciństwa',
+  NPN_PODROZE: 'Podróże małe i duże',
+  NPN_PRZYPALY: 'Małe przypały',
+  NPN_MOTYLKI: 'Motylki w brzuchu',
+  NPN_SMIECH: 'Śmiech gwarantowany',
+  NPN_RELACJE: 'Szczere relacje',
+  NPN_LEKKI_FLIRT: 'Lekki flirt',
+  NPN_ZMYSLOWE: 'Zmysłowe momenty 18+',
+  NPN_ODWAZNE: 'Bardziej odważne 18+',
+  NPN_EKSTRAWAGANCKIE: 'Ekstrawaganckie i zabawne 18+',
 };
 
 function formatCategoryLabel(category) {
   return CATEGORY_LABELS[category] || category.replace(/_/g, ' ');
 }
 
-async function setupCategoryOptions() {
+async function ensureQuestionsLoaded(deckId) {
+  if (loadingCategories && questionsLoadedDeck === deckId) {
+    return;
+  }
+  if (questionsLoadedDeck === deckId && allQuestions.length) {
+    const categories = getUniqueCategories(allQuestions);
+    populateCategoryOptions(categories);
+    renderCategoryButtons(activeVariant.showCatalog ? categories : []);
+    return;
+  }
+  loadingCategories = true;
   try {
-    const response = await fetch('data/questions.json');
-    if (!response.ok) return;
-    const data = await response.json();
-    if (!Array.isArray(data)) return;
-    allQuestions = data;
-    const uniqueCategories = [...new Set(data.map((item) => item.category).filter(Boolean))];
-    uniqueCategories.sort();
-    if (categorySelect) {
-      uniqueCategories.forEach((category) => {
-        const option = document.createElement('option');
-        option.value = category;
-        option.textContent = formatCategoryLabel(category);
-        categorySelect.appendChild(option);
-      });
+    const variant = getVariantConfig(deckId);
+    const response = await fetch(variant.questionsPath, { cache: 'no-cache' });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
     }
-    renderCategoryButtons(uniqueCategories);
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      throw new Error('Invalid data');
+    }
+    allQuestions = data;
+    questionsLoadedDeck = deckId;
+    const categories = getUniqueCategories(data);
+    populateCategoryOptions(categories);
+    renderCategoryButtons(variant.showCatalog ? categories : []);
   } catch (error) {
     console.warn('Nie udało się pobrać kategorii', error);
+    allQuestions = [];
+    questionsLoadedDeck = deckId;
+    populateCategoryOptions([]);
+    renderCategoryButtons([]);
+  } finally {
+    loadingCategories = false;
   }
+}
+
+function getUniqueCategories(data) {
+  const uniqueCategories = [...new Set(data.map((item) => item.category).filter(Boolean))];
+  uniqueCategories.sort();
+  return uniqueCategories;
+}
+
+function populateCategoryOptions(categories) {
+  if (!categorySelect) {
+    return;
+  }
+  categorySelect.innerHTML = '';
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.textContent = 'Dowolna';
+  categorySelect.appendChild(defaultOption);
+  categories.forEach((category) => {
+    const option = document.createElement('option');
+    option.value = category;
+    option.textContent = formatCategoryLabel(category);
+    categorySelect.appendChild(option);
+  });
 }
 
 function renderCategoryButtons(categories) {
   if (!catalogCategories) return;
   catalogCategories.innerHTML = '';
+  if (!activeVariant.showCatalog || categories.length === 0) {
+    activeCategory = '';
+    updateCatalogVisibility();
+    if (catalogQuestions) {
+      catalogQuestions.hidden = true;
+    }
+    return;
+  }
   categories.forEach((category) => {
     const item = document.createElement('li');
     const button = document.createElement('button');
@@ -1297,15 +1552,37 @@ function renderCategoryButtons(categories) {
     item.appendChild(button);
     catalogCategories.appendChild(item);
   });
-  if (catalogContainer) {
-    catalogContainer.hidden = categories.length === 0;
+  updateCatalogVisibility();
+}
+
+function updateCatalogVisibility() {
+  if (!catalogContainer) {
+    return;
   }
-  if (catalogQuestions && categories.length === 0) {
+  const hasCategories = Boolean(
+    activeVariant.showCatalog && catalogCategories && catalogCategories.childElementCount > 0,
+  );
+  catalogContainer.hidden = !hasCategories;
+  if (!hasCategories && catalogQuestions) {
     catalogQuestions.hidden = true;
   }
 }
 
+function updateQuestionActionsVisibility() {
+  if (!questionActions) {
+    return;
+  }
+  const shouldShow = activeVariant.showCatalog;
+  questionActions.hidden = !shouldShow;
+  if (!shouldShow && categorySelect) {
+    categorySelect.value = '';
+  }
+}
+
 function showCategoryQuestions(category) {
+  if (!activeVariant.showCatalog) {
+    return;
+  }
   activeCategory = category;
   if (catalogCategories) {
     catalogCategories

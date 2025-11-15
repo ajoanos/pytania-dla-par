@@ -11,6 +11,7 @@ purgeExpiredRooms();
 $roomKey = strtoupper(trim((string)($data['room_key'] ?? '')));
 $displayName = trim((string)($data['display_name'] ?? ''));
 $mode = strtolower(trim((string)($data['mode'] ?? 'join')));
+$deckParam = normalizeDeck($data['deck'] ?? 'default');
 
 if ($roomKey === '' || $displayName === '') {
     respond(['ok' => false, 'error' => 'Wymagany kod pokoju i imię.']);
@@ -21,7 +22,7 @@ $isClaimingHost = $mode === 'host';
 $autoActivate = $mode === 'invite' || $isClaimingHost;
 
 if ($isCreating) {
-    $room = createRoom($roomKey);
+    $room = createRoom($roomKey, $deckParam);
     if ($room === null) {
         respond(['ok' => false, 'error' => 'Pokój o tym kodzie już istnieje. Wybierz inną nazwę.']);
     }
@@ -41,7 +42,8 @@ $stmt->execute([
 ]);
 
 $participants = getRoomParticipants((int)$room['id']);
-$currentQuestion = getLatestQuestion((int)$room['id']);
+$roomDeck = normalizeDeck($room['deck'] ?? 'default');
+$currentQuestion = getLatestQuestion((int)$room['id'], $roomDeck);
 
 respond([
     'ok' => true,
@@ -52,4 +54,5 @@ respond([
     'requires_approval' => ($participant['status'] ?? '') !== 'active',
     'participants' => $participants,
     'current_question' => $currentQuestion,
+    'deck' => $roomDeck,
 ]);
