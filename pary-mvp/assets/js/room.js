@@ -21,7 +21,7 @@ const questionCategory = document.getElementById('question-category');
 const questionId = document.getElementById('question-id');
 const questionText = document.getElementById('question-text');
 const nextQuestionButton = document.getElementById('next-question');
-const questionActions = document.querySelector('.question__actions');
+const questionFilter = document.getElementById('question-filter');
 const reactionButtons = document.getElementById('reaction-buttons');
 const reactionsList = document.getElementById('reactions-list');
 const categorySelect = document.getElementById('category-select');
@@ -97,6 +97,7 @@ const GAME_VARIANTS = {
     questionButtonLabel: 'Losuj pytanie',
     questionsPath: 'data/questions.json',
     showCatalog: true,
+    enableCategoryFilter: true,
     reactionButtons: [
       { action: 'ok', label: 'OK', className: 'btn btn--ok' },
       { action: 'skip', label: 'Pomiń', className: 'btn btn--skip' },
@@ -119,6 +120,7 @@ const GAME_VARIANTS = {
     questionButtonLabel: 'Losuj zdanie',
     questionsPath: 'data/nigdy-przenigdy.json',
     showCatalog: false,
+    enableCategoryFilter: true,
     reactionButtons: [
       { action: 'agree', label: '👍', className: 'btn btn--thumb', ariaLabel: 'Zgadzam się z odpowiedzią' },
       { action: 'disagree', label: '👎', className: 'btn btn--thumb btn--thumb-down', ariaLabel: 'Nie zgadzam się z odpowiedzią' },
@@ -177,7 +179,7 @@ async function applyVariant(deckId) {
   shareEmailSubject = SHARE_EMAIL_SUBJECTS[activeVariant.id] || SHARE_EMAIL_SUBJECTS.default;
   renderReactionButtonsUI();
   await ensureQuestionsLoaded(activeVariant.id);
-  updateQuestionActionsVisibility();
+  updateQuestionFilterVisibility();
   updateCatalogVisibility();
   updateShareLink();
   if (currentQuestion) {
@@ -1568,12 +1570,12 @@ function updateCatalogVisibility() {
   }
 }
 
-function updateQuestionActionsVisibility() {
-  if (!questionActions) {
+function updateQuestionFilterVisibility() {
+  if (!questionFilter) {
     return;
   }
-  const shouldShow = activeVariant.showCatalog;
-  questionActions.hidden = !shouldShow;
+  const shouldShow = activeVariant.enableCategoryFilter !== false;
+  questionFilter.hidden = !shouldShow;
   if (!shouldShow && categorySelect) {
     categorySelect.value = '';
   }
