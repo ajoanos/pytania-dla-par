@@ -3866,6 +3866,12 @@ body.has-floating-dice .planszowka-dice[data-floating='false'] {
   box-shadow: 0 15px 30px rgba(0, 0, 0, 0.55);
 }
 
+#trio-reset {
+  display: inline-flex;
+  justify-content: center;
+  margin: 1.25rem auto 0;
+}
+
 .trio-board-toggle__button[aria-disabled='true'] {
   opacity: 0.55;
   pointer-events: none;

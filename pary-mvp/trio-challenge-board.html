@@ -57,31 +57,6 @@
       <p id="trio-waiting" class="trio-status__hint">Udostępnij pokój partnerowi, aby rozpocząć partię.</p>
     </section>
 
-    <section class="card trio-board-card">
-      <header class="card__header card__header--inline">
-        <div>
-          <h2 id="trio-board-title">Plansza 4×4</h2>
-          <p id="trio-board-subtitle" class="card__subtitle">Kliknij pole, aby postawić swój symbol.</p>
-        </div>
-        <button type="button" class="btn btn--ghost" id="trio-reset" disabled>Zacznij nową grę</button>
-      </header>
-      <div class="trio-board-toggle" id="trio-board-toggle" role="group" aria-label="Wybierz rozmiar planszy">
-        <button type="button" class="btn btn--ghost trio-board-toggle__button" data-size="3" aria-pressed="false">
-          Plansza 3×3
-        </button>
-        <button type="button" class="btn btn--ghost trio-board-toggle__button" data-size="4" aria-pressed="true">
-          Plansza 4×4
-        </button>
-      </div>
-      <div class="trio-board" id="trio-board" role="grid" aria-label="Plansza Kółko i krzyżyk Wyzwanie"></div>
-      <p id="trio-move-hint" class="trio-board__hint"></p>
-      <section class="trio-result" id="trio-result" hidden>
-        <h3 id="trio-result-title"></h3>
-        <p id="trio-result-text"></p>
-        <ul id="trio-challenges" class="trio-challenges"></ul>
-      </section>
-    </section>
-
     <section class="card trio-mode" id="trio-mode-card">
       <header class="card__header card__header--inline">
         <div>
@@ -95,6 +70,31 @@
         <button type="button" class="btn btn--ghost" data-mode="extreme">Extreme 😈</button>
       </div>
       <p id="trio-mode-hint" class="trio-mode__hint">Dołączający partner pozna wybór dopiero po zakończeniu rundy.</p>
+    </section>
+
+    <section class="card trio-board-card">
+      <header class="card__header card__header--inline">
+        <div>
+          <h2 id="trio-board-title">Plansza 4×4</h2>
+          <p id="trio-board-subtitle" class="card__subtitle">Kliknij pole, aby postawić swój symbol.</p>
+        </div>
+      </header>
+      <div class="trio-board-toggle" id="trio-board-toggle" role="group" aria-label="Wybierz rozmiar planszy">
+        <button type="button" class="btn btn--ghost trio-board-toggle__button" data-size="3" aria-pressed="false">
+          Plansza 3×3
+        </button>
+        <button type="button" class="btn btn--ghost trio-board-toggle__button" data-size="4" aria-pressed="true">
+          Plansza 4×4
+        </button>
+      </div>
+      <div class="trio-board" id="trio-board" role="grid" aria-label="Plansza Kółko i krzyżyk Wyzwanie"></div>
+      <button type="button" class="btn btn--ghost" id="trio-reset" disabled>Zacznij nową grę</button>
+      <p id="trio-move-hint" class="trio-board__hint"></p>
+      <section class="trio-result" id="trio-result" hidden>
+        <h3 id="trio-result-title"></h3>
+        <p id="trio-result-text"></p>
+        <ul id="trio-challenges" class="trio-challenges"></ul>
+      </section>
     </section>
 
     <section class="card trio-rules">
