@@ -732,6 +732,9 @@ function getActiveTinderSession(int $roomId): ?array
     return $session;
 }
 
+const TRIO_ALLOWED_BOARD_SIZES = [3, 4];
+const TRIO_DEFAULT_BOARD_SIZE = 4;
+
 function defaultBoardState(): array
 {
     return [
@@ -756,8 +759,11 @@ function defaultBoardState(): array
 
 function defaultTrioChallengeState(): array
 {
+    $size = TRIO_DEFAULT_BOARD_SIZE;
+
     return [
-        'board' => array_fill(0, 16, ''),
+        'boardSize' => $size,
+        'board' => array_fill(0, trioBoardCellCount($size), ''),
         'currentSymbol' => randomTrioStartingSymbol(),
         'assignments' => ['x' => null, 'o' => null],
         'winner' => null,
@@ -769,6 +775,20 @@ function defaultTrioChallengeState(): array
         'lastMoveBy' => null,
         'updatedAt' => '',
     ];
+}
+
+function sanitizeTrioBoardSize($value): int
+{
+    $size = (int)$value;
+
+    return in_array($size, TRIO_ALLOWED_BOARD_SIZES, true) ? $size : TRIO_DEFAULT_BOARD_SIZE;
+}
+
+function trioBoardCellCount($size): int
+{
+    $sanitized = sanitizeTrioBoardSize($size);
+
+    return $sanitized * $sanitized;
 }
 
 function randomTrioStartingSymbol(): string
@@ -1048,11 +1068,15 @@ function normalizeTrioChallengeState($state, array $participants): array
         return $normalized;
     }
 
-    $board = array_fill(0, 16, '');
+    $boardSize = sanitizeTrioBoardSize($state['boardSize'] ?? null);
+    $cellCount = trioBoardCellCount($boardSize);
+    $normalized['boardSize'] = $boardSize;
+
+    $board = array_fill(0, $cellCount, '');
     if (isset($state['board']) && is_array($state['board'])) {
         foreach ($state['board'] as $index => $value) {
             $idx = (int)$index;
-            if ($idx < 0 || $idx >= 16) {
+            if ($idx < 0 || $idx >= $cellCount) {
                 continue;
             }
             $symbol = strtoupper((string)$value);
@@ -1093,7 +1117,7 @@ function normalizeTrioChallengeState($state, array $participants): array
     if (isset($state['winningLine']) && is_array($state['winningLine'])) {
         foreach ($state['winningLine'] as $value) {
             $index = (int)$value;
-            if ($index >= 0 && $index < 16) {
+            if ($index >= 0 && $index < $cellCount) {
                 $winningLine[] = $index;
             }
         }
