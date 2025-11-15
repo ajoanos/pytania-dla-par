@@ -153,6 +153,8 @@ let presenceTimer;
 let allQuestions = [];
 let activeCategory = '';
 let loadingCategories = false;
+let questionAnimationQueue = Promise.resolve();
+let hasShownBlurQuestion = false;
 
 async function applyVariant(deckId) {
   const normalizedDeck = (deckId || '').toLowerCase();
@@ -161,6 +163,7 @@ async function applyVariant(deckId) {
   currentDeck = nextDeck;
   document.body.dataset.deck = activeVariant.id;
   document.title = activeVariant.pageTitle || defaultTitle;
+  resetQuestionAnimationState();
   if (heroTitle) {
     heroTitle.textContent = activeVariant.title;
   }
@@ -918,7 +921,7 @@ function triggerQuestionFadeAnimation() {
   if (!questionCard) {
     return;
   }
-  questionCard.classList.remove('question--fade-in');
+  questionCard.classList.remove('question--fade-in', 'question--blur-in', 'question--blur-out');
   // Force reflow to allow the animation to restart.
   void questionCard.offsetWidth;
   questionCard.classList.add('question--fade-in');
@@ -926,6 +929,15 @@ function triggerQuestionFadeAnimation() {
 
 function applyQuestion(question) {
   currentQuestion = question;
+  if (shouldUseBlurTransitions()) {
+    queueBlurQuestionUpdate(question);
+    return;
+  }
+  updateQuestionContent(question);
+  triggerQuestionFadeAnimation();
+}
+
+function updateQuestionContent(question) {
   if (questionCategory) {
     questionCategory.textContent = formatCategoryLabel(question.category || '');
   }
@@ -939,7 +951,6 @@ function applyQuestion(question) {
   if (reactionButtons) {
     reactionButtons.hidden = reactionButtons.childElementCount === 0;
   }
-  triggerQuestionFadeAnimation();
 }
 
 function clearQuestion() {
@@ -956,6 +967,66 @@ function clearQuestion() {
   setQuestionHighlight(null);
   if (reactionButtons) {
     reactionButtons.hidden = true;
+  }
+  if (shouldUseBlurTransitions()) {
+    resetQuestionAnimationState();
+  }
+}
+
+function shouldUseBlurTransitions() {
+  return (activeVariant?.id || '') === 'never';
+}
+
+function queueBlurQuestionUpdate(question) {
+  questionAnimationQueue = questionAnimationQueue.then(() => runBlurQuestionTransition(question));
+}
+
+async function runBlurQuestionTransition(question) {
+  const shouldAnimateOut = hasShownBlurQuestion && questionCard && !questionCard.hidden;
+  if (shouldAnimateOut) {
+    await playQuestionAnimation('question--blur-out');
+  }
+  updateQuestionContent(question);
+  await playQuestionAnimation('question--blur-in');
+  hasShownBlurQuestion = true;
+}
+
+function playQuestionAnimation(className) {
+  return new Promise((resolve) => {
+    if (!questionCard || !className) {
+      resolve();
+      return;
+    }
+    const animationClasses = ['question--fade-in', 'question--blur-in', 'question--blur-out'];
+    animationClasses.forEach((name) => questionCard.classList.remove(name));
+    // Force reflow before applying the next animation class.
+    void questionCard.offsetWidth;
+    questionCard.classList.add(className);
+    let resolved = false;
+    const cleanup = () => {
+      if (resolved) {
+        return;
+      }
+      resolved = true;
+      questionCard.removeEventListener('animationend', handleAnimationEnd);
+      resolve();
+    };
+    const handleAnimationEnd = (event) => {
+      if (event.target !== questionCard) {
+        return;
+      }
+      cleanup();
+    };
+    questionCard.addEventListener('animationend', handleAnimationEnd);
+    setTimeout(cleanup, 700);
+  });
+}
+
+function resetQuestionAnimationState() {
+  questionAnimationQueue = Promise.resolve();
+  hasShownBlurQuestion = false;
+  if (questionCard) {
+    questionCard.classList.remove('question--blur-in', 'question--blur-out');
   }
 }
 
