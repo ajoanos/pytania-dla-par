@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pary-mvp-v18';
+const CACHE_NAME = 'pary-mvp-v19';
 const ASSETS = [
   '/pary-mvp/',
   '/pary-mvp/index.html',
@@ -19,6 +19,9 @@ const ASSETS = [
   '/pary-mvp/room.html',
   '/pary-mvp/room-waiting.html',
   '/pary-mvp/room-invite.html',
+  '/pary-mvp/nigdy-przenigdy.html',
+  '/pary-mvp/nigdy-przenigdy-room.html',
+  '/pary-mvp/nigdy-przenigdy-waiting.html',
   '/pary-mvp/admin-import.html',
   '/pary-mvp/assets/css/style.css',
   '/pary-mvp/assets/js/app.js',
@@ -32,6 +35,7 @@ const ASSETS = [
   '/pary-mvp/assets/js/pozycje-na-czas.js',
   '/pary-mvp/assets/js/niegrzeczne-kolo.js',
   '/pary-mvp/data/questions.json',
+  '/pary-mvp/data/nigdy-przenigdy.json',
   '/pary-mvp/assets/data/plan-wieczoru.json',
   '/pary-mvp/manifest.webmanifest',
 ];

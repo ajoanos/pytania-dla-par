@@ -9,6 +9,11 @@ const displayNameInput = document.getElementById('invite-display-name');
 const inviteError = document.getElementById('invite-error');
 const inviteHint = document.getElementById('invite-hint');
 const successTarget = inviteForm?.dataset.success || 'room.html';
+const deckParam = (params.get('deck') || '').toLowerCase();
+
+if (deckParam) {
+  document.body.dataset.deck = deckParam;
+}
 
 if (roomLabel) {
   roomLabel.textContent = roomKey
@@ -45,11 +50,14 @@ inviteForm?.addEventListener('submit', async (event) => {
     if (!payload.ok) {
       throw new Error(payload.error || 'Nie udało się dołączyć do pokoju.');
     }
-    const params = new URLSearchParams({
-      room_key: payload.room_key,
-      pid: payload.participant_id,
-    });
-    window.location.href = `${successTarget}?${params.toString()}`;
+    const targetUrl = new URL(successTarget, window.location.href);
+    targetUrl.searchParams.set('room_key', payload.room_key);
+    targetUrl.searchParams.set('pid', payload.participant_id);
+    const redirectDeck = payload.deck || deckParam;
+    if (redirectDeck) {
+      targetUrl.searchParams.set('deck', redirectDeck);
+    }
+    window.location.href = targetUrl.toString();
   } catch (error) {
     console.error(error);
     showInviteError(error.message || 'Wystąpił błąd podczas dołączania do pokoju.');

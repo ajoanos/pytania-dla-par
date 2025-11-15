@@ -12,6 +12,7 @@ if ($roomKey === '') {
 purgeExpiredRooms();
 
 $room = getRoomByKeyOrFail($roomKey);
+$roomDeck = normalizeDeck($room['deck'] ?? 'default');
 
 $participantId = (int)($_GET['participant_id'] ?? 0);
 $participant = null;
@@ -44,7 +45,7 @@ if ($hasFullAccess) {
     $stmt->execute(['room_id' => $room['id']]);
     $reactionsRaw = $stmt->fetchAll();
 
-    $questions = fetchQuestions();
+    $questions = fetchQuestions($roomDeck);
     $questionMap = [];
     foreach ($questions as $question) {
         $id = (string)($question['id'] ?? '');
@@ -69,7 +70,7 @@ if ($hasFullAccess) {
     }, $reactionsRaw);
 }
 
-$currentQuestion = $hasFullAccess ? getLatestQuestion((int)$room['id']) : null;
+$currentQuestion = $hasFullAccess ? getLatestQuestion((int)$room['id'], $roomDeck) : null;
 $messages = $hasFullAccess ? fetchChatMessages((int)$room['id'], $roomKey, 60) : [];
 
 $self = null;
@@ -90,4 +91,5 @@ respond([
     'pending_requests' => $pendingRequests,
     'messages' => $messages,
     'self' => $self,
+    'deck' => $roomDeck,
 ]);

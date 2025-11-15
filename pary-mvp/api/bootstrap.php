@@ -12,6 +12,10 @@ if (BOOTSTRAP_EMIT_JSON) {
 
 define('DB_FILE', __DIR__ . '/../db/data.sqlite');
 const ROOM_LIFETIME_SECONDS = 6 * 60 * 60;
+const QUESTION_DECKS = [
+    'default' => __DIR__ . '/../data/questions.json',
+    'never' => __DIR__ . '/../data/nigdy-przenigdy.json',
+];
 
 if (!function_exists('array_is_list')) {
     function array_is_list(array $array): bool
@@ -54,8 +58,10 @@ function initializeDatabase(PDO $pdo): void
     $pdo->exec('CREATE TABLE IF NOT EXISTS rooms (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         room_key TEXT UNIQUE NOT NULL,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        deck TEXT NOT NULL DEFAULT "default"
     )');
+    addColumnIfMissing($pdo, 'rooms', 'deck', 'TEXT NOT NULL DEFAULT "default"');
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS participants (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -321,9 +327,19 @@ function respond(array $data): void
     exit;
 }
 
-function fetchQuestions(): array
+function normalizeDeck(?string $deck): string
 {
-    $file = __DIR__ . '/../data/questions.json';
+    $deck = strtolower(trim((string)$deck));
+    if (isset(QUESTION_DECKS[$deck])) {
+        return $deck;
+    }
+    return 'default';
+}
+
+function fetchQuestions(string $deck = 'default'): array
+{
+    $deck = normalizeDeck($deck);
+    $file = QUESTION_DECKS[$deck] ?? QUESTION_DECKS['default'];
     if (!file_exists($file)) {
         return [];
     }
@@ -469,16 +485,17 @@ function generateRoomKey(int $length = 6): string
     return implode('', $characters);
 }
 
-function createRoom(string $roomKey): ?array
+function createRoom(string $roomKey, string $deck = 'default'): ?array
 {
     $roomKey = strtoupper($roomKey);
     if (getRoomByKey($roomKey)) {
         return null;
     }
-    $stmt = db()->prepare('INSERT INTO rooms (room_key, created_at) VALUES (:room_key, :created_at)');
+    $stmt = db()->prepare('INSERT INTO rooms (room_key, created_at, deck) VALUES (:room_key, :created_at, :deck)');
     $stmt->execute([
         'room_key' => $roomKey,
         'created_at' => gmdate('Y-m-d H:i:s'),
+        'deck' => normalizeDeck($deck),
     ]);
     return getRoomByKey($roomKey);
 }
@@ -594,7 +611,7 @@ function updateParticipantStatus(int $participantId, int $roomId, string $status
     ]);
 }
 
-function getLatestQuestion(int $roomId): ?array
+function getLatestQuestion(int $roomId, string $deck = 'default'): ?array
 {
     $stmt = db()->prepare('SELECT question_id FROM session_questions WHERE room_id = :room_id ORDER BY shown_at DESC LIMIT 1');
     $stmt->execute(['room_id' => $roomId]);
@@ -602,7 +619,7 @@ function getLatestQuestion(int $roomId): ?array
     if (!$last) {
         return null;
     }
-    foreach (fetchQuestions() as $question) {
+    foreach (fetchQuestions($deck) as $question) {
         if (($question['id'] ?? null) === $last) {
             return $question;
         }

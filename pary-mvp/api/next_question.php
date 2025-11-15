@@ -16,7 +16,8 @@ if ($roomKey === '') {
 purgeExpiredRooms();
 
 $room = getRoomByKeyOrFail($roomKey);
-$questions = fetchQuestions();
+$deck = normalizeDeck($room['deck'] ?? 'default');
+$questions = fetchQuestions($deck);
 $selectedQuestion = null;
 
 if ($questionId !== '') {
