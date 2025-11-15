@@ -22,7 +22,7 @@
         </a>
         <div class="hero__text">
           <h1>Kółko i krzyżyk Wyzwanie</h1>
-          <p>Ułóż trójkę symboli na planszy 4×4, żeby wygrać i wylosować zadanie dla partnera.</p>
+          <p>Wybierz planszę 3×3 lub 4×4. Na mniejszej wystarczą trzy symbole w linii, na większej potrzebujesz czterech, aby wylosować zadanie.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
@@ -60,11 +60,19 @@
     <section class="card trio-board-card">
       <header class="card__header card__header--inline">
         <div>
-          <h2>Plansza 4×4</h2>
-          <p class="card__subtitle">Kliknij pole, aby postawić swój symbol.</p>
+          <h2 id="trio-board-title">Plansza 4×4</h2>
+          <p id="trio-board-subtitle" class="card__subtitle">Kliknij pole, aby postawić swój symbol.</p>
         </div>
         <button type="button" class="btn btn--ghost" id="trio-reset" disabled>Zacznij nową grę</button>
       </header>
+      <div class="trio-board-toggle" id="trio-board-toggle" role="group" aria-label="Wybierz rozmiar planszy">
+        <button type="button" class="btn btn--ghost trio-board-toggle__button" data-size="3" aria-pressed="false">
+          Plansza 3×3
+        </button>
+        <button type="button" class="btn btn--ghost trio-board-toggle__button" data-size="4" aria-pressed="true">
+          Plansza 4×4
+        </button>
+      </div>
       <div class="trio-board" id="trio-board" role="grid" aria-label="Plansza Kółko i krzyżyk Wyzwanie"></div>
       <p id="trio-move-hint" class="trio-board__hint"></p>
       <section class="trio-result" id="trio-result" hidden>
@@ -93,8 +101,8 @@
       <h2>Jak grać?</h2>
       <ol>
         <li>Gracz X gra symbolem „X”, gracz O gra symbolem „O”.</li>
-        <li>Ruchy wykonujecie naprzemiennie, klikając pola na planszy 4×4.</li>
-        <li>Wygrywa osoba, która jako pierwsza ułoży trzy swoje symbole w linii (poziomo, pionowo lub ukośnie).</li>
+        <li>Ruchy wykonujecie naprzemiennie, klikając pola na wybranej planszy (3×3 lub 4×4).</li>
+        <li>Na planszy 3×3 wygrywa układ trzech symboli w linii, a na planszy 4×4 – czterech symboli w linii.</li>
         <li>Przegrany losuje mini-wyzwanie, dopasowane do wybranego trybu. Przy remisie każdy otrzymuje własne zadanie.</li>
         <li>Po zakończeniu kliknij „Zacznij nową grę”, by rozpocząć kolejną rundę.</li>
       </ol>

@@ -17,6 +17,9 @@ const elements = {
   waitingHint: document.getElementById('trio-waiting'),
   turnLabel: document.getElementById('trio-turn'),
   board: document.getElementById('trio-board'),
+  boardTitle: document.getElementById('trio-board-title'),
+  boardSubtitle: document.getElementById('trio-board-subtitle'),
+  boardToggle: document.getElementById('trio-board-toggle'),
   moveHint: document.getElementById('trio-move-hint'),
   resultSection: document.getElementById('trio-result'),
   resultTitle: document.getElementById('trio-result-title'),
@@ -50,10 +53,9 @@ const shareElements = {
   emailFeedback: document.getElementById('share-email-feedback'),
 };
 
-const TRIO_SIZE = 4;
-const WIN_LENGTH = 3;
-const BOARD_CELLS = TRIO_SIZE * TRIO_SIZE;
-const WINNING_COMBOS = buildWinningCombos();
+const BOARD_SIZES = [3, 4];
+const DEFAULT_BOARD_SIZE = 4;
+const winningCombosCache = new Map();
 const SOFT_TASKS = [
   'Zrób partnerowi/partnerce 30-sekundowy masaż karku.',
   'Powiedz partnerowi/partnerce 3 rzeczy, które w nim/niej uwielbiasz.',
@@ -118,8 +120,10 @@ let shareSheetController = null;
 let shareFeedbackTimer = null;
 let isCurrentUserHost = false;
 let selfInfo = null;
+let renderedBoardSize = null;
+let lastResultSignature = '';
 
-renderBoardSkeleton();
+renderBoardSkeleton(DEFAULT_BOARD_SIZE);
 bindEvents();
 
 shareSheetController = initializeShareSheet(shareElements);
@@ -165,33 +169,46 @@ function ensureTrioState(state) {
     return;
   }
   const trio = state.trioChallenge;
+  const roundNumber = Number.isInteger(trio.round) && trio.round > 0 ? trio.round : 1;
+  trio.round = roundNumber;
+  const boardSize = sanitizeBoardSize(trio.boardSize);
+  trio.boardSize = boardSize;
+  const expectedCells = getBoardCellCount(boardSize);
   if (!Array.isArray(trio.board)) {
-    trio.board = Array.from({ length: BOARD_CELLS }, () => '');
-  } else if (trio.board.length !== BOARD_CELLS) {
-    trio.board = Array.from({ length: BOARD_CELLS }, (_, index) => String(trio.board[index] || ''));
+    trio.board = createEmptyBoard(boardSize);
+  } else if (trio.board.length !== expectedCells) {
+    trio.board = Array.from({ length: expectedCells }, (_, index) => String(trio.board[index] || ''));
   }
   trio.board = trio.board.map((value) => (value === 'X' || value === 'O' ? value : ''));
-  trio.currentSymbol = trio.currentSymbol === 'O' ? 'O' : 'X';
+  const boardHasMoves = trio.board.some((value) => Boolean(value));
+  if (!boardHasMoves) {
+    trio.currentSymbol = startingSymbolForRound(roundNumber);
+  } else {
+    trio.currentSymbol = trio.currentSymbol === 'O' ? 'O' : 'X';
+  }
   if (!trio.assignments || typeof trio.assignments !== 'object') {
     trio.assignments = { x: '', o: '' };
   } else {
     trio.assignments.x = validParticipantId(trio.assignments.x);
     trio.assignments.o = validParticipantId(trio.assignments.o);
   }
-  trio.winningLine = Array.isArray(trio.winningLine) ? trio.winningLine.map((value) => clampIndex(value)) : [];
+  trio.winningLine = Array.isArray(trio.winningLine)
+    ? trio.winningLine
+        .map((value) => clampIndex(value, boardSize))
+        .filter((value) => value >= 0 && value < expectedCells)
+    : [];
   trio.challenge = normalizeChallenge(trio.challenge);
   trio.drawChallenges = Array.isArray(trio.drawChallenges)
     ? trio.drawChallenges.map((text) => String(text || '')).filter(Boolean).slice(0, 2)
     : [];
   trio.mode = trio.mode === 'extreme' ? 'extreme' : 'soft';
-  trio.round = Number.isInteger(trio.round) && trio.round > 0 ? trio.round : 1;
   trio.lastMoveBy = validParticipantId(trio.lastMoveBy);
   trio.updatedAt = String(trio.updatedAt || '');
 }
 
 function defaultTrioState() {
   return {
-    board: Array.from({ length: BOARD_CELLS }, () => ''),
+    board: createEmptyBoard(DEFAULT_BOARD_SIZE),
     currentSymbol: 'X',
     assignments: { x: '', o: '' },
     winner: null,
@@ -202,11 +219,8 @@ function defaultTrioState() {
     round: 1,
     lastMoveBy: '',
     updatedAt: '',
+    boardSize: DEFAULT_BOARD_SIZE,
   };
-}
-
-function drawStartingSymbol() {
-  return Math.random() < 0.5 ? 'X' : 'O';
 }
 
 function normalizeChallenge(challenge) {
@@ -288,10 +302,8 @@ function renderPlayers() {
     } else if (activeCount < 2) {
       elements.turnLabel.textContent = 'Czekamy na graczy…';
     } else if (!boardHasMoves) {
-      const starter = symbolName(trio.currentSymbol);
-      elements.turnLabel.textContent = starter
-        ? `Losowanie: ${starter} zaczyna rundę (${trio.currentSymbol}).`
-        : 'Losujemy, kto rozpocznie rundę…';
+      const starter = symbolName(trio.currentSymbol) || (trio.currentSymbol === 'X' ? 'Gospodarz' : 'Drugi gracz');
+      elements.turnLabel.textContent = `${starter} rozpoczyna tę rundę (${trio.currentSymbol}).`;
     } else {
       const symbolOwner = symbolName(trio.currentSymbol);
       elements.turnLabel.textContent = symbolOwner
@@ -306,8 +318,20 @@ function renderBoard() {
     return;
   }
   const trio = getTrioState();
+  const boardSize = getBoardSize();
+  renderBoardSkeleton(boardSize);
   const boardHasMoves = Array.isArray(trio.board) && trio.board.some((value) => Boolean(value));
-  const cells = elements.board.querySelectorAll('[data-index]');
+  const boardElement = elements.board;
+  const boardGoalText = boardSize === 4 ? 'cztery symbole w linii' : 'trzy symbole w linii';
+  boardElement.dataset.size = String(boardSize);
+  boardElement.setAttribute('aria-label', `Plansza ${boardSize}×${boardSize}. Aby wygrać, ułóż ${boardGoalText}.`);
+  if (elements.boardTitle) {
+    elements.boardTitle.textContent = `Plansza ${boardSize}×${boardSize}`;
+  }
+  if (elements.boardSubtitle) {
+    elements.boardSubtitle.textContent = `Kliknij pole, aby postawić swój symbol. W tej wersji musisz ułożyć ${boardGoalText}.`;
+  }
+  const cells = boardElement.querySelectorAll('[data-index]');
   cells.forEach((cell) => {
     const index = Number(cell.dataset.index);
     const value = trio.board[index] || '';
@@ -323,19 +347,17 @@ function renderBoard() {
   });
 
   const canMove = canCurrentUserMove();
+  const starterName = symbolName(trio.currentSymbol) || (trio.currentSymbol === 'X' ? 'Gospodarz' : 'Drugi gracz');
   if (elements.moveHint) {
     if (trio.winner) {
       elements.moveHint.textContent = 'Kliknij „Zacznij nową grę”, żeby rozpocząć kolejną rundę.';
     } else if (currentParticipants.length < 2) {
       elements.moveHint.textContent = 'Poczekaj, aż partner dołączy do pokoju.';
     } else if (!boardHasMoves) {
-      const starter = symbolName(trio.currentSymbol);
       if (canMove) {
-        elements.moveHint.textContent = 'Los przydzielił Ci pierwszy ruch – wybierz dowolne pole.';
+        elements.moveHint.textContent = 'Rozpocznij rundę i wybierz dowolne wolne pole.';
       } else {
-        elements.moveHint.textContent = starter
-          ? `${starter} rozpoczyna tę rundę. Zaczekaj na pierwszy ruch.`
-          : 'Losujemy pierwszego gracza…';
+        elements.moveHint.textContent = `${starterName} rozpoczyna tę rundę. Zaczekaj na pierwszy ruch.`;
       }
     } else if (canMove) {
       elements.moveHint.textContent = 'Wybierz dowolne wolne pole i postaw swój symbol.';
@@ -344,6 +366,9 @@ function renderBoard() {
       elements.moveHint.textContent = owner ? `Ruch: ${owner}.` : 'Czekamy na kolejny ruch.';
     }
   }
+
+  const boardLocked = boardHasMoves && !trio.winner;
+  updateBoardToggle(boardSize, boardLocked);
 
   if (elements.resetButton) {
     elements.resetButton.disabled = !trio.winner;
@@ -395,6 +420,7 @@ function renderResult() {
   if (!trio.winner) {
     elements.resultSection.hidden = true;
     elements.challengesList.innerHTML = '';
+    lastResultSignature = '';
     return;
   }
   elements.resultSection.hidden = false;
@@ -413,6 +439,11 @@ function renderResult() {
     const tasks = trio.challenge?.tasks || [];
     renderChallenges(tasks);
   }
+  const signature = `${trio.round}-${trio.winner}`;
+  if (signature && signature !== lastResultSignature) {
+    scrollToResult();
+  }
+  lastResultSignature = signature;
 }
 
 function renderChallenges(tasks) {
@@ -427,12 +458,19 @@ function renderChallenges(tasks) {
   });
 }
 
-function renderBoardSkeleton() {
+function renderBoardSkeleton(size = DEFAULT_BOARD_SIZE) {
   if (!elements.board) {
     return;
   }
+  const sanitizedSize = sanitizeBoardSize(size);
+  const totalCells = getBoardCellCount(sanitizedSize);
+  const currentCells = elements.board.querySelectorAll('[data-index]').length;
+  elements.board.dataset.size = String(sanitizedSize);
+  if (renderedBoardSize === sanitizedSize && currentCells === totalCells) {
+    return;
+  }
   const fragment = document.createDocumentFragment();
-  for (let index = 0; index < BOARD_CELLS; index += 1) {
+  for (let index = 0; index < totalCells; index += 1) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'trio-cell';
@@ -443,12 +481,14 @@ function renderBoardSkeleton() {
   }
   elements.board.innerHTML = '';
   elements.board.appendChild(fragment);
+  renderedBoardSize = sanitizedSize;
 }
 
 function bindEvents() {
   elements.board?.addEventListener('click', handleCellClick);
   elements.resetButton?.addEventListener('click', handleReset);
   elements.modeActions?.addEventListener('click', handleModeChange);
+  elements.boardToggle?.addEventListener('click', handleBoardSizeChange);
   shareElements.copyButton?.addEventListener('click', copyShareLink);
   shareElements.qrButton?.addEventListener('click', openQrModal);
   shareElements.modalClose?.addEventListener('click', closeQrModal);
@@ -475,7 +515,8 @@ function handleCellClick(event) {
   nextTrio.board[index] = nextTrio.currentSymbol;
   nextTrio.lastMoveBy = localPlayerId;
   nextTrio.updatedAt = new Date().toISOString();
-  const victory = detectVictory(nextTrio.board, nextTrio.currentSymbol);
+  const boardSize = sanitizeBoardSize(nextTrio.boardSize);
+  const victory = detectVictory(nextTrio.board, nextTrio.currentSymbol, boardSize);
   if (victory) {
     nextTrio.winner = nextTrio.currentSymbol;
     nextTrio.winningLine = victory;
@@ -502,15 +543,17 @@ function handleReset() {
     return;
   }
   const nextState = cloneState(gameState);
-  nextState.trioChallenge.board = Array.from({ length: BOARD_CELLS }, () => '');
-  nextState.trioChallenge.currentSymbol = drawStartingSymbol();
-  nextState.trioChallenge.winner = null;
-  nextState.trioChallenge.winningLine = [];
-  nextState.trioChallenge.challenge = null;
-  nextState.trioChallenge.drawChallenges = [];
-  nextState.trioChallenge.round += 1;
-  nextState.trioChallenge.lastMoveBy = '';
-  nextState.trioChallenge.updatedAt = new Date().toISOString();
+  const nextTrio = nextState.trioChallenge;
+  const boardSize = sanitizeBoardSize(nextTrio.boardSize);
+  nextTrio.board = createEmptyBoard(boardSize);
+  nextTrio.winner = null;
+  nextTrio.winningLine = [];
+  nextTrio.challenge = null;
+  nextTrio.drawChallenges = [];
+  nextTrio.round += 1;
+  nextTrio.currentSymbol = startingSymbolForRound(nextTrio.round);
+  nextTrio.lastMoveBy = '';
+  nextTrio.updatedAt = new Date().toISOString();
   persistState(nextState);
   applySnapshot({ state: nextState, participants: currentParticipants, self: { is_host: isCurrentUserHost } });
 }
@@ -537,6 +580,42 @@ function handleModeChange(event) {
   applySnapshot({ state: nextState, participants: currentParticipants, self: { is_host: isCurrentUserHost } });
 }
 
+function handleBoardSizeChange(event) {
+  const button = event.target instanceof HTMLElement ? event.target.closest('button[data-size]') : null;
+  if (!button || button.disabled) {
+    return;
+  }
+  if (!gameState) {
+    return;
+  }
+  const requestedSize = Number(button.dataset.size);
+  if (!BOARD_SIZES.includes(requestedSize)) {
+    return;
+  }
+  const trio = getTrioState();
+  const boardLocked = Array.isArray(trio.board) && trio.board.some((value) => Boolean(value)) && !trio.winner;
+  if (boardLocked) {
+    return;
+  }
+  if (sanitizeBoardSize(trio.boardSize) === requestedSize) {
+    return;
+  }
+  const nextState = cloneState(gameState);
+  const nextTrio = nextState.trioChallenge;
+  nextTrio.boardSize = requestedSize;
+  nextTrio.board = createEmptyBoard(requestedSize);
+  nextTrio.winner = null;
+  nextTrio.winningLine = [];
+  nextTrio.challenge = null;
+  nextTrio.drawChallenges = [];
+  nextTrio.round = 1;
+  nextTrio.currentSymbol = startingSymbolForRound(nextTrio.round);
+  nextTrio.lastMoveBy = '';
+  nextTrio.updatedAt = new Date().toISOString();
+  persistState(nextState);
+  applySnapshot({ state: nextState, participants: currentParticipants, self: { is_host: isCurrentUserHost } });
+}
+
 function canCurrentUserMove() {
   const trio = getTrioState();
   if (!trio || trio.winner) {
@@ -553,8 +632,9 @@ function canCurrentUserMove() {
   return mySymbol === trio.currentSymbol;
 }
 
-function detectVictory(board, symbol) {
-  for (const combo of WINNING_COMBOS) {
+function detectVictory(board, symbol, size) {
+  const combos = getWinningCombos(size);
+  for (const combo of combos) {
     if (combo.every((index) => board[index] === symbol)) {
       return combo;
     }
@@ -562,45 +642,52 @@ function detectVictory(board, symbol) {
   return null;
 }
 
-function buildWinningCombos() {
+function getWinningCombos(size) {
+  const sanitizedSize = sanitizeBoardSize(size);
+  const winLength = getWinLength(sanitizedSize);
+  const cacheKey = `${sanitizedSize}-${winLength}`;
+  if (!winningCombosCache.has(cacheKey)) {
+    winningCombosCache.set(cacheKey, buildWinningCombos(sanitizedSize, winLength));
+  }
+  return winningCombosCache.get(cacheKey) || [];
+}
+
+function buildWinningCombos(size, winLength) {
   const combos = [];
-  for (let row = 0; row < TRIO_SIZE; row += 1) {
-    for (let col = 0; col <= TRIO_SIZE - WIN_LENGTH; col += 1) {
-      combos.push([
-        indexFromCoords(row, col),
-        indexFromCoords(row, col + 1),
-        indexFromCoords(row, col + 2),
-      ]);
+  for (let row = 0; row < size; row += 1) {
+    for (let col = 0; col <= size - winLength; col += 1) {
+      const line = [];
+      for (let offset = 0; offset < winLength; offset += 1) {
+        line.push(indexFromCoords(row, col + offset, size));
+      }
+      combos.push(line);
     }
   }
-  for (let col = 0; col < TRIO_SIZE; col += 1) {
-    for (let row = 0; row <= TRIO_SIZE - WIN_LENGTH; row += 1) {
-      combos.push([
-        indexFromCoords(row, col),
-        indexFromCoords(row + 1, col),
-        indexFromCoords(row + 2, col),
-      ]);
+  for (let col = 0; col < size; col += 1) {
+    for (let row = 0; row <= size - winLength; row += 1) {
+      const line = [];
+      for (let offset = 0; offset < winLength; offset += 1) {
+        line.push(indexFromCoords(row + offset, col, size));
+      }
+      combos.push(line);
     }
   }
-  for (let row = 0; row <= TRIO_SIZE - WIN_LENGTH; row += 1) {
-    for (let col = 0; col <= TRIO_SIZE - WIN_LENGTH; col += 1) {
-      combos.push([
-        indexFromCoords(row, col),
-        indexFromCoords(row + 1, col + 1),
-        indexFromCoords(row + 2, col + 2),
-      ]);
-      combos.push([
-        indexFromCoords(row, col + WIN_LENGTH - 1),
-        indexFromCoords(row + 1, col + WIN_LENGTH - 2),
-        indexFromCoords(row + 2, col + WIN_LENGTH - 3),
-      ]);
+  for (let row = 0; row <= size - winLength; row += 1) {
+    for (let col = 0; col <= size - winLength; col += 1) {
+      const diagonal = [];
+      const reverseDiagonal = [];
+      for (let offset = 0; offset < winLength; offset += 1) {
+        diagonal.push(indexFromCoords(row + offset, col + offset, size));
+        reverseDiagonal.push(indexFromCoords(row + offset, col + winLength - 1 - offset, size));
+      }
+      combos.push(diagonal, reverseDiagonal);
     }
   }
   return combos;
 }
 
-function indexFromCoords(row, col) {
-  return row * TRIO_SIZE + col;
+function indexFromCoords(row, col, size) {
+  return row * size + col;
 }
 
 function drawTask(mode, allowDuplicate = false) {
@@ -611,6 +698,64 @@ function drawTask(mode, allowDuplicate = false) {
   const available = allowDuplicate ? pool : pool.filter(Boolean);
   const pick = Math.floor(Math.random() * available.length);
   return available[pick];
+}
+
+function getBoardSize() {
+  const trio = getTrioState();
+  return sanitizeBoardSize(trio.boardSize);
+}
+
+function getWinLength(size) {
+  return size === 4 ? 4 : 3;
+}
+
+function sanitizeBoardSize(value) {
+  const numeric = Number(value);
+  return BOARD_SIZES.includes(numeric) ? numeric : DEFAULT_BOARD_SIZE;
+}
+
+function getBoardCellCount(size) {
+  const sanitizedSize = sanitizeBoardSize(size);
+  return sanitizedSize * sanitizedSize;
+}
+
+function createEmptyBoard(size) {
+  const sanitizedSize = sanitizeBoardSize(size);
+  return Array.from({ length: getBoardCellCount(sanitizedSize) }, () => '');
+}
+
+function startingSymbolForRound(roundNumber) {
+  return roundNumber % 2 === 1 ? 'X' : 'O';
+}
+
+function updateBoardToggle(size, isLocked) {
+  if (!elements.boardToggle) {
+    return;
+  }
+  const buttons = elements.boardToggle.querySelectorAll('button[data-size]');
+  buttons.forEach((button) => {
+    const buttonSize = Number(button.dataset.size);
+    const isActive = buttonSize === size;
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    if (isLocked) {
+      button.disabled = true;
+      button.setAttribute('aria-disabled', 'true');
+      button.title = 'Zmień rozmiar planszy po zakończeniu rundy.';
+    } else {
+      button.disabled = false;
+      button.removeAttribute('aria-disabled');
+      button.removeAttribute('title');
+    }
+  });
+}
+
+function scrollToResult() {
+  if (!elements.resultSection) {
+    return;
+  }
+  window.requestAnimationFrame(() => {
+    elements.resultSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
 }
 
 function symbolName(symbol) {
@@ -748,16 +893,18 @@ function normalizeParticipants(list) {
     .filter((entry) => entry.id);
 }
 
-function clampIndex(value) {
+function clampIndex(value, boardSize) {
   const numeric = Number(value);
   if (!Number.isInteger(numeric)) {
     return 0;
   }
+  const sanitizedSize = sanitizeBoardSize(boardSize);
+  const maxIndex = getBoardCellCount(sanitizedSize) - 1;
   if (numeric < 0) {
     return 0;
   }
-  if (numeric >= BOARD_CELLS) {
-    return BOARD_CELLS - 1;
+  if (numeric > maxIndex) {
+    return maxIndex;
   }
   return numeric;
 }
