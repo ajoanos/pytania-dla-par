@@ -916,6 +916,25 @@ body {
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
+body:not([data-deck="never"]) .question--active {
+  border-style: solid;
+  border-color: transparent;
+  box-shadow: 0 24px 45px rgba(234, 97, 128, 0.2);
+}
+
+body:not([data-deck="never"]) .question--active:not(.question--reaction) {
+  background: linear-gradient(180deg, #fff8f2, #ffeef7);
+}
+
+body[data-theme="dark"]:not([data-deck="never"]) .question--active {
+  box-shadow: 0 24px 45px rgba(8, 2, 14, 0.55);
+}
+
+body[data-theme="dark"]:not([data-deck="never"]) .question--active:not(.question--reaction) {
+  background: linear-gradient(180deg, rgba(64, 33, 72, 0.95), rgba(21, 10, 30, 0.92));
+  color: var(--color-text);
+}
+
 .question__content {
   display: flex;
   flex-direction: column;

@@ -977,6 +977,7 @@ function updateQuestionContent(question) {
     questionText.textContent = question.text || '';
   }
   questionCard.hidden = false;
+  questionCard.classList.add('question--active');
   updateQuestionEmptyState(true);
   setQuestionHighlight(null);
   if (reactionButtons) {
@@ -987,6 +988,7 @@ function updateQuestionContent(question) {
 function clearQuestion() {
   currentQuestion = null;
   questionCard.hidden = true;
+  questionCard.classList.remove('question--active');
   if (questionCategory) {
     questionCategory.textContent = '';
   }
