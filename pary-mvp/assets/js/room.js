@@ -110,6 +110,8 @@ const GAME_VARIANTS = {
       fav: 'question--reaction-fav',
     },
     pageTitle: 'Pytania dla par – Pokój',
+    questionAnimation: 'blur',
+    showQuestionIdentifier: false,
   },
   never: {
     id: 'never',
@@ -134,6 +136,8 @@ const GAME_VARIANTS = {
       disagree: 'question--reaction-disagree',
     },
     pageTitle: 'Nigdy przenigdy – Pokój',
+    questionAnimation: 'blur',
+    showQuestionIdentifier: false,
   },
 };
 
@@ -905,7 +909,7 @@ function setQuestionHighlight(action) {
 }
 
 function shouldShowQuestionIdentifier() {
-  return activeVariant?.id !== 'never';
+  return activeVariant?.showQuestionIdentifier ?? true;
 }
 
 function syncQuestionIdVisibility(identifier = '') {
@@ -991,7 +995,7 @@ function clearQuestion() {
 }
 
 function shouldUseBlurTransitions() {
-  return (activeVariant?.id || '') === 'never';
+  return (activeVariant?.questionAnimation || '') === 'blur';
 }
 
 function queueBlurQuestionUpdate(question) {

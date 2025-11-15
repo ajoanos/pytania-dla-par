@@ -957,11 +957,11 @@ body {
   }
 }
 
-body[data-deck="never"] .question--blur-in {
+.question--blur-in {
   animation: questionBlurIn 0.45s ease forwards;
 }
 
-body[data-deck="never"] .question--blur-out {
+.question--blur-out {
   animation: questionBlurOut 0.35s ease forwards;
 }
 
