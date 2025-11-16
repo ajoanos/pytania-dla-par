@@ -699,9 +699,49 @@ body {
   transform: translateY(0);
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 .btn--primary {
   background: var(--color-primary);
   color: white;
+}
+
+.btn--timer-start {
+  background: linear-gradient(120deg, #ff9aa2, #f26d6f);
+  box-shadow: 0 16px 32px rgba(242, 109, 111, 0.35);
+  color: #fff;
+}
+
+.btn--timer-start:focus,
+.btn--timer-start:hover {
+  background: linear-gradient(120deg, #ffb1c0, #ff6f91);
+}
+
+.btn--timer-draw {
+  background: linear-gradient(120deg, #dbc8ff, #a57cff);
+  box-shadow: 0 16px 32px rgba(165, 124, 255, 0.35);
+  color: #fff;
+}
+
+.btn--timer-draw:focus,
+.btn--timer-draw:hover {
+  background: linear-gradient(120deg, #e5d6ff, #b38dff);
+}
+
+.btn--timer-next {
+  background: linear-gradient(120deg, #ffe5a5, #ff9f85);
+  box-shadow: 0 16px 32px rgba(255, 159, 133, 0.3);
+  color: #6a2f1f;
+}
+
+.btn--timer-next:focus,
+.btn--timer-next:hover {
+  background: linear-gradient(120deg, #fff1c9, #ffb292);
 }
 
 .btn--enter-room {
@@ -4398,8 +4438,11 @@ body.has-floating-dice .planszowka-dice[data-floating='false'] {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--category-color, rgba(242, 109, 111, 0.18)), transparent 65%),
-    linear-gradient(120deg, var(--category-accent, rgba(242, 109, 111, 0.4)), transparent 70%);
+  background: linear-gradient(
+    90deg,
+    var(--category-color, rgba(242, 109, 111, 0.25)),
+    var(--category-shade, var(--category-accent, rgba(242, 109, 111, 0.55)))
+  );
   opacity: 0.85;
   z-index: 0;
 }
@@ -4425,8 +4468,11 @@ body.page--timer[data-theme="dark"] .category-chip::after {
 }
 
 body.page--timer[data-theme="dark"] .category-chip::before {
-  background: linear-gradient(140deg, var(--category-accent, #f26d6f), transparent 70%),
-    linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 75%);
+  background: linear-gradient(
+    90deg,
+    var(--category-color, rgba(242, 109, 111, 0.35)),
+    var(--category-shade, var(--category-accent, #f26d6f))
+  );
   opacity: 0.95;
   filter: saturate(1.2);
 }
@@ -4637,8 +4683,12 @@ body.page--timer[data-theme="dark"] .question-card {
   width: 100%;
 }
 
+.timer-draw {
+  margin-top: 0.65rem;
+}
+
 .timer-next {
-  margin-top: 0.5rem;
+  margin-top: 0.65rem;
 }
 
 .result-buttons {
