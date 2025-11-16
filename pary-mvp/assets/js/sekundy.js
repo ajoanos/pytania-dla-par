@@ -21,8 +21,7 @@ const elements = {
   questionCard: document.getElementById('question-card'),
   questionCategory: document.getElementById('question-category'),
   questionText: document.getElementById('question-text'),
-  drawQuestionButton: document.getElementById('draw-question'),
-  nextQuestionButton: document.getElementById('next-question'),
+  questionActionButton: document.getElementById('question-action'),
   timerValue: document.getElementById('timer-value'),
   timerStatus: document.getElementById('timer-status'),
   timerStart: document.getElementById('start-timer'),
@@ -42,6 +41,7 @@ const state = {
   readyForNext: true,
   awaitingResult: false,
   questionHistory: new Set(),
+  hasDrawnQuestion: false,
 };
 
 const timerState = {
@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindEvents();
   updateTimerVisual();
   setGameMessage('Najpierw dodajcie graczy, a potem losujcie pytania.', 'muted');
+  updateQuestionActionLabel();
 });
 
 function ensureAccess() {
@@ -105,8 +106,7 @@ function bindEvents() {
     setGameMessage(`Ustawiono ${duration} sekund na odpowiedź.`, 'info');
   });
   const drawHandler = () => requestQuestionDraw();
-  elements.nextQuestionButton?.addEventListener('click', drawHandler);
-  elements.drawQuestionButton?.addEventListener('click', drawHandler);
+  elements.questionActionButton?.addEventListener('click', drawHandler);
   elements.timerStart?.addEventListener('click', () => {
     if (!state.currentQuestion) {
       setGameMessage('Wylosuj pytanie, zanim uruchomisz licznik.', 'error');
@@ -156,6 +156,7 @@ function handlePlayersSubmit(event) {
   state.readyForNext = true;
   state.awaitingResult = false;
   state.questionHistory.clear();
+  state.hasDrawnQuestion = false;
   resetTimer();
   renderPlayers();
   updatePlayerLabel();
@@ -163,6 +164,7 @@ function handlePlayersSubmit(event) {
   elements.gameCard?.removeAttribute('hidden');
   setGameMessage('Gracze dodani! Wybierzcie kategorie, ustawcie czas i kliknijcie „Losuj pytanie”.', 'info');
   updateControls();
+  updateQuestionActionLabel();
 }
 
 function renderPlayers() {
@@ -308,12 +310,14 @@ function drawQuestion() {
   state.currentPlayerIndex = state.activePlayerIndex;
   state.readyForNext = false;
   state.awaitingResult = false;
+  state.hasDrawnQuestion = true;
   resetTimer();
   updateQuestionCard(nextQuestion);
   renderPlayers();
   updatePlayerLabel();
   setGameMessage(`🔥 ${state.players[state.currentPlayerIndex]?.name || 'Gracz'} ma ${state.timerDuration} sekund na zadanie.`, 'info');
   updateControls();
+  updateQuestionActionLabel();
 }
 
 function updateQuestionCard(question) {
@@ -378,6 +382,7 @@ function finishTimer() {
   setGameMessage('Kliknij Wykonane lub Niewykonane, aby przyznać punkt.', 'info');
   playFinalChime();
   updateControls();
+  scrollToResultsPanel();
 }
 
 function resetTimer() {
@@ -435,6 +440,7 @@ function markResult(success) {
   renderPlayers();
   updatePlayerLabel();
   updateControls();
+  scrollToQuestionPanel();
 }
 
 function updatePlayerLabel() {
@@ -451,18 +457,20 @@ function updatePlayerLabel() {
 }
 
 function updateControls() {
-  if (elements.nextQuestionButton) {
+  if (elements.questionActionButton) {
     const canDraw = !timerState.running && (!state.currentQuestion || state.readyForNext);
-    elements.nextQuestionButton.disabled = !canDraw;
-  }
-  if (elements.drawQuestionButton) {
-    const canDraw = !timerState.running && (!state.currentQuestion || state.readyForNext);
-    elements.drawQuestionButton.disabled = !canDraw;
+    elements.questionActionButton.disabled = !canDraw;
   }
   if (elements.timerStart) {
     const disableTimer = timerState.running || !state.currentQuestion || state.awaitingResult;
     elements.timerStart.disabled = disableTimer;
   }
+}
+
+function updateQuestionActionLabel() {
+  if (!elements.questionActionButton) return;
+  const label = state.hasDrawnQuestion ? '➡️ Następne pytanie' : '🎲 Losuj pytanie';
+  elements.questionActionButton.textContent = label;
 }
 
 function setGameMessage(text, tone = 'info') {
@@ -587,4 +595,21 @@ function playFinalChime() {
   lowBell.connect(lowGain).connect(master);
   lowBell.start(now);
   lowBell.stop(now + 1.7);
+}
+
+function scrollToResultsPanel() {
+  const panel = elements.successButton?.closest('.panel') || elements.successButton?.parentElement;
+  smoothScrollIntoView(panel);
+}
+
+function scrollToQuestionPanel() {
+  const panel = elements.questionCard?.closest('.panel') || elements.questionCard;
+  smoothScrollIntoView(panel);
+}
+
+function smoothScrollIntoView(target) {
+  if (!target || typeof target.scrollIntoView !== 'function') {
+    return;
+  }
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
