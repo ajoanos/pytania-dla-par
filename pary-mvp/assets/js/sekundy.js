@@ -1,66 +1,9 @@
 import { initThemeToggle } from './app.js';
+import { QUESTION_DECK } from './sekundy-data.js';
 
 const ACCESS_KEY = 'momenty.timer.access';
 const ACCESS_PAGE = '5-7-10.html';
 const TIMER_OPTIONS = [5, 7, 10];
-const QUESTION_DECK = [
-  {
-    id: 'wyznania',
-    name: 'Szybkie wyznania',
-    color: '#ffe8f1',
-    accent: '#f26d6f',
-    questions: [
-      'Wymień jedną rzecz, którą chcesz częściej robić z partnerem.',
-      'Dokończ zdanie: najbardziej kręci mnie, kiedy Ty…',
-      'Opisz w trzech słowach idealny wspólny poranek.',
-      'Co ostatnio sprawiło, że poczułeś/poczułaś motyle w brzuchu?',
-      'Jakie dotknięcie natychmiast poprawia Ci humor?',
-      'Wymień ulubioną część ciała partnera i dlaczego ją uwielbiasz.',
-    ],
-  },
-  {
-    id: 'dotyk',
-    name: 'Dotyk & ciało',
-    color: '#e6f5f1',
-    accent: '#63b9a6',
-    questions: [
-      'Pokaż dłonią tempo masażu, które teraz Cię odpręża.',
-      'Nazwij miejsce na ciele, które chciał(a)byś, by partner pocałował.',
-      'Opisz dotyk, który chciał(a)byś poczuć w następnych 5 minutach.',
-      'Jakim gestem przywitasz partnera, gdy spotkacie się po tęsknocie?',
-      'Wymień pozycję, która zawsze wprawia Cię w dobry nastrój.',
-      'Który zmysł chcesz pobudzić w tej rundzie i jak?',
-    ],
-  },
-  {
-    id: 'wyzwania',
-    name: 'Szalone wyzwania',
-    color: '#fff4e0',
-    accent: '#f7b267',
-    questions: [
-      'Zaproponuj krótkie wyzwanie, które możecie wykonać w minutę.',
-      'Opisz fantazję, którą chcesz sprawdzić w ten weekend.',
-      'Wymyśl tajne hasło, które dzisiaj oznacza „pocałuj mnie”.',
-      'Powiedz, co zrobisz partnerowi, jeśli wygra tę rundę.',
-      'Jaką niespodziankę przygotujesz, gdy zdobędziesz 3 punkty?',
-      'Zaproponuj gest nagrody za wykonane zadanie.',
-    ],
-  },
-  {
-    id: 'rozmowy',
-    name: 'Rozmowy w 10 sekund',
-    color: '#ede7ff',
-    accent: '#a070ff',
-    questions: [
-      'Dokończ zdanie: w naszej relacji najbardziej doceniam…',
-      'Jaką wspólną chwilę chciał(a)byś powtórzyć jeszcze dziś?',
-      'Wymień rzecz, której nauczyłeś/aś się od partnera.',
-      'Podaj trzy słowa, które opisują Wasz klimat wieczoru.',
-      'Za co chcesz dziś partnerowi podziękować?',
-      'Wymień spontaniczny pomysł na randkę last minute.',
-    ],
-  },
-];
 
 const elements = {
   themeToggle: document.getElementById('theme-toggle'),
@@ -266,6 +209,7 @@ function renderCategoryList() {
     const label = document.createElement('label');
     label.className = 'category-chip';
     label.style.setProperty('--category-color', category.color);
+    label.style.setProperty('--category-accent', category.accent || category.color);
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.name = 'category';
@@ -421,6 +365,7 @@ function finishTimer() {
   updateTimerOptions();
   updateTimerVisual();
   setGameMessage('Kliknij Wykonane lub Niewykonane, aby przyznać punkt.', 'info');
+  playFinalChime();
   updateControls();
 }
 
@@ -530,6 +475,9 @@ function randomInt(maxExclusive) {
 
 function ensureAudioContext() {
   if (audioCtx) {
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
     return audioCtx;
   }
   const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -537,6 +485,9 @@ function ensureAudioContext() {
     return null;
   }
   audioCtx = new AudioContext();
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
   return audioCtx;
 }
 
@@ -553,4 +504,51 @@ function playTick() {
   osc.connect(gain).connect(ctx.destination);
   osc.start(now);
   osc.stop(now + 0.12);
+}
+
+function playFinalChime() {
+  const ctx = ensureAudioContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.linearRampToValueAtTime(0.7, now + 0.08);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + 2.4);
+  master.connect(ctx.destination);
+
+  const sweep = ctx.createOscillator();
+  const sweepGain = ctx.createGain();
+  sweep.type = 'triangle';
+  sweep.frequency.setValueAtTime(520, now);
+  sweep.frequency.exponentialRampToValueAtTime(1080, now + 0.45);
+  sweepGain.gain.setValueAtTime(0.001, now);
+  sweepGain.gain.linearRampToValueAtTime(0.5, now + 0.04);
+  sweepGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.7);
+  sweep.connect(sweepGain).connect(master);
+  sweep.start(now);
+  sweep.stop(now + 1.8);
+
+  const sparkle = ctx.createOscillator();
+  const sparkleGain = ctx.createGain();
+  sparkle.type = 'sine';
+  sparkle.frequency.setValueAtTime(660, now + 0.22);
+  sparkle.frequency.exponentialRampToValueAtTime(1400, now + 0.9);
+  sparkleGain.gain.setValueAtTime(0.0001, now);
+  sparkleGain.gain.linearRampToValueAtTime(0.35, now + 0.35);
+  sparkleGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+  sparkle.connect(sparkleGain).connect(master);
+  sparkle.start(now + 0.22);
+  sparkle.stop(now + 2.3);
+
+  const lowBell = ctx.createOscillator();
+  const lowGain = ctx.createGain();
+  lowBell.type = 'sawtooth';
+  lowBell.frequency.setValueAtTime(280, now);
+  lowBell.frequency.linearRampToValueAtTime(420, now + 0.6);
+  lowGain.gain.setValueAtTime(0.0001, now);
+  lowGain.gain.linearRampToValueAtTime(0.25, now + 0.08);
+  lowGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
+  lowBell.connect(lowGain).connect(master);
+  lowBell.start(now);
+  lowBell.stop(now + 1.7);
 }
