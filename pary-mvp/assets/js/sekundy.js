@@ -22,6 +22,7 @@ const elements = {
   questionCategory: document.getElementById('question-category'),
   questionText: document.getElementById('question-text'),
   questionActionButton: document.getElementById('question-action'),
+  skipQuestionButton: document.getElementById('skip-question'),
   timerValue: document.getElementById('timer-value'),
   timerStatus: document.getElementById('timer-status'),
   timerStart: document.getElementById('start-timer'),
@@ -68,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateTimerVisual();
   setGameMessage('Najpierw dodajcie graczy, a potem losujcie pytania.', 'muted');
   updateQuestionActionLabel();
+  updateControls();
 });
 
 function ensureAccess() {
@@ -107,6 +109,7 @@ function bindEvents() {
   });
   const drawHandler = () => requestQuestionDraw();
   elements.questionActionButton?.addEventListener('click', drawHandler);
+  elements.skipQuestionButton?.addEventListener('click', skipCurrentQuestion);
   elements.timerStart?.addEventListener('click', () => {
     if (!state.currentQuestion) {
       setGameMessage('Wylosuj pytanie, zanim uruchomisz licznik.', 'error');
@@ -256,6 +259,30 @@ function requestQuestionDraw() {
   drawQuestion();
 }
 
+function skipCurrentQuestion() {
+  if (!state.currentQuestion) {
+    setGameMessage('Nie ma pytania do pominięcia. Najpierw je wylosuj.', 'error');
+    return;
+  }
+  if (timerState.running) {
+    setGameMessage('Najpierw zatrzymaj licznik, a potem pomiń pytanie.', 'error');
+    return;
+  }
+  if (state.awaitingResult) {
+    setGameMessage('Oceń aktualne pytanie zanim je pominiesz.', 'error');
+    return;
+  }
+  if (state.currentQuestion?.id) {
+    state.questionHistory.delete(state.currentQuestion.id);
+  }
+  state.currentQuestion = null;
+  state.currentPlayerIndex = null;
+  state.readyForNext = true;
+  setGameMessage('Pytanie pominięte. Losuję nowe z wybranych kategorii.', 'info');
+  updateControls();
+  drawQuestion();
+}
+
 function renderTimerOptions() {
   if (!elements.timerOptions) return;
   const fragment = document.createDocumentFragment();
@@ -298,13 +325,21 @@ function drawQuestion() {
       pool.push({ id: `${category.id}-${index}`, text, category });
     });
   });
-  let available = pool.filter((item) => !state.questionHistory.has(item.id));
-  if (!available.length) {
+  let availablePool = pool.filter((item) => !state.questionHistory.has(item.id));
+  if (!availablePool.length) {
     state.questionHistory.clear();
-    available = pool;
+    availablePool = pool;
   }
-  const randomIndex = randomInt(available.length);
-  const nextQuestion = available[randomIndex];
+  const uniqueCategories = Array.from(
+    new Map(availablePool.map((item) => [item.category.id, item.category])).values(),
+  );
+  if (!uniqueCategories.length) {
+    setGameMessage('Brak pytań w zaznaczonych kategoriach.', 'error');
+    return;
+  }
+  const chosenCategory = uniqueCategories[randomInt(uniqueCategories.length)];
+  const categoryPool = availablePool.filter((item) => item.category.id === chosenCategory.id);
+  const nextQuestion = categoryPool[randomInt(categoryPool.length)];
   state.questionHistory.add(nextQuestion.id);
   state.currentQuestion = nextQuestion;
   state.currentPlayerIndex = state.activePlayerIndex;
@@ -464,6 +499,11 @@ function updateControls() {
   if (elements.timerStart) {
     const disableTimer = timerState.running || !state.currentQuestion || state.awaitingResult;
     elements.timerStart.disabled = disableTimer;
+  }
+  if (elements.skipQuestionButton) {
+    const canSkip =
+      Boolean(state.currentQuestion) && !timerState.running && !state.awaitingResult && !state.readyForNext;
+    elements.skipQuestionButton.disabled = !canSkip;
   }
 }
 
