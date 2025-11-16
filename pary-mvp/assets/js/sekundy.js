@@ -21,6 +21,7 @@ const elements = {
   questionCard: document.getElementById('question-card'),
   questionCategory: document.getElementById('question-category'),
   questionText: document.getElementById('question-text'),
+  drawQuestionButton: document.getElementById('draw-question'),
   nextQuestionButton: document.getElementById('next-question'),
   timerValue: document.getElementById('timer-value'),
   timerStatus: document.getElementById('timer-status'),
@@ -36,7 +37,7 @@ const state = {
   activePlayerIndex: 0,
   currentPlayerIndex: null,
   timerDuration: TIMER_OPTIONS[0],
-  selectedCategories: new Set(QUESTION_DECK.map((category) => category.id)),
+  selectedCategories: new Set(),
   currentQuestion: null,
   readyForNext: true,
   awaitingResult: false,
@@ -103,21 +104,9 @@ function bindEvents() {
     updateTimerVisual();
     setGameMessage(`Ustawiono ${duration} sekund na odpowiedź.`, 'info');
   });
-  elements.nextQuestionButton?.addEventListener('click', () => {
-    if (!state.players.length) {
-      setGameMessage('Dodaj graczy, aby rozpocząć.', 'error');
-      return;
-    }
-    if (timerState.running) {
-      setGameMessage('Najpierw zatrzymaj aktualny licznik.', 'error');
-      return;
-    }
-    if (!state.readyForNext && state.currentQuestion) {
-      setGameMessage('Oceń poprzednie pytanie zanim losujesz kolejne.', 'error');
-      return;
-    }
-    drawQuestion();
-  });
+  const drawHandler = () => requestQuestionDraw();
+  elements.nextQuestionButton?.addEventListener('click', drawHandler);
+  elements.drawQuestionButton?.addEventListener('click', drawHandler);
   elements.timerStart?.addEventListener('click', () => {
     if (!state.currentQuestion) {
       setGameMessage('Wylosuj pytanie, zanim uruchomisz licznik.', 'error');
@@ -172,7 +161,7 @@ function handlePlayersSubmit(event) {
   updatePlayerLabel();
   elements.playersCard?.setAttribute('hidden', '');
   elements.gameCard?.removeAttribute('hidden');
-  setGameMessage('Gracze dodani! Wybierzcie kategorie i losujcie pytanie.', 'info');
+  setGameMessage('Gracze dodani! Wybierzcie kategorie, ustawcie czas i kliknijcie „Losuj pytanie”.', 'info');
   updateControls();
 }
 
@@ -208,8 +197,14 @@ function renderCategoryList() {
   QUESTION_DECK.forEach((category) => {
     const label = document.createElement('label');
     label.className = 'category-chip';
-    label.style.setProperty('--category-color', category.color);
-    label.style.setProperty('--category-accent', category.accent || category.color);
+    const baseColor = category.color || '#f5d7de';
+    const accentColor = category.accent || baseColor;
+    label.style.setProperty('--category-color', baseColor);
+    label.style.setProperty('--category-accent', accentColor);
+    const darkerShade = deriveDarkerShade(accentColor);
+    if (darkerShade) {
+      label.style.setProperty('--category-shade', darkerShade);
+    }
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.name = 'category';
@@ -241,6 +236,22 @@ function selectAllCategories() {
   state.questionHistory.clear();
   renderCategoryList();
   setGameMessage('Wszystkie kategorie zaznaczone.', 'info');
+}
+
+function requestQuestionDraw() {
+  if (!state.players.length) {
+    setGameMessage('Dodaj graczy, aby rozpocząć.', 'error');
+    return;
+  }
+  if (timerState.running) {
+    setGameMessage('Najpierw zatrzymaj aktualny licznik.', 'error');
+    return;
+  }
+  if (!state.readyForNext && state.currentQuestion) {
+    setGameMessage('Oceń poprzednie pytanie zanim losujesz kolejne.', 'error');
+    return;
+  }
+  drawQuestion();
 }
 
 function renderTimerOptions() {
@@ -415,8 +426,8 @@ function markResult(success) {
   }
   const playerName = state.players[state.currentPlayerIndex]?.name || 'Gracz';
   const feedback = success
-    ? `+1 punkt dla ${playerName}! Kliknij „Następne pytanie”.`
-    : `${playerName} spróbuje następnym razem. Przejdź do kolejnego pytania.`;
+    ? `+1 punkt dla ${playerName}! Kliknij „Losuj pytanie” lub „Następne pytanie”.`
+    : `${playerName} spróbuje następnym razem. Przejdź do kolejnego pytania przyciskiem „Losuj pytanie” lub „Następne pytanie”.`;
   setGameMessage(feedback, 'info');
   state.activePlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
   state.currentPlayerIndex = null;
@@ -444,6 +455,10 @@ function updateControls() {
     const canDraw = !timerState.running && (!state.currentQuestion || state.readyForNext);
     elements.nextQuestionButton.disabled = !canDraw;
   }
+  if (elements.drawQuestionButton) {
+    const canDraw = !timerState.running && (!state.currentQuestion || state.readyForNext);
+    elements.drawQuestionButton.disabled = !canDraw;
+  }
   if (elements.timerStart) {
     const disableTimer = timerState.running || !state.currentQuestion || state.awaitingResult;
     elements.timerStart.disabled = disableTimer;
@@ -454,6 +469,27 @@ function setGameMessage(text, tone = 'info') {
   if (!elements.gameMessage) return;
   elements.gameMessage.textContent = text || '';
   elements.gameMessage.dataset.tone = tone;
+}
+
+function deriveDarkerShade(color) {
+  if (typeof color !== 'string') {
+    return '';
+  }
+  const trimmed = color.trim();
+  const match = trimmed.match(/^#([0-9a-f]{6})$/i);
+  if (!match) {
+    return '';
+  }
+  const hex = match[1];
+  const factor = 0.82;
+  const r = Math.round(parseInt(hex.slice(0, 2), 16) * factor);
+  const g = Math.round(parseInt(hex.slice(2, 4), 16) * factor);
+  const b = Math.round(parseInt(hex.slice(4, 6), 16) * factor);
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function toHex(value) {
+  return Math.max(0, Math.min(255, value)).toString(16).padStart(2, '0');
 }
 
 function randomInt(maxExclusive) {
