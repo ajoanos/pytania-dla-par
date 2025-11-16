@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pary-mvp-v19';
+const CACHE_NAME = 'pary-mvp-v20';
 const ASSETS = [
   '/pary-mvp/',
   '/pary-mvp/index.html',
@@ -12,6 +12,8 @@ const ASSETS = [
   '/pary-mvp/pozycje-na-czas-play.html',
   '/pary-mvp/niegrzeczne-kolo.html',
   '/pary-mvp/niegrzeczne-kolo-play.html',
+  '/pary-mvp/5-7-10.html',
+  '/pary-mvp/5-7-10-room.html',
   '/pary-mvp/pytania-dla-par.html',
   '/pary-mvp/plan-wieczoru.html',
   '/pary-mvp/plan-wieczoru-room.html',
@@ -34,6 +36,7 @@ const ASSETS = [
   '/pary-mvp/assets/js/zdrapka-pozycji.js',
   '/pary-mvp/assets/js/pozycje-na-czas.js',
   '/pary-mvp/assets/js/niegrzeczne-kolo.js',
+  '/pary-mvp/assets/js/sekundy.js',
   '/pary-mvp/data/questions.json',
   '/pary-mvp/data/nigdy-przenigdy.json',
   '/pary-mvp/assets/data/plan-wieczoru.json',
