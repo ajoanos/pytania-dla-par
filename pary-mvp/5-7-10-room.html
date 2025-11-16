@@ -105,14 +105,7 @@
         <div class="timer-options" id="timer-options"></div>
       </article>
 
-      <article class="panel panel--question">
-        <div class="panel__header panel__header--icon">
-          <span aria-hidden="true">🔥</span>
-          <div>
-            <h3>Losowo animowane pytanie</h3>
-            <p class="panel__hint">Pastelowe tło dopasowuje się do kategorii.</p>
-          </div>
-        </div>
+      <article class="panel panel--question" aria-label="Wylosowane pytanie">
         <div class="question-card" id="question-card">
           <p class="question-card__category" id="question-category">Wybierz kategorie i kliknij „Następne pytanie”.</p>
           <p class="question-card__text" id="question-text">Gdy losowanie się rozpocznie, pytanie pojawi się w rozmytej animacji.</p>
@@ -120,13 +113,6 @@
       </article>
 
       <article class="panel panel--timer">
-        <div class="panel__header panel__header--icon">
-          <span aria-hidden="true">⏳</span>
-          <div>
-            <h3>Okrągły timer</h3>
-            <p class="panel__hint">Kliknij START CZASU, aby dać graczowi chwilę na mentalną pauzę.</p>
-          </div>
-        </div>
         <div class="timer-visual" aria-live="polite">
           <svg class="timer-ring" viewBox="0 0 120 120" aria-hidden="true">
             <circle class="timer-ring__bg" cx="60" cy="60" r="54"></circle>
@@ -136,15 +122,14 @@
         </div>
         <p class="timer-status" id="timer-status">Gotowy do startu.</p>
         <button type="button" class="btn btn--primary timer-start" id="start-timer">🎙️ START CZASU</button>
+        <button type="button" class="btn btn--primary btn--wide timer-next" id="next-question">Następne pytanie</button>
+        <p class="game-message" id="game-message" role="status"></p>
       </article>
 
       <article class="panel panel--results">
-        <div class="panel__header panel__header--icon">
-          <span aria-hidden="true">🎯</span>
-          <div>
-            <h3>Po upływie czasu oceń zadanie</h3>
-            <p class="panel__hint">Kliknij odpowiednią ikonę, a punkt trafi do gracza.</p>
-          </div>
+        <div class="panel__info panel__info--center">
+          <p class="panel__info-title">Po upływie czasu oceń zadanie</p>
+          <p class="panel__hint">Kliknij odpowiednią ikonę, a punkt trafi do gracza.</p>
         </div>
         <div class="result-buttons">
           <button type="button" class="result-button result-button--success" id="mark-success" disabled>
@@ -158,15 +143,10 @@
         </div>
       </article>
 
-      <div class="panel panel--actions">
-        <button type="button" class="btn btn--primary btn--wide" id="next-question">Następne pytanie</button>
-        <p class="game-message" id="game-message" role="status"></p>
-      </div>
     </section>
 
     <footer class="footer">
       <nav class="footer__nav">
-        <a href="5-7-10.html">Zmień hasło / wróć</a>
         <a href="index.html">Powrót do wyboru gier</a>
       </nav>
     </footer>
