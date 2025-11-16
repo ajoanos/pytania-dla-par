@@ -1759,13 +1759,9 @@ function renderCategoryQuestions(questions) {
     button.type = 'button';
     button.className = 'catalog__question';
     button.dataset.questionId = question.id;
-    const id = document.createElement('span');
-    id.className = 'catalog__question-id';
-    id.textContent = question.id;
     const text = document.createElement('span');
     text.className = 'catalog__question-text';
     text.textContent = question.text;
-    button.appendChild(id);
     button.appendChild(text);
     item.appendChild(button);
     catalogList.appendChild(item);
