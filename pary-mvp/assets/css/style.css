@@ -4589,6 +4589,12 @@ body.page--timer[data-theme="dark"] .category-chip::before {
   gap: 1rem;
 }
 
+.reveal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .question-card {
   border-radius: 22px;
   padding: 1.5rem;
@@ -4599,6 +4605,9 @@ body.page--timer[data-theme="dark"] .category-chip::before {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 [data-theme="dark"] .question-card {
@@ -4624,8 +4633,16 @@ body.page--timer[data-theme="dark"] .question-card {
   opacity: 0.8;
 }
 
-[data-theme="dark"] .question-card__category {
-  color: rgba(255, 255, 255, 0.85);
+.question-card__label {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .question-card__label {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .question-card__text {
@@ -4633,10 +4650,48 @@ body.page--timer[data-theme="dark"] .question-card {
   font-size: 1.4rem;
   font-weight: 700;
   line-height: 1.4;
+  filter: blur(12px);
+  opacity: 0.7;
+  transition: filter 250ms ease, opacity 250ms ease;
 }
 
 [data-theme="dark"] .question-card__text {
   color: var(--color-text);
+}
+
+.question-card--reveal {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  min-height: 220px;
+}
+
+.question-card__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--color-primary-dark);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.4));
+  transition: opacity 200ms ease;
+}
+
+[data-theme="dark"] .question-card__overlay {
+  background: linear-gradient(180deg, rgba(24, 12, 20, 0.85), rgba(24, 12, 20, 0.65));
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.question-card--revealed .question-card__text {
+  filter: blur(0);
+  opacity: 1;
+}
+
+.question-card--revealed .question-card__overlay {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .question-card--animate {
