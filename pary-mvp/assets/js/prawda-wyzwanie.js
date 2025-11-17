@@ -38,6 +38,12 @@ const state = {
     truth: false,
     dare: false,
   },
+  awaitingResult: false,
+};
+
+const DEFAULT_CARD_TEXT = {
+  truth: elements.truthText?.textContent?.trim() || 'Kliknij, aby odsłonić prawdę.',
+  dare: elements.dareText?.textContent?.trim() || 'Kliknij, aby odsłonić wyzwanie.',
 };
 
 const CATEGORY_DEFAULT_COLOR = '#f8e8ff';
@@ -217,9 +223,57 @@ function setCardReveal(type, revealed) {
   card.classList.toggle('question-card--revealed', revealed);
 }
 
+function updateCardLocks(activeType = null) {
+  const truthDisabled = state.awaitingResult && activeType === 'dare';
+  const dareDisabled = state.awaitingResult && activeType === 'truth';
+
+  if (elements.truthCard) {
+    elements.truthCard.disabled = truthDisabled;
+    elements.truthCard.classList.toggle('question-card--locked', truthDisabled);
+  }
+
+  if (elements.dareCard) {
+    elements.dareCard.disabled = dareDisabled;
+    elements.dareCard.classList.toggle('question-card--locked', dareDisabled);
+  }
+}
+
+function lockCards(activeType) {
+  state.awaitingResult = true;
+  updateCardLocks(activeType);
+}
+
+function unlockCards() {
+  state.awaitingResult = false;
+  updateCardLocks(null);
+}
+
+function resetCard(type) {
+  const textElement = type === 'truth' ? elements.truthText : elements.dareText;
+  if (textElement) {
+    textElement.textContent = DEFAULT_CARD_TEXT[type];
+  }
+  setCardReveal(type, false);
+}
+
+function resetCards() {
+  resetCard('truth');
+  resetCard('dare');
+}
+
 function handleCardClick(type) {
+  if (state.awaitingResult) {
+    const sameType = state.currentCard?.type === type;
+    const pendingLabel = state.currentCard?.type === 'truth' ? 'prawdę' : 'wyzwanie';
+    const message = sameType
+      ? 'Oceń bieżącą kartę, zanim wylosujesz następną.'
+      : `Najpierw zakończ ${pendingLabel}, zanim wylosujesz kolejną kartę.`;
+    setStatus(message, 'error');
+    return;
+  }
   const drawn = drawCard(type);
   if (!drawn) return;
+  lockCards(type);
   requestAnimationFrame(() => setCardReveal(type, true));
 }
 
@@ -241,11 +295,13 @@ function markResult(success) {
   renderReactions();
   setStatus(`${entry.player} ${success ? 'wykonał/a' : 'nie wykonał/a'} zadania.`, success ? 'success' : 'muted');
   state.currentCard = null;
+  resetCards();
   if (elements.lastPickLabel) {
     elements.lastPickLabel.textContent = 'Czekamy na wybór prawdy lub wyzwania.';
   }
   elements.resultSuccess?.setAttribute('disabled', '');
   elements.resultFail?.setAttribute('disabled', '');
+  unlockCards();
 }
 
 function renderReactions() {
@@ -314,4 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCategories();
   bindEvents();
   setStatus('Najpierw zaznacz kategorie, potem kliknij prawdę lub wyzwanie, aby odsłonić kartę.', 'muted');
+  resetCards();
+  unlockCards();
 });
