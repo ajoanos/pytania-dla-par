@@ -80,9 +80,9 @@ body {
 
 .hero {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .hero__branding {
@@ -1819,8 +1819,6 @@ body[data-deck="never"] .question__filter {
 
 @media (max-width: 640px) {
   .hero {
-    flex-direction: column;
-    align-items: center;
     gap: 1.5rem;
   }
 
@@ -1840,7 +1838,7 @@ body[data-deck="never"] .question__filter {
   }
 
   #theme-toggle {
-    align-self: flex-end;
+    align-self: center;
   }
 }
 
