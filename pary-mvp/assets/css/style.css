@@ -4650,8 +4650,6 @@ body.page--timer[data-theme="dark"] .question-card {
   font-size: 1.4rem;
   font-weight: 700;
   line-height: 1.4;
-  filter: blur(12px);
-  opacity: 0.7;
   transition: filter 250ms ease, opacity 250ms ease;
 }
 
@@ -4664,6 +4662,11 @@ body.page--timer[data-theme="dark"] .question-card {
   overflow: hidden;
   cursor: pointer;
   min-height: 220px;
+}
+
+.question-card--reveal .question-card__text {
+  filter: blur(12px);
+  opacity: 0.7;
 }
 
 .question-card__overlay {
