@@ -4610,6 +4610,12 @@ body.page--timer[data-theme="dark"] .category-chip::before {
   text-align: center;
 }
 
+.question-card--locked,
+.question-card[disabled] {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .question-card--truth {
   --question-bg: #e6f7f5;
   --question-border: rgba(48, 179, 165, 0.35);
@@ -4669,6 +4675,10 @@ body.page--timer[data-theme="dark"] .question-card {
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--color-text);
+}
+
+.reveal-grid .question-card__label {
+  display: none;
 }
 
 [data-theme="dark"] .question-card__label {
