@@ -1,0 +1,290 @@
+import { initThemeToggle } from './app.js';
+import { TRUTH_DARE_DECK } from './prawda-wyzwanie-data.js';
+
+const ACCESS_KEY = 'momenty.truthdare.access';
+const ACCESS_PAGE = 'prawda-wyzwanie.html';
+
+const elements = {
+  themeToggle: document.getElementById('theme-toggle'),
+  introCard: document.getElementById('intro-card'),
+  nameForm: document.getElementById('name-form'),
+  nameInput: document.getElementById('player-name'),
+  gameCard: document.getElementById('game-card'),
+  categoryList: document.getElementById('category-list'),
+  selectAllButton: document.getElementById('select-all'),
+  truthCategory: document.getElementById('truth-category'),
+  truthText: document.getElementById('truth-text'),
+  dareCategory: document.getElementById('dare-category'),
+  dareText: document.getElementById('dare-text'),
+  drawTruthButton: document.getElementById('draw-truth'),
+  drawDareButton: document.getElementById('draw-dare'),
+  statusMessage: document.getElementById('status-message'),
+  resultSuccess: document.getElementById('mark-success'),
+  resultFail: document.getElementById('mark-fail'),
+  lastPickLabel: document.getElementById('last-pick-label'),
+  reactionsList: document.getElementById('reactions-list'),
+  shareButton: document.getElementById('share-room'),
+  singleDeviceButton: document.getElementById('single-device'),
+  shareBar: document.getElementById('share-bar'),
+  shareFeedback: document.getElementById('share-feedback'),
+};
+
+const state = {
+  playerName: '',
+  selectedCategories: new Set(),
+  history: new Set(),
+  currentCard: null,
+  reactions: [],
+  singleDevice: false,
+};
+
+const CATEGORY_DEFAULT_COLOR = '#f8e8ff';
+
+function ensureAccess() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('auto')) {
+    sessionStorage.setItem(ACCESS_KEY, 'true');
+  }
+  if (sessionStorage.getItem(ACCESS_KEY) === 'true') {
+    return true;
+  }
+  window.location.replace(ACCESS_PAGE);
+  return false;
+}
+
+function renderCategories() {
+  if (!elements.categoryList) return;
+  elements.categoryList.innerHTML = '';
+  const fragment = document.createDocumentFragment();
+  TRUTH_DARE_DECK.forEach((category) => {
+    const label = document.createElement('label');
+    label.className = 'category-chip';
+    label.style.setProperty('--category-color', category.color || CATEGORY_DEFAULT_COLOR);
+    label.style.setProperty('--category-accent', category.accent || '#9b4dca');
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.name = 'category';
+    checkbox.value = category.id;
+    checkbox.setAttribute('aria-label', category.name);
+
+    const dot = document.createElement('span');
+    dot.className = 'category-chip__dot';
+    dot.setAttribute('aria-hidden', 'true');
+    dot.textContent = '•';
+
+    const text = document.createElement('span');
+    text.textContent = category.name;
+
+    label.append(checkbox, dot, text);
+    fragment.append(label);
+  });
+  elements.categoryList.append(fragment);
+}
+
+function bindEvents() {
+  elements.nameForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const name = elements.nameInput?.value.trim();
+    if (!name) {
+      elements.nameInput?.focus();
+      return;
+    }
+    state.playerName = name;
+    elements.introCard?.setAttribute('hidden', '');
+    elements.gameCard?.removeAttribute('hidden');
+    setStatus(`Hej, ${state.playerName}! Wybierz kategorie i losuj prawdę lub wyzwanie.`, 'info');
+  });
+
+  elements.categoryList?.addEventListener('change', (event) => {
+    const checkbox = event.target.closest('input[type="checkbox"][name="category"]');
+    if (!checkbox) return;
+    if (checkbox.checked) {
+      state.selectedCategories.add(checkbox.value);
+    } else {
+      state.selectedCategories.delete(checkbox.value);
+    }
+    setStatus(`Zaznaczone kategorie: ${state.selectedCategories.size || 'brak'}.`, 'muted');
+  });
+
+  elements.selectAllButton?.addEventListener('click', () => {
+    const checkboxes = elements.categoryList?.querySelectorAll('input[type="checkbox"][name="category"]');
+    checkboxes?.forEach((box) => {
+      box.checked = true;
+      state.selectedCategories.add(box.value);
+    });
+    setStatus('Wybrano wszystkie kategorie.', 'info');
+  });
+
+  elements.drawTruthButton?.addEventListener('click', () => drawCard('truth'));
+  elements.drawDareButton?.addEventListener('click', () => drawCard('dare'));
+
+  elements.resultSuccess?.addEventListener('click', () => markResult(true));
+  elements.resultFail?.addEventListener('click', () => markResult(false));
+
+  elements.shareButton?.addEventListener('click', handleShare);
+  elements.singleDeviceButton?.addEventListener('click', () => {
+    state.singleDevice = true;
+    elements.shareBar?.setAttribute('hidden', '');
+    setStatus('Tryb jednego urządzenia włączony. Zarządzaj turami na tym ekranie.', 'info');
+  });
+}
+
+function drawCard(type) {
+  if (state.selectedCategories.size === 0) {
+    setStatus('Najpierw wybierz przynajmniej jedną kategorię.', 'error');
+    return;
+  }
+  const selected = TRUTH_DARE_DECK.filter((cat) => state.selectedCategories.has(cat.id));
+  if (!selected.length) {
+    setStatus('Brak pasujących kategorii.', 'error');
+    return;
+  }
+  const category = selected[Math.floor(Math.random() * selected.length)];
+  const pool = type === 'truth' ? category.truths : category.dares;
+  if (!pool || pool.length === 0) {
+    setStatus('Wybrana kategoria nie ma treści do wylosowania.', 'error');
+    return;
+  }
+
+  const seenKeyPrefix = `${category.id}:${type}:`;
+  if (state.history.size >= TRUTH_DARE_DECK.length * 100) {
+    state.history.clear();
+  }
+
+  let pick = null;
+  let attempts = 0;
+  while (attempts < 50) {
+    const index = Math.floor(Math.random() * pool.length);
+    const key = `${seenKeyPrefix}${index}`;
+    attempts += 1;
+    if (!state.history.has(key) || state.history.size > pool.length * selected.length * 0.8) {
+      state.history.add(key);
+      pick = pool[index];
+      break;
+    }
+  }
+
+  if (!pick) {
+    pick = pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  state.currentCard = {
+    type,
+    categoryId: category.id,
+    categoryName: category.name,
+    text: pick,
+  };
+  updateCurrentCard();
+  setStatus(`Wylosowano ${type === 'truth' ? 'prawdę' : 'wyzwanie'} z kategorii ${category.name}.`, 'info');
+}
+
+function updateCurrentCard() {
+  if (!state.currentCard) return;
+  const { type, categoryName, text } = state.currentCard;
+  if (type === 'truth') {
+    if (elements.truthCategory) elements.truthCategory.textContent = categoryName;
+    if (elements.truthText) elements.truthText.textContent = text;
+  } else {
+    if (elements.dareCategory) elements.dareCategory.textContent = categoryName;
+    if (elements.dareText) elements.dareText.textContent = text;
+  }
+  elements.resultSuccess?.removeAttribute('disabled');
+  elements.resultFail?.removeAttribute('disabled');
+  if (elements.lastPickLabel) {
+    elements.lastPickLabel.textContent = `${state.playerName || 'Gracz'} gra: ${type === 'truth' ? 'Prawda' : 'Wyzwanie'}.`;
+  }
+}
+
+function markResult(success) {
+  if (!state.currentCard) {
+    setStatus('Wylosuj pytanie lub wyzwanie, zanim ocenisz wynik.', 'error');
+    return;
+  }
+  const entry = {
+    ...state.currentCard,
+    player: state.playerName || 'Gracz',
+    outcome: success ? 'Wykonał' : 'Nie wykonał',
+    timestamp: new Date(),
+  };
+  state.reactions.unshift(entry);
+  if (state.reactions.length > 12) {
+    state.reactions.pop();
+  }
+  renderReactions();
+  setStatus(`${entry.player} ${success ? 'wykonał/a' : 'nie wykonał/a'} zadania.`, success ? 'success' : 'muted');
+  state.currentCard = null;
+  if (elements.lastPickLabel) {
+    elements.lastPickLabel.textContent = 'Czekamy na wybór prawdy lub wyzwania.';
+  }
+  elements.resultSuccess?.setAttribute('disabled', '');
+  elements.resultFail?.setAttribute('disabled', '');
+}
+
+function renderReactions() {
+  if (!elements.reactionsList) return;
+  elements.reactionsList.innerHTML = '';
+  const fragment = document.createDocumentFragment();
+  state.reactions.forEach((item) => {
+    const li = document.createElement('li');
+    li.className = 'reactions__item';
+
+    const meta = document.createElement('div');
+    meta.className = 'reactions__meta';
+
+    const author = document.createElement('span');
+    author.className = 'reactions__author';
+    author.textContent = item.player;
+
+    const label = document.createElement('span');
+    label.className = 'reactions__label';
+    label.textContent = `${item.outcome} • ${item.type === 'truth' ? 'Prawda' : 'Wyzwanie'}`;
+
+    meta.append(author, label);
+
+    const question = document.createElement('p');
+    question.className = 'reactions__question';
+    question.textContent = `${item.categoryName}: ${item.text}`;
+
+    li.append(meta, question);
+    fragment.append(li);
+  });
+  elements.reactionsList.append(fragment);
+}
+
+async function handleShare() {
+  if (!elements.shareFeedback) return;
+  const url = window.location.href;
+  const title = 'Prawda czy Wyzwanie – pokój gry';
+  const text = 'Dołącz do mojego pokoju i zagrajmy w Prawda czy Wyzwanie!';
+  try {
+    if (navigator.share) {
+      await navigator.share({ title, text, url });
+      elements.shareFeedback.textContent = 'Link wysłany przez system udostępniania.';
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(url);
+      elements.shareFeedback.textContent = 'Skopiowano link do schowka.';
+    } else {
+      elements.shareFeedback.textContent = 'Skopiuj link z paska adresu, aby zaprosić znajomych.';
+    }
+    elements.shareFeedback.hidden = false;
+  } catch (error) {
+    console.error(error);
+    elements.shareFeedback.textContent = 'Nie udało się udostępnić. Spróbuj ponownie.';
+    elements.shareFeedback.hidden = false;
+  }
+}
+
+function setStatus(message, tone = 'info') {
+  if (!elements.statusMessage) return;
+  elements.statusMessage.textContent = message;
+  elements.statusMessage.dataset.tone = tone;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initThemeToggle(elements.themeToggle);
+  if (!ensureAccess()) return;
+  renderCategories();
+  bindEvents();
+  setStatus('Najpierw zaznacz kategorie, potem losuj prawdę lub wyzwanie.', 'muted');
+});
