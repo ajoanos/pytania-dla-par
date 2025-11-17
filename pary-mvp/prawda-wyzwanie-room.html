@@ -21,7 +21,7 @@
         </a>
         <div class="hero__text">
           <h1>Prawda czy Wyzwanie</h1>
-          <p>Dodaj swoje imię, wybierz kategorie i graj w duchu 5·7·10 sekund.</p>
+          <p>Dodaj swoje imię i wybierz kategorie.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
@@ -68,7 +68,7 @@
       <header class="card__header">
         <p class="card__eyebrow">Krok 2 z 2</p>
         <h2>Wybierz kategorie i losuj</h2>
-        <p class="card__hint">Karty prawdy i wyzwania losują się z zaznaczonych kategorii. Nic nie jest zaznaczone domyślnie.</p>
+        <p class="card__hint">Karty prawdy i wyzwania losują się z zaznaczonych kategorii.</p>
       </header>
 
       <article class="panel panel--categories">
@@ -87,24 +87,24 @@
           <h3>Wasze karty</h3>
           <p class="panel__hint" id="last-pick-label">Czekamy na wybór prawdy lub wyzwania.</p>
         </div>
-        <div class="card-grid card-grid--double">
-          <div class="question-card">
-            <p class="question-card__category" id="truth-category">Prawda</p>
-            <p class="question-card__text" id="truth-text">Wybierz kategorie i kliknij „Losuj prawdę”.</p>
-            <button type="button" class="btn btn--primary btn--wide" id="draw-truth">🎲 Losuj prawdę</button>
-          </div>
-          <div class="question-card question-card--action">
-            <p class="question-card__category" id="dare-category">Wyzwanie</p>
-            <p class="question-card__text" id="dare-text">Wybierz kategorie i kliknij „Losuj wyzwanie”.</p>
-            <button type="button" class="btn btn--primary btn--wide" id="draw-dare">🔥 Losuj wyzwanie</button>
-          </div>
+        <div class="reveal-grid">
+          <button class="question-card question-card--reveal" type="button" id="truth-card">
+            <span class="question-card__label">Prawda</span>
+            <span class="question-card__text" id="truth-text">Kliknij, aby odsłonić prawdę.</span>
+            <span class="question-card__overlay">Odkryj kartę</span>
+          </button>
+          <button class="question-card question-card--reveal question-card--action" type="button" id="dare-card">
+            <span class="question-card__label">Wyzwanie</span>
+            <span class="question-card__text" id="dare-text">Kliknij, aby odsłonić wyzwanie.</span>
+            <span class="question-card__overlay">Odkryj kartę</span>
+          </button>
         </div>
       </article>
 
       <article class="panel panel--results">
         <div class="panel__info panel__info--center">
           <p class="panel__info-title">Przeciwny gracz ocenia</p>
-          <p class="panel__hint">Wybierz, czy zadanie zostało wykonane – jak w 5·7·10 sekund.</p>
+          <p class="panel__hint">Wybierz, czy zadanie zostało wykonane.</p>
         </div>
         <div class="result-buttons">
           <button type="button" class="result-button result-button--success" id="mark-success" disabled>
@@ -121,7 +121,6 @@
       <article class="panel card--reactions">
         <div class="panel__header">
           <h3>Co wybrali?</h3>
-          <p class="panel__hint">Historia reakcji działa jak w „Pytania dla par”. Zapisujemy prawdy, wyzwania i wyniki.</p>
         </div>
         <ul class="reactions" id="reactions-list"></ul>
       </article>

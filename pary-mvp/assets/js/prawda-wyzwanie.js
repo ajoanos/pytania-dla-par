@@ -12,12 +12,10 @@ const elements = {
   gameCard: document.getElementById('game-card'),
   categoryList: document.getElementById('category-list'),
   selectAllButton: document.getElementById('select-all'),
-  truthCategory: document.getElementById('truth-category'),
+  truthCard: document.getElementById('truth-card'),
   truthText: document.getElementById('truth-text'),
-  dareCategory: document.getElementById('dare-category'),
+  dareCard: document.getElementById('dare-card'),
   dareText: document.getElementById('dare-text'),
-  drawTruthButton: document.getElementById('draw-truth'),
-  drawDareButton: document.getElementById('draw-dare'),
   statusMessage: document.getElementById('status-message'),
   resultSuccess: document.getElementById('mark-success'),
   resultFail: document.getElementById('mark-fail'),
@@ -36,6 +34,10 @@ const state = {
   currentCard: null,
   reactions: [],
   singleDevice: false,
+  revealed: {
+    truth: false,
+    dare: false,
+  },
 };
 
 const CATEGORY_DEFAULT_COLOR = '#f8e8ff';
@@ -93,7 +95,7 @@ function bindEvents() {
     state.playerName = name;
     elements.introCard?.setAttribute('hidden', '');
     elements.gameCard?.removeAttribute('hidden');
-    setStatus(`Hej, ${state.playerName}! Wybierz kategorie i losuj prawdę lub wyzwanie.`, 'info');
+    setStatus(`Hej, ${state.playerName}! Wybierz kategorie i kliknij prawdę lub wyzwanie, aby odsłonić kartę.`, 'info');
   });
 
   elements.categoryList?.addEventListener('change', (event) => {
@@ -116,8 +118,8 @@ function bindEvents() {
     setStatus('Wybrano wszystkie kategorie.', 'info');
   });
 
-  elements.drawTruthButton?.addEventListener('click', () => drawCard('truth'));
-  elements.drawDareButton?.addEventListener('click', () => drawCard('dare'));
+  elements.truthCard?.addEventListener('click', () => handleCardClick('truth'));
+  elements.dareCard?.addEventListener('click', () => handleCardClick('dare'));
 
   elements.resultSuccess?.addEventListener('click', () => markResult(true));
   elements.resultFail?.addEventListener('click', () => markResult(false));
@@ -127,24 +129,32 @@ function bindEvents() {
     state.singleDevice = true;
     elements.shareBar?.setAttribute('hidden', '');
     setStatus('Tryb jednego urządzenia włączony. Zarządzaj turami na tym ekranie.', 'info');
+    if (elements.lastPickLabel) {
+      if (state.currentCard) {
+        const label = state.currentCard.type === 'truth' ? 'Prawda' : 'Wyzwanie';
+        elements.lastPickLabel.textContent = `Wybrano: ${label}.`;
+      } else {
+        elements.lastPickLabel.textContent = 'Czekamy na wybór prawdy lub wyzwania.';
+      }
+    }
   });
 }
 
 function drawCard(type) {
   if (state.selectedCategories.size === 0) {
     setStatus('Najpierw wybierz przynajmniej jedną kategorię.', 'error');
-    return;
+    return false;
   }
   const selected = TRUTH_DARE_DECK.filter((cat) => state.selectedCategories.has(cat.id));
   if (!selected.length) {
     setStatus('Brak pasujących kategorii.', 'error');
-    return;
+    return false;
   }
   const category = selected[Math.floor(Math.random() * selected.length)];
   const pool = type === 'truth' ? category.truths : category.dares;
   if (!pool || pool.length === 0) {
     setStatus('Wybrana kategoria nie ma treści do wylosowania.', 'error');
-    return;
+    return false;
   }
 
   const seenKeyPrefix = `${category.id}:${type}:`;
@@ -175,25 +185,42 @@ function drawCard(type) {
     categoryName: category.name,
     text: pick,
   };
+  state.revealed[type] = false;
+  setCardReveal(type, false);
   updateCurrentCard();
-  setStatus(`Wylosowano ${type === 'truth' ? 'prawdę' : 'wyzwanie'} z kategorii ${category.name}.`, 'info');
+  setStatus(`Wylosowano ${type === 'truth' ? 'prawdę' : 'wyzwanie'}.`, 'info');
+  return true;
 }
 
 function updateCurrentCard() {
   if (!state.currentCard) return;
-  const { type, categoryName, text } = state.currentCard;
+  const { type, text } = state.currentCard;
   if (type === 'truth') {
-    if (elements.truthCategory) elements.truthCategory.textContent = categoryName;
     if (elements.truthText) elements.truthText.textContent = text;
   } else {
-    if (elements.dareCategory) elements.dareCategory.textContent = categoryName;
     if (elements.dareText) elements.dareText.textContent = text;
   }
   elements.resultSuccess?.removeAttribute('disabled');
   elements.resultFail?.removeAttribute('disabled');
   if (elements.lastPickLabel) {
-    elements.lastPickLabel.textContent = `${state.playerName || 'Gracz'} gra: ${type === 'truth' ? 'Prawda' : 'Wyzwanie'}.`;
+    const label = type === 'truth' ? 'Prawda' : 'Wyzwanie';
+    elements.lastPickLabel.textContent = state.singleDevice
+      ? `Wybrano: ${label}.`
+      : `${state.playerName || 'Gracz'} gra: ${label}.`;
   }
+}
+
+function setCardReveal(type, revealed) {
+  const card = type === 'truth' ? elements.truthCard : elements.dareCard;
+  if (!card) return;
+  state.revealed[type] = revealed;
+  card.classList.toggle('question-card--revealed', revealed);
+}
+
+function handleCardClick(type) {
+  const drawn = drawCard(type);
+  if (!drawn) return;
+  requestAnimationFrame(() => setCardReveal(type, true));
 }
 
 function markResult(success) {
@@ -244,7 +271,7 @@ function renderReactions() {
 
     const question = document.createElement('p');
     question.className = 'reactions__question';
-    question.textContent = `${item.categoryName}: ${item.text}`;
+    question.textContent = item.text;
 
     li.append(meta, question);
     fragment.append(li);
@@ -286,5 +313,5 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!ensureAccess()) return;
   renderCategories();
   bindEvents();
-  setStatus('Najpierw zaznacz kategorie, potem losuj prawdę lub wyzwanie.', 'muted');
+  setStatus('Najpierw zaznacz kategorie, potem kliknij prawdę lub wyzwanie, aby odsłonić kartę.', 'muted');
 });
