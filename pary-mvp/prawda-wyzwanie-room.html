@@ -100,18 +100,18 @@
       </article>
 
       <article class="panel panel--results">
-        <div class="panel__info panel__info--center">
-          <p class="panel__info-title">Przeciwny gracz ocenia</p>
-          <p class="panel__hint">Wybierz, czy zadanie zostało wykonane.</p>
-        </div>
-        <div class="result-buttons">
-          <button type="button" class="result-button result-button--success" id="mark-success" disabled>
-            <span class="result-button__icon" aria-hidden="true">👍</span>
-            <span>Wykonał</span>
+        <div class="question__reactions">
+          <button type="button" class="btn btn--thumb" id="mark-success" aria-label="Zadanie wykonane" disabled>
+            👍
           </button>
-          <button type="button" class="result-button result-button--fail" id="mark-fail" disabled>
-            <span class="result-button__icon" aria-hidden="true">👎</span>
-            <span>Nie wykonał</span>
+          <button
+            type="button"
+            class="btn btn--thumb btn--thumb-down"
+            id="mark-fail"
+            aria-label="Zadanie niewykonane"
+            disabled
+          >
+            👎
           </button>
         </div>
       </article>
