@@ -4,35 +4,30 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Pytania dla par – Hasło dostępu</title>
-  <link rel="manifest" href="manifest.webmanifest">
+  <title>Jak dobrze mnie znasz – Stwórz pokój</title>
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet" />
   <script type="module" src="assets/js/app.js"></script>
 </head>
-<body class="page page--access" data-theme="light">
+<body class="page page--game" data-theme="light">
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
-          <img
-            class="hero__logo"
-            src="https://sklep.allemedia.pl/momenty/logo.png"
-            alt="Momenty"
-          />
+          <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
         </a>
         <div class="hero__text">
-          <h1>Pytania dla par</h1>
-          <p>Podaj hasło, aby uzyskać dostęp do gry i utworzyć pokój.</p>
+          <h1>Jak dobrze mnie znasz</h1>
+          <p>Stwórz pokój i zaproś partnera, aby rozpocząć grę.</p>
         </div>
         <details class="game-switcher">
           <summary class="game-switcher__toggle">Wybierz grę</summary>
           <div class="game-switcher__panel">
             <ul class="game-switcher__list">
-              <li><a class="game-switcher__link" href="pytania-dla-par.html" aria-current="page">Pytania dla par</a></li>
-              <li><a class="game-switcher__link" href="jak-dobrze-mnie-znasz.html">Jak dobrze mnie znasz</a></li>
+              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
               <li><a class="game-switcher__link" href="nigdy-przenigdy.html">Nigdy przenigdy</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
@@ -44,6 +39,8 @@
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
               <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder z pozycjami</a></li>
               <li><a class="game-switcher__link" href="5-7-10.html">5 • 7 • 10 sekund</a></li>
+              <li><a class="game-switcher__link" href="prawda-wyzwanie.html">Prawda czy Wyzwanie</a></li>
+              <li><a class="game-switcher__link" href="jak-dobrze-mnie-znasz.html" aria-current="page">Jak dobrze mnie znasz</a></li>
             </ul>
           </div>
         </details>
@@ -51,19 +48,32 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--password" id="password-card">
-      <h2>Podaj hasło dostępu</h2>
-      <form id="password-form" class="form form--inline" data-success="pytania-dla-par-room.html">
+    <section class="card card--game" id="game-card">
+      <header class="card__header">
+        <h2>Jak dobrze mnie znasz</h2>
+      </header>
+      <form
+        id="join-form"
+        class="form"
+        data-success-active="room.html?deck=jak-dobrze-mnie-znasz"
+        data-success-pending="jak-dobrze-mnie-znasz-waiting.html"
+        data-storage-key="pary.access.jdmz"
+        data-access-redirect="jak-dobrze-mnie-znasz.html"
+        data-require-room-key="true"
+        data-submit-mode="host"
+      >
+        <input type="hidden" id="room_key" name="room_key" autocomplete="off" />
+        <aside class="form__notice" data-role="room-ready" hidden>
+          <p>
+            Wasz pokój jest już gotowy. Wejdź do środka, aby zaprosić partnera linkiem lub kodem QR. Pokój wygaśnie po 6 godzinach.
+          </p>
+        </aside>
         <label class="form__field">
-          <span>Hasło</span>
-          <input type="password" id="access-password" name="access_password" placeholder="••••" autocomplete="current-password" required />
+          <span>Twoje imię</span>
+          <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
         </label>
-        <div class="form__actions">
-          <button type="submit" class="btn btn--primary">Potwierdź</button>
-          <button type="button" class="btn btn--ghost" id="password-cancel" data-back="index.html">Wróć</button>
-        </div>
+        <button type="submit" class="btn btn--primary btn--enter-room">Wejdź do pokoju</button>
       </form>
-      <p class="form__hint" id="password-error" hidden>Niepoprawne hasło. Spróbuj ponownie.</p>
     </section>
 
     <footer class="footer">

@@ -15,6 +15,7 @@ const ROOM_LIFETIME_SECONDS = 6 * 60 * 60;
 const QUESTION_DECKS = [
     'default' => __DIR__ . '/../data/questions.json',
     'never' => __DIR__ . '/../data/nigdy-przenigdy.json',
+    'jak-dobrze-mnie-znasz' => __DIR__ . '/../data/jak-dobrze-mnie-znasz.json',
 ];
 
 if (!function_exists('array_is_list')) {
