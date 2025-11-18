@@ -26,6 +26,7 @@ const questionFilter = document.getElementById('question-filter');
 const categoryCard = document.getElementById('category-card');
 const reactionButtons = document.getElementById('reaction-buttons');
 const reactionsList = document.getElementById('reactions-list');
+const participantsCard = document.querySelector('.card--participants');
 const categorySelect = document.getElementById('category-select');
 const categorySelectWrapper = document.getElementById('category-select-wrapper');
 const categoryChipList = document.getElementById('category-chip-list');
@@ -41,6 +42,9 @@ const catalogCategoryTitle = document.getElementById('catalog-category-title');
 const catalogList = document.getElementById('catalog-list');
 const catalogEmpty = document.getElementById('catalog-empty');
 const roomContent = document.getElementById('room-content');
+const questionSection = document.querySelector('.card--question');
+const chatCard = document.getElementById('chat-card');
+const reactionsCard = document.querySelector('.card--reactions');
 const hostRequestsOverlay = document.getElementById('host-requests-overlay');
 const hostRequestsPanel = document.getElementById('host-requests');
 const hostRequestsList = document.getElementById('host-requests-list');
@@ -69,6 +73,7 @@ const chatInput = document.getElementById('chat-input');
 const chatSendButton = chatForm?.querySelector('.chat__send');
 const emojiToggle = document.getElementById('chat-emoji-toggle');
 const emojiPanel = document.getElementById('chat-emoji-panel');
+const defaultModuleOrder = roomContent ? Array.from(roomContent.children) : [];
 
 const defaultTitle = document.title;
 let selfInfo = null;
@@ -223,6 +228,34 @@ function updateNextQuestionButtonLabel(hasQuestion) {
   nextQuestionButton.textContent = activeVariant.questionButtonLabel || 'Losuj pytanie';
 }
 
+function resetModuleOrder() {
+  if (!roomContent || defaultModuleOrder.length === 0) {
+    return;
+  }
+  defaultModuleOrder.forEach((section) => roomContent.append(section));
+}
+
+function reorderModulesForCurrentVariant() {
+  if (!roomContent) {
+    return;
+  }
+  if (activeVariant.id !== 'jak-dobrze-mnie-znasz') {
+    resetModuleOrder();
+    return;
+  }
+
+  const orderedSections = [
+    participantsCard,
+    categoryCard,
+    questionSection,
+    chatCard,
+    catalogContainer,
+    reactionsCard,
+  ].filter(Boolean);
+
+  orderedSections.forEach((section) => roomContent.append(section));
+}
+
 async function applyVariant(deckId) {
   const normalizedDeck = (deckId || '').toLowerCase();
   const nextDeck = GAME_VARIANTS[normalizedDeck] ? normalizedDeck : 'default';
@@ -258,6 +291,7 @@ async function applyVariant(deckId) {
     updateQuestionEmptyState(false);
   }
   syncQuestionIdVisibility(currentQuestion?.id || '');
+  reorderModulesForCurrentVariant();
 }
 
 function getSelectedCategoryFilter() {
