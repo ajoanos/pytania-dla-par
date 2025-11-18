@@ -26,6 +26,10 @@ const questionFilter = document.getElementById('question-filter');
 const reactionButtons = document.getElementById('reaction-buttons');
 const reactionsList = document.getElementById('reactions-list');
 const categorySelect = document.getElementById('category-select');
+const categorySelectWrapper = document.getElementById('category-select-wrapper');
+const categoryChipList = document.getElementById('category-chip-list');
+const categoryChipActions = document.getElementById('category-chip-actions');
+const categoryClearButton = document.getElementById('category-clear');
 const catalogContainer = document.getElementById('category-browser');
 const catalogCategories = document.getElementById('catalog-categories');
 const catalogQuestions = document.getElementById('catalog-questions');
@@ -86,6 +90,7 @@ const EMAIL_ENDPOINT = 'api/send_positions_email.php';
 const SHARE_EMAIL_SUBJECTS = {
   default: 'Pytania dla par – dołącz do mnie',
   never: 'Nigdy przenigdy – dołącz do mnie',
+  'jak-dobrze-mnie-znasz': 'Jak dobrze mnie znasz – dołącz do mnie',
 };
 
 const GAME_VARIANTS = {
@@ -99,6 +104,7 @@ const GAME_VARIANTS = {
     questionsPath: 'data/questions.json',
     showCatalog: true,
     enableCategoryFilter: true,
+    categoryFilterLayout: 'select',
     reactionButtons: [
       { action: 'ok', label: 'Odpowiem Ci na nie', className: 'btn btn--ok' },
       { action: 'skip', label: 'Nie chcę tego pytania', className: 'btn btn--skip' },
@@ -128,6 +134,7 @@ const GAME_VARIANTS = {
     questionsPath: 'data/nigdy-przenigdy.json',
     showCatalog: false,
     enableCategoryFilter: true,
+    categoryFilterLayout: 'select',
     reactionButtons: [
       { action: 'agree', label: '👍', className: 'btn btn--thumb', ariaLabel: 'Zgadzam się z odpowiedzią' },
       { action: 'disagree', label: '👎', className: 'btn btn--thumb btn--thumb-down', ariaLabel: 'Nie zgadzam się z odpowiedzią' },
@@ -141,6 +148,36 @@ const GAME_VARIANTS = {
       disagree: 'question--reaction-disagree',
     },
     pageTitle: 'Nigdy przenigdy – Pokój',
+    questionAnimation: 'blur',
+    showQuestionIdentifier: false,
+  },
+  'jak-dobrze-mnie-znasz': {
+    id: 'jak-dobrze-mnie-znasz',
+    title: 'Jak dobrze mnie znasz',
+    subtitle: 'Losuj pytania i sprawdź, jak dobrze znacie się na co dzień.',
+    cardTitle: 'Jak dobrze mnie znasz',
+    questionPrompt: 'Wybierz kategorię i wylosuj pytanie, aby sprawdzić swoją wiedzę.',
+    questionButtonLabel: 'Losuj pytanie',
+    questionsPath: 'data/jak-dobrze-mnie-znasz.json',
+    showCatalog: true,
+    enableCategoryFilter: true,
+    categoryFilterLayout: 'chips',
+    reactionButtons: [
+      { action: 'ok', label: 'Odpowiem Ci na nie', className: 'btn btn--ok' },
+      { action: 'skip', label: 'Nie chcę tego pytania', className: 'btn btn--skip' },
+      { action: 'fav', label: 'Bardzo lubię to pytanie', className: 'btn btn--fav' },
+    ],
+    reactionLabels: {
+      ok: 'Odpowiem Ci na nie',
+      skip: 'Nie chcę tego pytania',
+      fav: 'Bardzo lubię to pytanie',
+    },
+    highlightClasses: {
+      ok: 'question--reaction-ok',
+      skip: 'question--reaction-skip',
+      fav: 'question--reaction-fav',
+    },
+    pageTitle: 'Jak dobrze mnie znasz – Pokój',
     questionAnimation: 'blur',
     showQuestionIdentifier: false,
   },
@@ -164,6 +201,7 @@ let activeCategory = '';
 let loadingCategories = false;
 let questionAnimationQueue = Promise.resolve();
 let hasShownBlurQuestion = false;
+let selectedCategoryFilter = '';
 
 async function applyVariant(deckId) {
   const normalizedDeck = (deckId || '').toLowerCase();
@@ -173,6 +211,7 @@ async function applyVariant(deckId) {
   document.body.dataset.deck = activeVariant.id;
   document.title = activeVariant.pageTitle || defaultTitle;
   resetQuestionAnimationState();
+  selectedCategoryFilter = '';
   if (heroTitle) {
     heroTitle.textContent = activeVariant.title;
   }
@@ -200,6 +239,13 @@ async function applyVariant(deckId) {
     updateQuestionEmptyState(false);
   }
   syncQuestionIdVisibility(currentQuestion?.id || '');
+}
+
+function getSelectedCategoryFilter() {
+  if (activeVariant.categoryFilterLayout === 'chips') {
+    return selectedCategoryFilter || '';
+  }
+  return categorySelect?.value || '';
 }
 
 function updateShareLink() {
@@ -239,7 +285,7 @@ nextQuestionButton?.addEventListener('click', async () => {
     nextQuestionButton.disabled = true;
     const payload = await postJson('api/next_question.php', {
       room_key: roomKey,
-      category: categorySelect?.value || undefined,
+      category: getSelectedCategoryFilter() || undefined,
     });
     if (!payload.ok) {
       throw new Error(payload.error || 'Nie udało się wylosować pytania.');
@@ -251,6 +297,16 @@ nextQuestionButton?.addEventListener('click', async () => {
   } finally {
     nextQuestionButton.disabled = false;
   }
+});
+
+categoryChipList?.addEventListener('change', (event) => {
+  const input = event.target.closest('input[type="radio"]');
+  if (!input) return;
+  selectedCategoryFilter = input.checked ? input.value : '';
+});
+
+categoryClearButton?.addEventListener('click', () => {
+  clearCategorySelection();
 });
 
 catalogCategories?.addEventListener('click', (event) => {
@@ -1596,6 +1652,15 @@ const CATEGORY_LABELS = {
   NPN_ZMYSLOWE: 'Zmysłowe momenty 18+',
   NPN_ODWAZNE: 'Bardziej odważne 18+',
   NPN_EKSTRAWAGANCKIE: 'Ekstrawaganckie i zabawne 18+',
+  PREFERENCJE_CODZIENNE: 'Preferencje codzienne',
+  ULUBIONE_RZECZY: 'Ulubione rzeczy',
+  PRZYZWYCZAJENIA_I_NAWYKI: 'Przyzwyczajenia i nawyki',
+  WSPOMNIENIA_I_DOSWIADCZENIA: 'Wspomnienia i doświadczenia',
+  MARZENIA_I_PLANY: 'Marzenia i plany',
+  OPINIE_I_POGLEADY: 'Opinie i poglądy',
+  RELACJE_I_EMOCJE: 'Relacje i emocje',
+  DZIWNE_I_SMIESZNE: 'Dziwne i śmieszne',
+  PYTANIA_EROTYCZNE_INTYMNE_18_PLUS: 'Pytania erotyczne/intymne 18+',
 };
 
 function isAdultCategory(category) {
@@ -1614,6 +1679,7 @@ async function ensureQuestionsLoaded(deckId) {
   if (questionsLoadedDeck === deckId && allQuestions.length) {
     const categories = getUniqueCategories(allQuestions);
     populateCategoryOptions(categories);
+    renderCategoryChips(categories);
     renderCategoryButtons(activeVariant.showCatalog ? categories : []);
     return;
   }
@@ -1632,12 +1698,14 @@ async function ensureQuestionsLoaded(deckId) {
     questionsLoadedDeck = deckId;
     const categories = getUniqueCategories(data);
     populateCategoryOptions(categories);
+    renderCategoryChips(categories);
     renderCategoryButtons(variant.showCatalog ? categories : []);
   } catch (error) {
     console.warn('Nie udało się pobrać kategorii', error);
     allQuestions = [];
     questionsLoadedDeck = deckId;
     populateCategoryOptions([]);
+    renderCategoryChips([]);
     renderCategoryButtons([]);
   } finally {
     loadingCategories = false;
@@ -1670,6 +1738,52 @@ function populateCategoryOptions(categories) {
     option.value = category;
     option.textContent = formatCategoryLabel(category);
     categorySelect.appendChild(option);
+  });
+}
+
+function renderCategoryChips(categories) {
+  if (!categoryChipList) {
+    return;
+  }
+  categoryChipList.innerHTML = '';
+  if (activeVariant.categoryFilterLayout !== 'chips') {
+    categoryChipList.hidden = true;
+    if (categoryChipActions) {
+      categoryChipActions.hidden = true;
+    }
+    return;
+  }
+  categories.forEach((category) => {
+    const label = document.createElement('label');
+    label.className = 'category-chip';
+
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'question-category';
+    input.value = category;
+    input.checked = category === selectedCategoryFilter;
+
+    const dot = document.createElement('span');
+    dot.className = 'category-chip__dot';
+    dot.setAttribute('aria-hidden', 'true');
+    dot.textContent = '•';
+
+    const text = document.createElement('span');
+    text.textContent = formatCategoryLabel(category);
+
+    label.append(input, dot, text);
+    categoryChipList.append(label);
+  });
+  categoryChipList.hidden = categories.length === 0;
+  if (categoryChipActions) {
+    categoryChipActions.hidden = categories.length === 0;
+  }
+}
+
+function clearCategorySelection() {
+  selectedCategoryFilter = '';
+  categoryChipList?.querySelectorAll('input[type="radio"]').forEach((input) => {
+    input.checked = false;
   });
 }
 
@@ -1719,7 +1833,26 @@ function updateQuestionFilterVisibility() {
   }
   const shouldShow = activeVariant.enableCategoryFilter !== false;
   questionFilter.hidden = !shouldShow;
-  if (!shouldShow && categorySelect) {
+  if (!shouldShow) {
+    if (categorySelect) {
+      categorySelect.value = '';
+    }
+    clearCategorySelection();
+    return;
+  }
+
+  const useChips = activeVariant.categoryFilterLayout === 'chips';
+  if (categorySelectWrapper) {
+    categorySelectWrapper.hidden = useChips;
+  }
+  if (categoryChipList) {
+    const hasChips = categoryChipList.childElementCount > 0;
+    categoryChipList.hidden = !useChips || !hasChips;
+    if (categoryChipActions) {
+      categoryChipActions.hidden = categoryChipList.hidden;
+    }
+  }
+  if (!useChips && categorySelect) {
     categorySelect.value = '';
   }
 }

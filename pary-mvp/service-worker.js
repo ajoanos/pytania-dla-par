@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pary-mvp-v20';
+const CACHE_NAME = 'pary-mvp-v21';
 const ASSETS = [
   '/pary-mvp/',
   '/pary-mvp/index.html',
@@ -15,6 +15,7 @@ const ASSETS = [
   '/pary-mvp/5-7-10.html',
   '/pary-mvp/5-7-10-room.html',
   '/pary-mvp/pytania-dla-par.html',
+  '/pary-mvp/jak-dobrze-mnie-znasz.html',
   '/pary-mvp/plan-wieczoru.html',
   '/pary-mvp/plan-wieczoru-room.html',
   '/pary-mvp/plan-wieczoru-play.html',
@@ -24,6 +25,8 @@ const ASSETS = [
   '/pary-mvp/nigdy-przenigdy.html',
   '/pary-mvp/nigdy-przenigdy-room.html',
   '/pary-mvp/nigdy-przenigdy-waiting.html',
+  '/pary-mvp/jak-dobrze-mnie-znasz-room.html',
+  '/pary-mvp/jak-dobrze-mnie-znasz-waiting.html',
   '/pary-mvp/admin-import.html',
   '/pary-mvp/assets/css/style.css',
   '/pary-mvp/assets/js/app.js',
@@ -39,6 +42,7 @@ const ASSETS = [
   '/pary-mvp/assets/js/sekundy.js',
   '/pary-mvp/data/questions.json',
   '/pary-mvp/data/nigdy-przenigdy.json',
+  '/pary-mvp/data/jak-dobrze-mnie-znasz.json',
   '/pary-mvp/assets/data/plan-wieczoru.json',
   '/pary-mvp/manifest.webmanifest',
 ];

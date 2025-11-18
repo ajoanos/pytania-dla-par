@@ -33,6 +33,7 @@
           <div class="game-switcher__panel">
             <ul class="game-switcher__list">
               <li><a class="game-switcher__link" href="pytania-dla-par.html" aria-current="page">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="jak-dobrze-mnie-znasz.html">Jak dobrze mnie znasz</a></li>
               <li><a class="game-switcher__link" href="nigdy-przenigdy.html">Nigdy przenigdy</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
@@ -73,12 +74,16 @@
         </article>
         <div class="question__reactions" id="reaction-buttons" hidden></div>
         <div class="question__filter" id="question-filter">
-          <label class="form__field">
+          <label class="form__field" id="category-select-wrapper">
             <span>Kategoria</span>
             <select id="category-select">
               <option value="">Dowolna</option>
             </select>
           </label>
+          <div class="category-list" id="category-chip-list" hidden></div>
+          <div class="category-actions" id="category-chip-actions" hidden>
+            <button type="button" class="btn btn--ghost" id="category-clear">Losuj dowolną</button>
+          </div>
         </div>
       </section>
 
