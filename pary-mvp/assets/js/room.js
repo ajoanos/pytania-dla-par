@@ -1796,6 +1796,18 @@ const CATEGORY_LABELS = {
   PYTANIA_EROTYCZNE_INTYMNE_18_PLUS: 'Pytania erotyczne/intymne 18+',
 };
 
+const CATEGORY_COLORS = {
+  PREFERENCJE_CODZIENNE: { color: '#ffe0e6', accent: '#ff6f91' },
+  ULUBIONE_RZECZY: { color: '#d2f3ff', accent: '#26c6da' },
+  PRZYZWYCZAJENIA_I_NAWYKI: { color: '#fff3d6', accent: '#f4a261' },
+  WSPOMNIENIA_I_DOSWIADCZENIA: { color: '#e7dcff', accent: '#7c6ff8' },
+  MARZENIA_I_PLANY: { color: '#e2f7da', accent: '#52b788' },
+  OPINIE_I_POGLEADY: { color: '#ffe3dd', accent: '#f28482' },
+  RELACJE_I_EMOCJE: { color: '#ffe2ed', accent: '#f3722c' },
+  DZIWNE_I_SMIESZNE: { color: '#fff9d9', accent: '#f6c344' },
+  PYTANIA_EROTYCZNE_INTYMNE_18_PLUS: { color: '#ffd6e0', accent: '#f26d6f' },
+};
+
 function isAdultCategory(category) {
   const label = CATEGORY_LABELS[category];
   return typeof label === 'string' && label.includes('18+');
@@ -1889,6 +1901,19 @@ function renderCategoryChips(categories) {
   categories.forEach((category) => {
     const label = document.createElement('label');
     label.className = 'category-chip';
+
+    if (activeVariant.id === 'jak-dobrze-mnie-znasz') {
+      const categoryStyle = CATEGORY_COLORS[category];
+      if (categoryStyle?.color) {
+        label.style.setProperty('--category-color', categoryStyle.color);
+      }
+      if (categoryStyle?.accent) {
+        label.style.setProperty('--category-accent', categoryStyle.accent);
+      }
+      if (categoryStyle?.shade) {
+        label.style.setProperty('--category-shade', categoryStyle.shade);
+      }
+    }
 
     const input = document.createElement('input');
     input.type = activeVariant.multiCategoryFilter ? 'checkbox' : 'radio';
