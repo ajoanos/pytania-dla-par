@@ -30,6 +30,9 @@ const categorySelectWrapper = document.getElementById('category-select-wrapper')
 const categoryChipList = document.getElementById('category-chip-list');
 const categoryChipActions = document.getElementById('category-chip-actions');
 const categoryClearButton = document.getElementById('category-clear');
+const categorySelectAllButton = document.getElementById('category-select-all');
+const categoryFilterHeader = document.getElementById('question-filter-header');
+const categoryFilterHint = document.getElementById('question-filter-hint');
 const catalogContainer = document.getElementById('category-browser');
 const catalogCategories = document.getElementById('catalog-categories');
 const catalogQuestions = document.getElementById('catalog-questions');
@@ -105,6 +108,7 @@ const GAME_VARIANTS = {
     showCatalog: true,
     enableCategoryFilter: true,
     categoryFilterLayout: 'select',
+    multiCategoryFilter: false,
     reactionButtons: [
       { action: 'ok', label: 'Odpowiem Ci na nie', className: 'btn btn--ok' },
       { action: 'skip', label: 'Nie chcę tego pytania', className: 'btn btn--skip' },
@@ -135,6 +139,7 @@ const GAME_VARIANTS = {
     showCatalog: false,
     enableCategoryFilter: true,
     categoryFilterLayout: 'select',
+    multiCategoryFilter: false,
     reactionButtons: [
       { action: 'agree', label: '👍', className: 'btn btn--thumb', ariaLabel: 'Zgadzam się z odpowiedzią' },
       { action: 'disagree', label: '👎', className: 'btn btn--thumb btn--thumb-down', ariaLabel: 'Nie zgadzam się z odpowiedzią' },
@@ -162,6 +167,7 @@ const GAME_VARIANTS = {
     showCatalog: true,
     enableCategoryFilter: true,
     categoryFilterLayout: 'chips',
+    multiCategoryFilter: true,
     reactionButtons: [
       { action: 'ok', label: 'Odpowiem Ci na nie', className: 'btn btn--ok' },
       { action: 'skip', label: 'Nie chcę tego pytania', className: 'btn btn--skip' },
@@ -202,6 +208,7 @@ let loadingCategories = false;
 let questionAnimationQueue = Promise.resolve();
 let hasShownBlurQuestion = false;
 let selectedCategoryFilter = '';
+let selectedCategorySet = new Set();
 
 async function applyVariant(deckId) {
   const normalizedDeck = (deckId || '').toLowerCase();
@@ -212,6 +219,7 @@ async function applyVariant(deckId) {
   document.title = activeVariant.pageTitle || defaultTitle;
   resetQuestionAnimationState();
   selectedCategoryFilter = '';
+  selectedCategorySet = new Set();
   if (heroTitle) {
     heroTitle.textContent = activeVariant.title;
   }
@@ -242,10 +250,28 @@ async function applyVariant(deckId) {
 }
 
 function getSelectedCategoryFilter() {
+  if (activeVariant.multiCategoryFilter) {
+    return '';
+  }
   if (activeVariant.categoryFilterLayout === 'chips') {
     return selectedCategoryFilter || '';
   }
   return categorySelect?.value || '';
+}
+
+function getCategoryFilterForRequest() {
+  if (!activeVariant.enableCategoryFilter) {
+    return '';
+  }
+  if (activeVariant.multiCategoryFilter) {
+    const choices = [...selectedCategorySet];
+    if (choices.length === 0) {
+      return '';
+    }
+    const index = Math.floor(Math.random() * choices.length);
+    return choices[index];
+  }
+  return getSelectedCategoryFilter();
 }
 
 function updateShareLink() {
@@ -285,7 +311,7 @@ nextQuestionButton?.addEventListener('click', async () => {
     nextQuestionButton.disabled = true;
     const payload = await postJson('api/next_question.php', {
       room_key: roomKey,
-      category: getSelectedCategoryFilter() || undefined,
+      category: getCategoryFilterForRequest() || undefined,
     });
     if (!payload.ok) {
       throw new Error(payload.error || 'Nie udało się wylosować pytania.');
@@ -300,9 +326,26 @@ nextQuestionButton?.addEventListener('click', async () => {
 });
 
 categoryChipList?.addEventListener('change', (event) => {
-  const input = event.target.closest('input[type="radio"]');
-  if (!input) return;
-  selectedCategoryFilter = input.checked ? input.value : '';
+  const input = event.target.closest('input[name="question-category"]');
+  if (!(input instanceof HTMLInputElement)) return;
+  if (activeVariant.multiCategoryFilter) {
+    if (input.checked) {
+      selectedCategorySet.add(input.value);
+    } else {
+      selectedCategorySet.delete(input.value);
+    }
+  } else {
+    selectedCategoryFilter = input.checked ? input.value : '';
+  }
+});
+
+categorySelectAllButton?.addEventListener('click', () => {
+  if (!activeVariant.multiCategoryFilter) return;
+  const checkboxes = categoryChipList?.querySelectorAll('input[type="checkbox"][name="question-category"]');
+  checkboxes?.forEach((box) => {
+    box.checked = true;
+    selectedCategorySet.add(box.value);
+  });
 });
 
 categoryClearButton?.addEventListener('click', () => {
@@ -1758,10 +1801,12 @@ function renderCategoryChips(categories) {
     label.className = 'category-chip';
 
     const input = document.createElement('input');
-    input.type = 'radio';
+    input.type = activeVariant.multiCategoryFilter ? 'checkbox' : 'radio';
     input.name = 'question-category';
     input.value = category;
-    input.checked = category === selectedCategoryFilter;
+    input.checked = activeVariant.multiCategoryFilter
+      ? selectedCategorySet.has(category)
+      : category === selectedCategoryFilter;
 
     const dot = document.createElement('span');
     dot.className = 'category-chip__dot';
@@ -1782,7 +1827,8 @@ function renderCategoryChips(categories) {
 
 function clearCategorySelection() {
   selectedCategoryFilter = '';
-  categoryChipList?.querySelectorAll('input[type="radio"]').forEach((input) => {
+  selectedCategorySet = new Set();
+  categoryChipList?.querySelectorAll('input[name="question-category"]').forEach((input) => {
     input.checked = false;
   });
 }
@@ -1845,12 +1891,24 @@ function updateQuestionFilterVisibility() {
   if (categorySelectWrapper) {
     categorySelectWrapper.hidden = useChips;
   }
+  if (categoryFilterHeader) {
+    categoryFilterHeader.hidden = !useChips;
+  }
+  if (categoryFilterHint) {
+    categoryFilterHint.hidden = !useChips;
+  }
   if (categoryChipList) {
     const hasChips = categoryChipList.childElementCount > 0;
     categoryChipList.hidden = !useChips || !hasChips;
     if (categoryChipActions) {
       categoryChipActions.hidden = categoryChipList.hidden;
     }
+  }
+  if (categoryClearButton) {
+    categoryClearButton.hidden = activeVariant.multiCategoryFilter;
+  }
+  if (categorySelectAllButton) {
+    categorySelectAllButton.hidden = !activeVariant.multiCategoryFilter;
   }
   if (!useChips && categorySelect) {
     categorySelect.value = '';

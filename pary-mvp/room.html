@@ -59,6 +59,25 @@
       </section>
 
       <section class="card card--question">
+        <div class="question__filter" id="question-filter">
+          <div class="panel__header" id="question-filter-header">
+            <h3>Kategorie pytań</h3>
+            <p class="panel__hint" id="question-filter-hint">
+              Wybierz jedną lub kilka kategorii, aby losować pytania, które najbardziej Was interesują.
+            </p>
+          </div>
+          <label class="form__field" id="category-select-wrapper">
+            <span>Kategoria</span>
+            <select id="category-select">
+              <option value="">Dowolna</option>
+            </select>
+          </label>
+          <div class="category-list" id="category-chip-list" hidden></div>
+          <div class="category-actions" id="category-chip-actions" hidden>
+            <button type="button" class="btn btn--ghost" id="category-select-all">Wybierz wszystkie</button>
+            <button type="button" class="btn btn--ghost" id="category-clear">Losuj dowolną</button>
+          </div>
+        </div>
         <div id="question-empty" class="question__empty">
           <p id="question-empty-text" class="question__empty-text">Wylosuj pytanie, aby rozpocząć rozmowę.</p>
           <button type="button" class="btn btn--primary btn--question" id="next-question">Losuj pytanie</button>
@@ -73,18 +92,6 @@
           </div>
         </article>
         <div class="question__reactions" id="reaction-buttons" hidden></div>
-        <div class="question__filter" id="question-filter">
-          <label class="form__field" id="category-select-wrapper">
-            <span>Kategoria</span>
-            <select id="category-select">
-              <option value="">Dowolna</option>
-            </select>
-          </label>
-          <div class="category-list" id="category-chip-list" hidden></div>
-          <div class="category-actions" id="category-chip-actions" hidden>
-            <button type="button" class="btn btn--ghost" id="category-clear">Losuj dowolną</button>
-          </div>
-        </div>
       </section>
 
       <section class="card card--chat" id="chat-card">
