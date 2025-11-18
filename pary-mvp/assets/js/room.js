@@ -23,6 +23,7 @@ const questionText = document.getElementById('question-text');
 const questionContent = document.getElementById('question-content');
 const nextQuestionButton = document.getElementById('next-question');
 const questionFilter = document.getElementById('question-filter');
+const categoryCard = document.getElementById('category-card');
 const reactionButtons = document.getElementById('reaction-buttons');
 const reactionsList = document.getElementById('reactions-list');
 const categorySelect = document.getElementById('category-select');
@@ -162,27 +163,17 @@ const GAME_VARIANTS = {
     subtitle: 'Losuj pytania i sprawdź, jak dobrze znacie się na co dzień.',
     cardTitle: 'Jak dobrze mnie znasz',
     questionPrompt: 'Wybierz kategorię i wylosuj pytanie, aby sprawdzić swoją wiedzę.',
+    emptyCategoryPrompt: 'Wybierz przynajmniej jedną kategorię, aby wylosować pytanie.',
     questionButtonLabel: 'Losuj pytanie',
+    questionButtonLabelNext: 'Losuj kolejne pytanie',
     questionsPath: 'data/jak-dobrze-mnie-znasz.json',
     showCatalog: true,
     enableCategoryFilter: true,
     categoryFilterLayout: 'chips',
     multiCategoryFilter: true,
-    reactionButtons: [
-      { action: 'ok', label: 'Odpowiem Ci na nie', className: 'btn btn--ok' },
-      { action: 'skip', label: 'Nie chcę tego pytania', className: 'btn btn--skip' },
-      { action: 'fav', label: 'Bardzo lubię to pytanie', className: 'btn btn--fav' },
-    ],
-    reactionLabels: {
-      ok: 'Odpowiem Ci na nie',
-      skip: 'Nie chcę tego pytania',
-      fav: 'Bardzo lubię to pytanie',
-    },
-    highlightClasses: {
-      ok: 'question--reaction-ok',
-      skip: 'question--reaction-skip',
-      fav: 'question--reaction-fav',
-    },
+    reactionButtons: [],
+    reactionLabels: {},
+    highlightClasses: {},
     pageTitle: 'Jak dobrze mnie znasz – Pokój',
     questionAnimation: 'blur',
     showQuestionIdentifier: false,
@@ -210,6 +201,28 @@ let hasShownBlurQuestion = false;
 let selectedCategoryFilter = '';
 let selectedCategorySet = new Set();
 
+function shouldRequireCategorySelection() {
+  return activeVariant.id === 'jak-dobrze-mnie-znasz' && activeVariant.multiCategoryFilter;
+}
+
+function getEmptyStatePrompt() {
+  if (shouldRequireCategorySelection() && selectedCategorySet.size === 0) {
+    return activeVariant.emptyCategoryPrompt || activeVariant.questionPrompt;
+  }
+  return activeVariant.questionPrompt;
+}
+
+function updateNextQuestionButtonLabel(hasQuestion) {
+  if (!nextQuestionButton) {
+    return;
+  }
+  if (hasQuestion && activeVariant.questionButtonLabelNext) {
+    nextQuestionButton.textContent = activeVariant.questionButtonLabelNext;
+    return;
+  }
+  nextQuestionButton.textContent = activeVariant.questionButtonLabel || 'Losuj pytanie';
+}
+
 async function applyVariant(deckId) {
   const normalizedDeck = (deckId || '').toLowerCase();
   const nextDeck = GAME_VARIANTS[normalizedDeck] ? normalizedDeck : 'default';
@@ -230,11 +243,9 @@ async function applyVariant(deckId) {
     gameCardTitle.textContent = activeVariant.cardTitle;
   }
   if (questionEmptyText && !currentQuestion) {
-    questionEmptyText.textContent = activeVariant.questionPrompt;
+    questionEmptyText.textContent = getEmptyStatePrompt();
   }
-  if (nextQuestionButton) {
-    nextQuestionButton.textContent = activeVariant.questionButtonLabel;
-  }
+  updateNextQuestionButtonLabel(Boolean(currentQuestion));
   shareEmailSubject = SHARE_EMAIL_SUBJECTS[activeVariant.id] || SHARE_EMAIL_SUBJECTS.default;
   renderReactionButtonsUI();
   await ensureQuestionsLoaded(activeVariant.id);
@@ -308,6 +319,11 @@ nextQuestionButton?.addEventListener('click', async () => {
       alert('Musisz poczekać na akceptację gospodarza.');
       return;
     }
+    if (shouldRequireCategorySelection() && selectedCategorySet.size === 0) {
+      updateQuestionEmptyState(Boolean(currentQuestion));
+      nextQuestionButton.disabled = false;
+      return;
+    }
     nextQuestionButton.disabled = true;
     const payload = await postJson('api/next_question.php', {
       room_key: roomKey,
@@ -337,6 +353,7 @@ categoryChipList?.addEventListener('change', (event) => {
   } else {
     selectedCategoryFilter = input.checked ? input.value : '';
   }
+  updateQuestionEmptyState(Boolean(currentQuestion));
 });
 
 categorySelectAllButton?.addEventListener('click', () => {
@@ -346,10 +363,12 @@ categorySelectAllButton?.addEventListener('click', () => {
     box.checked = true;
     selectedCategorySet.add(box.value);
   });
+  updateQuestionEmptyState(Boolean(currentQuestion));
 });
 
 categoryClearButton?.addEventListener('click', () => {
   clearCategorySelection();
+  updateQuestionEmptyState(Boolean(currentQuestion));
 });
 
 catalogCategories?.addEventListener('click', (event) => {
@@ -1079,6 +1098,7 @@ function updateQuestionContent(question) {
   questionCard.classList.add('question--active');
   updateQuestionEmptyState(true);
   setQuestionHighlight(null);
+  updateNextQuestionButtonLabel(true);
   if (reactionButtons) {
     reactionButtons.hidden = reactionButtons.childElementCount === 0;
   }
@@ -1097,6 +1117,7 @@ function clearQuestion() {
   }
   updateQuestionEmptyState(false);
   setQuestionHighlight(null);
+  updateNextQuestionButtonLabel(false);
   if (reactionButtons) {
     reactionButtons.hidden = true;
   }
@@ -1174,10 +1195,12 @@ function updateQuestionEmptyState(hasQuestion) {
     return;
   }
   questionEmpty.classList.toggle('question__empty--has-question', hasQuestion);
+  const shouldWarn = !hasQuestion && shouldRequireCategorySelection() && selectedCategorySet.size === 0;
+  questionEmpty.classList.toggle('question__empty--warning', shouldWarn);
   if (questionEmptyText) {
     questionEmptyText.hidden = hasQuestion;
     if (!hasQuestion) {
-      questionEmptyText.textContent = activeVariant.questionPrompt;
+      questionEmptyText.textContent = getEmptyStatePrompt();
     }
   }
 }
@@ -1831,6 +1854,7 @@ function clearCategorySelection() {
   categoryChipList?.querySelectorAll('input[name="question-category"]').forEach((input) => {
     input.checked = false;
   });
+  updateQuestionEmptyState(Boolean(currentQuestion));
 }
 
 function renderCategoryButtons(categories) {
@@ -1879,6 +1903,9 @@ function updateQuestionFilterVisibility() {
   }
   const shouldShow = activeVariant.enableCategoryFilter !== false;
   questionFilter.hidden = !shouldShow;
+  if (categoryCard) {
+    categoryCard.hidden = !shouldShow;
+  }
   if (!shouldShow) {
     if (categorySelect) {
       categorySelect.value = '';

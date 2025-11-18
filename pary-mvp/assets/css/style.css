@@ -1138,6 +1138,22 @@ body[data-deck="never"] .question.question--reaction-disagree {
   gap: 1.5rem;
 }
 
+.question__empty--warning {
+  border-color: rgba(242, 109, 111, 0.55);
+  background: rgba(242, 109, 111, 0.08);
+  color: var(--color-primary-dark);
+}
+
+[data-theme="dark"] .question__empty--warning {
+  background: rgba(242, 109, 111, 0.18);
+  border-color: rgba(242, 109, 111, 0.55);
+  color: white;
+}
+
+.question__empty--warning .question__empty-text {
+  color: inherit;
+}
+
 .question__empty-text {
   margin: 0;
   font-size: 1.1rem;
@@ -1205,6 +1221,44 @@ body[data-deck="never"] .question__reactions {
   display: flex;
   justify-content: center;
   text-align: center;
+}
+
+.card--categories {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card--categories .question__filter {
+  margin-top: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  text-align: left;
+}
+
+.card--categories .question__filter .form__field {
+  align-items: flex-start;
+}
+
+.card--categories .category-actions {
+  justify-content: flex-end;
+}
+
+[data-theme="dark"] .card--categories {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body[data-deck="jak-dobrze-mnie-znasz"] .card--categories {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 241, 237, 0.88));
+  border: 1px solid rgba(242, 109, 111, 0.18);
+  box-shadow: 0 24px 48px rgba(242, 109, 111, 0.18);
+}
+
+body[data-deck="jak-dobrze-mnie-znasz"][data-theme="dark"] .card--categories {
+  background: linear-gradient(135deg, rgba(35, 18, 41, 0.95), rgba(26, 11, 31, 0.88));
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
 }
 
 .question__filter .form__field {
@@ -1868,6 +1922,10 @@ body[data-deck="never"] .question__filter {
     grid-column: 1 / -1;
   }
 
+  .page--room .card--categories {
+    grid-column: 1 / -1;
+  }
+
   .page--room .card--question {
     grid-column: span 2;
   }
@@ -1876,6 +1934,23 @@ body[data-deck="never"] .question__filter {
   .page--room .card--catalog,
   .page--room .card--reactions {
     grid-column: 1 / -1;
+  }
+
+  .page--room[data-deck="jak-dobrze-mnie-znasz"] .card--categories {
+    order: 1;
+  }
+
+  .page--room[data-deck="jak-dobrze-mnie-znasz"] .card--question,
+  .page--room[data-deck="jak-dobrze-mnie-znasz"] .card--participants {
+    grid-column: 1 / -1;
+  }
+
+  .page--room[data-deck="jak-dobrze-mnie-znasz"] .card--question {
+    order: 2;
+  }
+
+  .page--room[data-deck="jak-dobrze-mnie-znasz"] .card--participants {
+    order: 3;
   }
 }
 
