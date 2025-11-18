@@ -4522,14 +4522,16 @@ body.has-floating-dice .planszowka-dice[data-floating='false'] {
   color: var(--color-text);
 }
 
-.page--timer .category-chip {
+.page--timer .category-chip,
+.page--room[data-deck="jak-dobrze-mnie-znasz"] .category-chip {
   border: 1px solid rgba(63, 43, 52, 0.12);
   background: linear-gradient(125deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.72));
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.08);
   color: #2e1f29;
 }
 
-.page--timer .category-chip::before {
+.page--timer .category-chip::before,
+.page--room[data-deck="jak-dobrze-mnie-znasz"] .category-chip::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -4542,7 +4544,8 @@ body.has-floating-dice .planszowka-dice[data-floating='false'] {
   z-index: 0;
 }
 
-.page--timer .category-chip::after {
+.page--timer .category-chip::after,
+.page--room[data-deck="jak-dobrze-mnie-znasz"] .category-chip::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -4551,18 +4554,21 @@ body.has-floating-dice .planszowka-dice[data-floating='false'] {
   z-index: 0;
 }
 
-body.page--timer[data-theme="dark"] .category-chip {
+body.page--timer[data-theme="dark"] .category-chip,
+body.page--room[data-theme="dark"][data-deck="jak-dobrze-mnie-znasz"] .category-chip {
   background: linear-gradient(140deg, rgba(18, 7, 16, 0.95), rgba(20, 9, 18, 0.78));
   border-color: rgba(255, 255, 255, 0.18);
   box-shadow: 0 26px 52px rgba(0, 0, 0, 0.7);
   color: rgba(255, 255, 255, 0.92);
 }
 
-body.page--timer[data-theme="dark"] .category-chip::after {
+body.page--timer[data-theme="dark"] .category-chip::after,
+body.page--room[data-theme="dark"][data-deck="jak-dobrze-mnie-znasz"] .category-chip::after {
   background: radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.25), transparent 55%);
 }
 
-body.page--timer[data-theme="dark"] .category-chip::before {
+body.page--timer[data-theme="dark"] .category-chip::before,
+body.page--room[data-theme="dark"][data-deck="jak-dobrze-mnie-znasz"] .category-chip::before {
   background: linear-gradient(
     90deg,
     var(--category-color, rgba(242, 109, 111, 0.35)),
@@ -4594,7 +4600,8 @@ body.page--timer[data-theme="dark"] .category-chip::before {
   border-color: rgba(63, 43, 52, 0.85);
 }
 
-.page--timer .category-chip input:checked {
+.page--timer .category-chip input:checked,
+.page--room[data-deck="jak-dobrze-mnie-znasz"] .category-chip input:checked {
   background: var(--category-accent, rgba(63, 43, 52, 0.85));
   border-color: var(--category-accent, rgba(63, 43, 52, 0.85));
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
@@ -4605,12 +4612,14 @@ body.page--timer[data-theme="dark"] .category-chip::before {
   border-color: rgba(255, 255, 255, 0.85);
 }
 
-.page--timer[data-theme="dark"] .category-chip input {
+.page--timer[data-theme="dark"] .category-chip input,
+.page--room[data-theme="dark"][data-deck="jak-dobrze-mnie-znasz"] .category-chip input {
   border-color: rgba(255, 255, 255, 0.55);
   background: rgba(7, 4, 9, 0.55);
 }
 
-.page--timer[data-theme="dark"] .category-chip input:checked {
+.page--timer[data-theme="dark"] .category-chip input:checked,
+.page--room[data-theme="dark"][data-deck="jak-dobrze-mnie-znasz"] .category-chip input:checked {
   background: var(--category-accent, #f26d6f);
   border-color: var(--category-accent, #f26d6f);
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.35);
@@ -4628,7 +4637,8 @@ body.page--timer[data-theme="dark"] .category-chip::before {
   background: #2e1f29;
 }
 
-.page--timer[data-theme="dark"] .category-chip input:checked::after {
+.page--timer[data-theme="dark"] .category-chip input:checked::after,
+.page--room[data-theme="dark"][data-deck="jak-dobrze-mnie-znasz"] .category-chip input:checked::after {
   background: rgba(255, 255, 255, 0.95);
 }
 
