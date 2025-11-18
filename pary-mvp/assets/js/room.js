@@ -176,6 +176,7 @@ const GAME_VARIANTS = {
     enableCategoryFilter: true,
     categoryFilterLayout: 'chips',
     multiCategoryFilter: true,
+    showReactions: false,
     reactionButtons: [],
     reactionLabels: {},
     highlightClasses: {},
@@ -208,6 +209,10 @@ let selectedCategorySet = new Set();
 
 function shouldRequireCategorySelection() {
   return activeVariant.id === 'jak-dobrze-mnie-znasz' && activeVariant.multiCategoryFilter;
+}
+
+function areReactionsEnabled() {
+  return activeVariant.showReactions !== false;
 }
 
 function getEmptyStatePrompt() {
@@ -250,10 +255,13 @@ function reorderModulesForCurrentVariant() {
     questionSection,
     chatCard,
     catalogContainer,
-    reactionsCard,
-  ].filter(Boolean);
+  ];
 
-  orderedSections.forEach((section) => roomContent.append(section));
+  if (areReactionsEnabled()) {
+    orderedSections.push(reactionsCard);
+  }
+
+  orderedSections.filter(Boolean).forEach((section) => roomContent.append(section));
 }
 
 async function applyVariant(deckId) {
@@ -285,6 +293,15 @@ async function applyVariant(deckId) {
   updateQuestionFilterVisibility();
   updateCatalogVisibility();
   updateShareLink();
+  const reactionsAllowed = areReactionsEnabled();
+  if (reactionsCard) {
+    reactionsCard.hidden = !reactionsAllowed;
+    reactionsCard.setAttribute('aria-hidden', (!reactionsAllowed).toString());
+  }
+  if (!reactionsAllowed) {
+    setQuestionHighlight(null);
+    reactionsList && (reactionsList.innerHTML = '');
+  }
   if (currentQuestion) {
     applyQuestion(currentQuestion);
   } else {
@@ -608,14 +625,26 @@ async function refreshState() {
     updateAccessState(selfInfo);
     const participants = Array.isArray(payload.participants) ? payload.participants : [];
     renderParticipants(participants);
-    const reactions = payload.reactions || [];
+    const reactionsAllowed = areReactionsEnabled();
+    const reactions = reactionsAllowed ? payload.reactions || [] : [];
     if (payload.current_question) {
       applyQuestion(payload.current_question);
-      updateQuestionHighlight(reactions);
+      if (reactionsAllowed) {
+        updateQuestionHighlight(reactions);
+      } else {
+        setQuestionHighlight(null);
+      }
     } else {
       clearQuestion();
+      if (!reactionsAllowed) {
+        setQuestionHighlight(null);
+      }
     }
-    renderReactions(reactions);
+    if (reactionsAllowed) {
+      renderReactions(reactions);
+    } else if (reactionsList) {
+      reactionsList.innerHTML = '';
+    }
     renderChatMessages(payload.messages || []);
     renderHostRequests(payload.pending_requests || []);
   } catch (error) {
@@ -665,6 +694,10 @@ function renderReactionButtonsUI() {
     return;
   }
   reactionButtons.innerHTML = '';
+  if (!areReactionsEnabled()) {
+    reactionButtons.hidden = true;
+    return;
+  }
   const configs = activeVariant.reactionButtons || [];
   configs.forEach((config) => {
     const button = document.createElement('button');
