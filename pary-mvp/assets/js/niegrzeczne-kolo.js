@@ -184,7 +184,9 @@ function createWheel() {
     }
     const cx = width / 2;
     const cy = height / 2;
-    const radius = Math.min(cx, cy) * 0.99;
+    const maxRadius = Math.min(cx, cy);
+    const ringWidth = maxRadius * 0.04;
+    const radius = maxRadius - ringWidth / 2;
     const segmentAngle = (Math.PI * 2) / count;
 
     for (let index = 0; index < count; index += 1) {
