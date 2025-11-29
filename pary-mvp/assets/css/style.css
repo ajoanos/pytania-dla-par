@@ -195,6 +195,13 @@ body {
   /* Slowed down from 15s */
 }
 
+#game-root {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-inline: 1rem;
+}
+
 [data-theme="dark"] body {
   background: linear-gradient(-45deg, #1A1016, #2D1B2E, #1A1016, #251820);
   background-size: 400% 400%;
