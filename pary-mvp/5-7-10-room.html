@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,12 +10,15 @@
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&family=Outfit:wght@400;700;800&display=swap"
+    rel="stylesheet" />
   <script type="module" src="assets/js/sekundy.js"></script>
 </head>
+
 <body class="page page--game page--timer" data-theme="light">
   <main class="container">
-    <header class="hero">
+    <header class="hero animate-in">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
           <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
@@ -31,9 +35,10 @@
               <li><a class="game-switcher__link" href="nigdy-przenigdy.html">Nigdy przenigdy</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
-              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
+              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna,
+                  zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="trio-challenge.html">Kółko i krzyżyk Wyzwanie</a></li>
-              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
+              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zaparowane Lustro</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
@@ -46,7 +51,7 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--play card--setup" id="players-card">
+    <section class="card card--play card--setup animate-in delay-200" id="intro-card">
       <header class="card__header">
         <p class="card__eyebrow">Start gry</p>
         <h2>Dodaj graczy</h2>
@@ -75,7 +80,8 @@
       <header class="card__header">
         <p class="card__eyebrow">Błyskawiczne rundy</p>
         <h2>Wasza tablica gry</h2>
-        <p class="card__hint">Najpierw wybierzcie kategorie i czas. Potem losuj pytanie i kliknij START CZASU, aby uruchomić okrągły licznik.</p>
+        <p class="card__hint">Najpierw wybierzcie kategorie i czas. Potem losuj pytanie i kliknij START CZASU, aby
+          uruchomić okrągły licznik.</p>
       </header>
 
       <article class="panel panel--players">
@@ -121,7 +127,8 @@
           <div class="timer-visual__value" id="timer-value">0</div>
         </div>
         <p class="timer-status" id="timer-status">Gotowy do startu.</p>
-        <button type="button" class="btn btn--primary btn--timer-start timer-start" id="start-timer">🎙️ START CZASU</button>
+        <button type="button" class="btn btn--primary btn--timer-start timer-start" id="start-timer">🎙️ START
+          CZASU</button>
         <button type="button" class="btn btn--primary btn--wide btn--timer-action timer-action" id="question-action">
           🎲 Losuj pytanie
         </button>
@@ -157,4 +164,5 @@
     </footer>
   </main>
 </body>
+
 </html>

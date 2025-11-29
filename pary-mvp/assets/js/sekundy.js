@@ -27,6 +27,9 @@ const elements = {
   timerStatus: document.getElementById('timer-status'),
   timerStart: document.getElementById('start-timer'),
   timerProgress: document.getElementById('timer-progress'),
+  timerVisual: document.querySelector('.timer-visual'),
+  timerFocusOverlay: document.getElementById('timer-focus-overlay'),
+  timerFocusValue: document.getElementById('timer-focus-value'),
   successButton: document.getElementById('mark-success'),
   failButton: document.getElementById('mark-fail'),
   gameMessage: document.getElementById('game-message'),
@@ -163,7 +166,7 @@ function handlePlayersSubmit(event) {
   resetTimer();
   renderPlayers();
   updatePlayerLabel();
-  elements.playersCard?.setAttribute('hidden', '');
+  // elements.playersCard?.setAttribute('hidden', '');
   elements.gameCard?.removeAttribute('hidden');
   setGameMessage('Gracze dodani! Wybierzcie kategorie, ustawcie czas i kliknijcie „Losuj pytanie”.', 'info');
   updateControls();
@@ -382,6 +385,13 @@ function startTimer() {
   playTick();
   updateTimerOptions();
   updateTimerVisual();
+
+  // Focus Mode Start
+  if (elements.timerFocusOverlay) {
+    elements.timerFocusOverlay.classList.add('is-active');
+    updateFocusModeVisual();
+  }
+
   timerState.rafId = requestAnimationFrame(handleTimerFrame);
 }
 
@@ -393,8 +403,23 @@ function handleTimerFrame(now) {
   if (wholeSeconds !== timerState.lastWholeSecond) {
     timerState.lastWholeSecond = wholeSeconds;
     playTick();
+
+    // Pulse animation for main timer
+    if (elements.timerValue) {
+      elements.timerValue.classList.remove('pulse-tick');
+      void elements.timerValue.offsetWidth; // Trigger reflow
+      elements.timerValue.classList.add('pulse-tick');
+    }
+
+    // Pulse animation for focus mode
+    if (elements.timerFocusValue) {
+      elements.timerFocusValue.classList.remove('pulse-tick');
+      void elements.timerFocusValue.offsetWidth; // Trigger reflow
+      elements.timerFocusValue.classList.add('pulse-tick');
+    }
   }
   updateTimerVisual();
+  updateFocusModeVisual();
   if (remaining <= 0.05) {
     finishTimer();
     return;
@@ -413,7 +438,14 @@ function finishTimer() {
   state.awaitingResult = true;
   enableResultButtons(true);
   updateTimerOptions();
+  updateTimerOptions();
   updateTimerVisual();
+
+  // Focus Mode End
+  if (elements.timerFocusOverlay) {
+    elements.timerFocusOverlay.classList.remove('is-active');
+  }
+
   setGameMessage('Kliknij Wykonane lub Niewykonane, aby przyznać punkt.', 'info');
   playFinalChime();
   updateControls();
@@ -431,7 +463,13 @@ function resetTimer() {
   elements.timerStatus.textContent = 'Gotowy do startu.';
   enableResultButtons(false);
   updateTimerOptions();
+  updateTimerOptions();
   updateTimerVisual();
+
+  // Focus Mode Reset
+  if (elements.timerFocusOverlay) {
+    elements.timerFocusOverlay.classList.remove('is-active');
+  }
 }
 
 function updateTimerVisual() {
@@ -443,6 +481,12 @@ function updateTimerVisual() {
   elements.timerProgress.style.strokeDashoffset = offset;
   const labelValue = timerState.running ? Math.max(0, Math.ceil(timerState.remaining)) : Math.ceil(state.timerDuration);
   elements.timerValue.textContent = String(labelValue);
+
+  // Toggle visibility class on the container
+  // Toggle visibility class on the container
+  if (elements.timerVisual) {
+    elements.timerVisual.classList.remove('timer-visual--hidden');
+  }
 }
 
 function enableResultButtons(enabled) {
@@ -560,7 +604,7 @@ function randomInt(maxExclusive) {
 function ensureAudioContext() {
   if (audioCtx) {
     if (audioCtx.state === 'suspended') {
-      audioCtx.resume().catch(() => {});
+      audioCtx.resume().catch(() => { });
     }
     return audioCtx;
   }
@@ -570,7 +614,7 @@ function ensureAudioContext() {
   }
   audioCtx = new AudioContext();
   if (audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
+    audioCtx.resume().catch(() => { });
   }
   return audioCtx;
 }
@@ -645,6 +689,31 @@ function scrollToResultsPanel() {
 function scrollToQuestionPanel() {
   const panel = elements.questionCard?.closest('.panel') || elements.questionCard;
   smoothScrollIntoView(panel);
+}
+
+function updateFocusModeVisual() {
+  if (!elements.timerFocusOverlay || !elements.timerFocusValue) return;
+
+  const duration = timerState.duration || state.timerDuration || 1;
+  const remaining = timerState.remaining;
+  const progress = 1 - (remaining / duration); // 0 to 1
+
+  // Update Value
+  const labelValue = Math.ceil(remaining);
+  elements.timerFocusValue.textContent = String(labelValue);
+
+  // Interpolate Color: Sea (#63B9A6) to Red (#F26D6F)
+  // Sea: RGB(99, 185, 166)
+  // Red: RGB(242, 109, 111)
+
+  const startColor = { r: 99, g: 185, b: 166 };
+  const endColor = { r: 242, g: 109, b: 111 };
+
+  const r = Math.round(startColor.r + (endColor.r - startColor.r) * progress);
+  const g = Math.round(startColor.g + (endColor.g - startColor.g) * progress);
+  const b = Math.round(startColor.b + (endColor.b - startColor.b) * progress);
+
+  elements.timerFocusOverlay.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
 }
 
 function smoothScrollIntoView(target) {

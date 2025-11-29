@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,20 +10,19 @@
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&family=Outfit:wght@400;700;800&display=swap"
+    rel="stylesheet">
   <script type="module" src="assets/js/app.js"></script>
   <script type="module" src="assets/js/tinder-game.js"></script>
 </head>
-<body class="page page--room" data-theme="light">
+
+<body class="page page--room page--tinder" data-theme="light">
   <main class="container">
-    <header class="hero">
+    <header class="hero animate-in">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
-          <img
-            class="hero__logo"
-            src="https://sklep.allemedia.pl/momenty/logo.png"
-            alt="Momenty"
-          />
+          <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
         </a>
         <div class="hero__text">
           <h1>Tinder z pozycjami</h1>
@@ -36,13 +36,15 @@
               <li><a class="game-switcher__link" href="nigdy-przenigdy.html">Nigdy przenigdy</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
-              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
+              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna,
+                  zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="trio-challenge.html">Kółko i krzyżyk Wyzwanie</a></li>
-              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
+              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zaparowane Lustro</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
-              <li><a class="game-switcher__link" href="tinder-dla-sexu.html" aria-current="page">Tinder z pozycjami</a></li>
+              <li><a class="game-switcher__link" href="tinder-dla-sexu.html" aria-current="page">Tinder z pozycjami</a>
+              </li>
               <li><a class="game-switcher__link" href="5-7-10.html">5 • 7 • 10 sekund</a></li>
             </ul>
           </div>
@@ -65,7 +67,7 @@
       <button type="button" class="btn btn--primary" id="start-session">Startujemy</button>
     </section>
 
-    <section class="card card--swipe" id="swipe-card" hidden>
+    <section class="card card--play animate-in delay-200" id="swipe-card" hidden>
       <header class="card__header">
         <div>
           <h2>Wasza runda</h2>
@@ -78,13 +80,15 @@
         <progress class="swipe-progress__bar" id="progress-bar" max="0" value="0"></progress>
       </div>
       <div class="swipe-stage" id="swipe-stage">
-        <div class="swipe-placeholder" id="swipe-placeholder">Wybierz, czy dana pozycja Was kręci. W prawo – bierzemy, w lewo – odpuszczamy.</div>
+        <div class="swipe-placeholder" id="swipe-placeholder">Wybierz, czy dana pozycja Was kręci. W prawo – bierzemy, w
+          lewo – odpuszczamy.</div>
         <div class="swipe-card__media" id="swipe-media" aria-live="off">
           <img id="swipe-image" alt="" loading="lazy" />
         </div>
       </div>
       <div class="swipe-actions">
-        <button type="button" class="swipe-button swipe-button--no" data-action="dislike" aria-label="W lewo, nie dla nas">
+        <button type="button" class="swipe-button swipe-button--no" data-action="dislike"
+          aria-label="W lewo, nie dla nas">
           <span aria-hidden="true">👎</span>
           <span>Nie dla nas</span>
         </button>
@@ -98,9 +102,11 @@
     <section class="card card--summary" id="match-summary" hidden aria-live="polite">
       <header class="card__header">
         <h2>Sprawdźmy co nas łączy!</h2>
-        <p class="card__subtitle" id="summary-lead">Gdy oboje skończycie swipować, pokażemy tu listę wspólnych typów.</p>
+        <p class="card__subtitle" id="summary-lead">Gdy oboje skończycie swipować, pokażemy tu listę wspólnych typów.
+        </p>
       </header>
-      <div id="summary-empty" class="summary-empty" hidden>Brak wspólnych typów? To idealny pretekst, by zagrać jeszcze raz!</div>
+      <div id="summary-empty" class="summary-empty" hidden>Brak wspólnych typów? To idealny pretekst, by zagrać jeszcze
+        raz!</div>
       <ul class="positions-summary__list" id="match-list"></ul>
       <div class="summary-actions">
         <button type="button" class="btn btn--primary" id="play-again">Gramy jeszcze raz?</button>
@@ -108,28 +114,16 @@
     </section>
 
     <div class="share-bar" id="share-bar" hidden>
-      <button
-        type="button"
-        class="btn btn--primary share-bar__button"
-        id="share-open"
-        aria-haspopup="dialog"
-        aria-controls="share-card"
-        aria-expanded="false"
-      >
+      <button type="button" class="btn btn--primary share-bar__button" id="share-open" aria-haspopup="dialog"
+        aria-controls="share-card" aria-expanded="false">
         Udostępnij pokój
       </button>
     </div>
 
     <section class="share-layer" id="share-layer" data-open="false" aria-hidden="true" hidden>
       <div class="share-layer__backdrop" id="share-backdrop"></div>
-      <section
-        class="card card--share share-layer__panel"
-        id="share-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="share-card-title"
-        tabindex="-1"
-      >
+      <section class="card card--share share-layer__panel" id="share-card" role="dialog" aria-modal="true"
+        aria-labelledby="share-card-title" tabindex="-1">
         <div class="share-card__header">
           <h2 id="share-card-title">Udostępnij pokój</h2>
           <button type="button" class="share-card__close" id="share-close">
@@ -144,15 +138,18 @@
             <button type="button" class="btn btn--ghost" id="share-copy" disabled>Kopiuj link</button>
             <button type="button" class="btn btn--ghost" id="share-show-qr" disabled>Zeskanuj QR dla partnera</button>
             <div class="share-links" id="share-links">
-              <a class="share-link" data-share-channel="messenger" href="#" aria-disabled="true" tabindex="-1">Messenger</a>
-              <a class="share-link" data-share-channel="whatsapp" href="#" aria-disabled="true" tabindex="-1">WhatsApp</a>
+              <a class="share-link" data-share-channel="messenger" href="#" aria-disabled="true"
+                tabindex="-1">Messenger</a>
+              <a class="share-link" data-share-channel="whatsapp" href="#" aria-disabled="true"
+                tabindex="-1">WhatsApp</a>
               <a class="share-link" data-share-channel="sms" href="#" aria-disabled="true" tabindex="-1">SMS</a>
             </div>
           </div>
           <form class="share-email" id="share-email">
             <label class="share-email__field" for="share-email-input">
               <span class="share-email__label">Adres e-mail partnera</span>
-              <input type="email" id="share-email-input" name="partner_email" placeholder="partner@przyklad.pl" autocomplete="email" required />
+              <input type="email" id="share-email-input" name="partner_email" placeholder="partner@przyklad.pl"
+                autocomplete="email" required />
             </label>
             <button type="submit" class="btn btn--primary">Wyślij</button>
             <p class="share-email__feedback" id="share-email-feedback" hidden role="status"></p>
@@ -179,4 +176,5 @@
     </div>
   </div>
 </body>
+
 </html>

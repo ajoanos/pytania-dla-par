@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,19 +10,18 @@
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&family=Outfit:wght@400;700;800&display=swap"
+    rel="stylesheet">
   <script type="module" src="assets/js/niegrzeczne-kolo.js"></script>
 </head>
+
 <body class="page page--wheel" data-theme="dark">
   <main class="container">
-    <header class="hero">
+    <header class="hero animate-in">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
-          <img
-            class="hero__logo"
-            src="https://sklep.allemedia.pl/momenty/logo.png"
-            alt="Momenty"
-          />
+          <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
         </a>
         <div class="hero__text">
           <h1>Niegrzeczne koło</h1>
@@ -35,11 +35,13 @@
               <li><a class="game-switcher__link" href="nigdy-przenigdy.html">Nigdy przenigdy</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
-              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
+              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna,
+                  zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="trio-challenge.html">Kółko i krzyżyk Wyzwanie</a></li>
-              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
+              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zaparowane Lustro</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
-              <li><a class="game-switcher__link" href="niegrzeczne-kolo.html" aria-current="page">Niegrzeczne koło</a></li>
+              <li><a class="game-switcher__link" href="niegrzeczne-kolo.html" aria-current="page">Niegrzeczne koło</a>
+              </li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
               <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder z pozycjami</a></li>
               <li><a class="game-switcher__link" href="5-7-10.html">5 • 7 • 10 sekund</a></li>
@@ -50,7 +52,7 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--wheel" id="wheel-card">
+    <section class="card card--play animate-in delay-200" id="game-card">
       <h2>Zakręć kołem</h2>
       <p class="card__lead">Zacznijmy losowanie! Zobacz co wydarzy się wieczorem.</p>
       <div class="wheel" data-role="wheel">
@@ -78,4 +80,5 @@
     </footer>
   </main>
 </body>
+
 </html>

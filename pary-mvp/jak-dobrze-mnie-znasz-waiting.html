@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,13 +10,17 @@
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&family=Outfit:wght@400;700;800&display=swap"
+    rel="stylesheet" />
   <script type="module" src="assets/js/app.js"></script>
   <script type="module" src="assets/js/waiting-room.js"></script>
 </head>
-<body class="page page--waiting" data-theme="light" data-host-page="jak-dobrze-mnie-znasz-room.html" data-home-page="jak-dobrze-mnie-znasz.html" data-room-page="room.html" data-deck="jak-dobrze-mnie-znasz">
+
+<body class="page page--waiting" data-theme="light" data-host-page="jak-dobrze-mnie-znasz-room.html"
+  data-home-page="jak-dobrze-mnie-znasz.html" data-room-page="room.html" data-deck="jak-dobrze-mnie-znasz">
   <main class="container">
-    <header class="hero">
+    <header class="hero animate-in">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
           <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
@@ -32,16 +37,18 @@
               <li><a class="game-switcher__link" href="nigdy-przenigdy.html">Nigdy przenigdy</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
-              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
+              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna,
+                  zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="trio-challenge.html">Kółko i krzyżyk Wyzwanie</a></li>
-              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
+              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zaparowane Lustro</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
               <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder z pozycjami</a></li>
               <li><a class="game-switcher__link" href="5-7-10.html">5 • 7 • 10 sekund</a></li>
               <li><a class="game-switcher__link" href="prawda-wyzwanie.html">Prawda czy Wyzwanie</a></li>
-              <li><a class="game-switcher__link" href="jak-dobrze-mnie-znasz.html" aria-current="page">Jak dobrze mnie znasz</a></li>
+              <li><a class="game-switcher__link" href="jak-dobrze-mnie-znasz.html" aria-current="page">Jak dobrze mnie
+                  znasz</a></li>
             </ul>
           </div>
         </details>
@@ -50,9 +57,10 @@
     </header>
 
     <section class="waiting-room">
-      <div class="card card--game waiting-room__card">
+      <div class="card card--game waiting-room__card animate-in delay-200" id="waiting-card">
         <h2 id="waiting-title">Oczekiwanie na dołączenie</h2>
-        <p id="waiting-message">Twoja prośba została wysłana do gospodarza. Gdy tylko zaakceptuje zgłoszenie, od razu otrzymasz dostęp do pokoju.</p>
+        <p id="waiting-message">Twoja prośba została wysłana do gospodarza. Gdy tylko zaakceptuje zgłoszenie, od razu
+          otrzymasz dostęp do pokoju.</p>
         <div class="waiting-room__actions">
           <button type="button" class="btn btn--ghost" id="waiting-leave">Wróć do tworzenia pokoju</button>
         </div>
@@ -60,4 +68,5 @@
     </section>
   </main>
 </body>
+
 </html>

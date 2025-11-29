@@ -1,171 +1,154 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="robots" content="noindex" />
-  <title>Momenty – Gry do rozmów</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Momenty - Gry dla Par</title>
+  <meta name="description"
+    content="Zestaw gier dla par, które zbliżają, bawią i podkręcają atmosferę. Odkryjcie nowe pragnienia i bawcie się lepiej niż kiedykolwiek.">
+  <meta property="og:title" content="Momenty - Gry dla Par">
+  <meta property="og:description" content="Zestaw gier dla par, które zbliżają, bawią i podkręcają atmosferę.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://sklep.allemedia.pl/momenty/logo.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/style.css?v=2.1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
-  <script type="module" src="assets/js/app.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&family=Outfit:wght@400;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    /* Ukryj zawartość do czasu potwierdzenia dostępu. */
+    #game-root {
+      display: none;
+    }
+  </style>
+  <script src="assets/js/momenty-guard.js"></script>
+  <script>
+    window.momentyAccessOk = function (expires) {
+      const revealContent = () => {
+        const root = document.getElementById('game-root');
+        if (root) {
+          root.style.display = 'block';
+          root.classList.remove('is-hidden');
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        if (!token) return;
+
+        const links = document.querySelectorAll('#game-root a[href]');
+        links.forEach((link) => {
+          try {
+            const url = new URL(link.getAttribute('href'), window.location.href);
+            url.searchParams.set('token', token);
+            link.href = url.toString();
+          } catch (error) {
+            console.warn('Nie udało się zaktualizować linku gry:', error);
+          }
+        });
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', revealContent, { once: true });
+        return;
+      }
+
+      revealContent();
+    };
+
+    if (window.__momentyAccessConfirmed && window.__momentyAccessPending) {
+      window.momentyAccessOk(window.__momentyAccessPending);
+      window.__momentyAccessPending = null;
+    }
+  </script>
 </head>
-<body class="page page--start" data-theme="light">
-  <main class="container">
-    <header class="hero">
-      <div class="hero__branding">
-        <a class="hero__logo-link" href="index.html">
-          <img
-            class="hero__logo"
-            src="https://sklep.allemedia.pl/momenty/logo.png"
-            alt="Momenty"
-          />
-        </a>
-        <div class="hero__text">
-          <p>Wybierz zabawę na dziś!</p>
+
+<body class="page" data-theme="light">
+
+  <div id="game-root">
+
+  <!-- 1. Header -->
+  <header class="v2-header">
+    <img src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" class="v2-logo">
+    <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
+  </header>
+
+  <!-- 3. Hero -->
+  <section class="v2-hero" id="hero-section">
+    <div class="v2-hero__wrapper">
+      <!-- Left Column: Greeting & Time -->
+      <div class="v2-hero__left">
+        <div class="v2-hero__text-container">
+          <div class="v2-hero__meta">
+            <div class="v2-hero__badge" id="hero-badge">Dobry Wieczór</div>
+            <div class="v2-hero__icon-large" id="hero-time-icon">✨</div>
+          </div>
+          <h1 class="v2-hero__title" id="hero-greeting">Zmień wieczór<br>w przygodę</h1>
+          <p class="v2-hero__subtitle">Złamcie rutynę, odkryjcie nowe pragnienia i bawcie się lepiej niż kiedykolwiek.
+          </p>
+          <p class="v2-hero__cta">Wybierzcie grę i dajcie się ponieść.</p>
         </div>
-        <details class="game-switcher">
-          <summary class="game-switcher__toggle">Nasze gry</summary>
-          <div class="game-switcher__panel">
-            <ul class="game-switcher__list">
-              <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
-              <li><a class="game-switcher__link" href="jak-dobrze-mnie-znasz.html">Jak dobrze mnie znasz</a></li>
-              <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
-              <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
-              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
-              <li><a class="game-switcher__link" href="trio-challenge.html">Kółko i krzyżyk Wyzwanie</a></li>
-              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
-              <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
-              <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
-              <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
-              <li><a class="game-switcher__link" href="5-7-10.html">5 • 7 • 10 sekund</a></li>
-            </ul>
-          </div>
-        </details>
       </div>
-      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
-    </header>
 
-    <section class="card card--products" id="products-card">
-      <h2>Dostępne gry</h2>
-      <div class="products">
-        <article class="product" data-product="pytania-dla-par">
-          <div class="product__header">
-            <h3>Pytania dla par</h3>
-            <span class="product__badge">Nowość</span>
+      <!-- Right Column: Game Drawer -->
+      <div class="v2-hero__right">
+        <div class="v2-hero__card-container">
+          <div class="v2-hero__card" id="hero-card">
+            <!-- Content injected by JS -->
+            <div class="v2-card-icon" id="hero-icon"></div>
+            <h2 class="v2-card-title" id="hero-title"></h2>
+            <p class="v2-card-desc" id="hero-desc"></p>
+            <a href="#" class="v2-btn-play" id="hero-link">Zagraj teraz</a>
           </div>
-          <p>Odkryj ponad sto pytań, które pomogą Wam lepiej się poznać i zbliżyć.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="pytania-dla-par.html" href="pytania-dla-par.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="jak-dobrze-mnie-znasz">
-          <div class="product__header">
-            <h3>Jak dobrze mnie znasz</h3>
-            <span class="product__badge">🎯 Nowość</span>
-          </div>
-          <p>Wejdź do pokoju i sprawdź, kto zna Cię najlepiej – od codziennych wyborów po pytania 18+.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="jak-dobrze-mnie-znasz.html" href="jak-dobrze-mnie-znasz.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="nigdy-przenigdy">
-          <div class="product__header">
-            <h3>Nigdy przenigdy</h3>
-            <span class="product__badge">🔥 Gorąca nowość</span>
-          </div>
-          <p>Losuj zdania „Nigdy przenigdy” i głosuj kciukami, czy już to zrobiliście.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="nigdy-przenigdy.html" href="nigdy-przenigdy.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="5-7-10">
-          <div class="product__header">
-            <h3>5 • 7 • 10 sekund</h3>
-            <span class="product__badge">⏱️ Błyskawiczna nowość</span>
-          </div>
-          <p>Dodaj graczy, wybierz ulubione kategorie i bawcie się pytaniami z licznikiem 5, 7 lub 10 sekund.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="5-7-10.html" href="5-7-10.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="prawda-wyzwanie">
-          <div class="product__header">
-            <h3>Prawda czy Wyzwanie</h3>
-            <span class="product__badge">🎯 Nowa talia</span>
-          </div>
-          <p>Losuj prawdy i wyzwania z wielu kategorii, oceniaj wykonanie jak w 5·7·10 sekund i udostępniaj pokój znajomym.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="prawda-wyzwanie.html" href="prawda-wyzwanie.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="plan-wieczoru">
-          <div class="product__header">
-            <h3>Plan Wieczoru – We Dwoje</h3>
-            <span class="product__badge">❤️ Nowość</span>
-          </div>
-          <p>Przejdź krótki rytuał i wybierz, na jaki wspólny wieczór macie ochotę. Na końcu wyślij partnerowi gotowy plan.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="plan-wieczoru.html" href="plan-wieczoru.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="planszowa">
-          <div class="product__header">
-            <h3>Planszówka dla dwojga (dla dorosłych)</h3>
-            <span class="product__badge">🎲 Nowość</span>
-          </div>
-          <p>Przemieszczajcie pionki po pikantnej planszy, zbierajcie serduszka i odkrywajcie nowe fantazje w dwuosobowej rywalizacji.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="planszowa.html" href="planszowa.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="planszowa-romantyczna">
-          <div class="product__header">
-            <h3>Planszówka dla dwojga (romantyczna, zbliżająca)</h3>
-            <span class="product__badge">💞 Nowość</span>
-          </div>
-          <p>Przemieszczajcie pionki po planszy pełnej czułych pytań i rytuałów, żeby poczuć jeszcze więcej bliskości.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="planszowa-romantyczna.html" href="planszowa-romantyczna.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="trio-challenge">
-          <div class="product__header">
-            <h3>Kółko i krzyżyk Wyzwanie</h3>
-            <span class="product__badge">🎯 Nowość</span>
-          </div>
-          <p>Wejdźcie do wspólnego pokoju, wybierz sekretny tryb i układajcie trójki na planszy 4×4. Przegrany losuje zadanie.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="trio-challenge.html" href="trio-challenge.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="niegrzeczne-kolo">
-          <div class="product__header">
-            <h3>Niegrzeczne koło</h3>
-            <span class="product__badge">💘 Nowość</span>
-          </div>
-          <p>Zakręć kołem z dwunastoma pikantnymi pozycjami i zobacz, która będzie Waszą zabawą na dziś.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="niegrzeczne-kolo.html" href="niegrzeczne-kolo.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="zdrapka-pozycji">
-          <div class="product__header">
-            <h3>Zdrapka pozycji</h3>
-            <span class="product__badge">🔥 Nowość</span>
-          </div>
-          <p>Zdrapuj kolor, aby odkryć losową pozycję. Za każdym uruchomieniem nowa niespodzianka.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="zdrapka-pozycji.html" href="zdrapka-pozycji.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="pozycje-na-czas">
-          <div class="product__header">
-            <h3>Pozycje na czas</h3>
-            <span class="product__badge">⏱️ Nowość</span>
-          </div>
-          <p>Losujcie pozycję, wybierzcie 60 lub 120 sekund i bawcie się, aż timer zacznie migać w końcówce.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="pozycje-na-czas.html" href="pozycje-na-czas.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="poznaj-wszystkie-pozycje">
-          <div class="product__header">
-            <h3>Poznaj wszystkie pozycje</h3>
-            <span class="product__badge">💞 Nowość</span>
-          </div>
-          <p>Przeglądajcie całą kolekcję pozycji, serduszkiem wybierajcie ulubione i wyślijcie partnerowi gotową listę inspiracji.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="poznaj-wszystkie-pozycje.html" href="poznaj-wszystkie-pozycje.html">Otwórz</a>
-        </article>
-        <article class="product" data-product="tinder-dla-sexu">
-          <div class="product__header">
-            <h3>Tinder z pozycjami</h3>
-            <span class="product__badge">🔥 Nowość</span>
-          </div>
-          <p>Wejdźcie do wspólnego pokoju, wybierzcie liczbę pozycji i swipujcie, aby znaleźć swoje gorące połączenia.</p>
-          <a class="btn btn--primary" data-action="open-product" data-target="tinder-dla-sexu.html" href="tinder-dla-sexu.html">Otwórz</a>
-        </article>
+        </div>
+
+        <button id="random-game-btn" class="v2-random-btn">
+          <span>🎲</span> Losuj inną grę
+        </button>
       </div>
-    </section>
+    </div>
+  </section>
 
-  </main>
+  <h2 class="v2-section-title">Jak to działa?</h2>
+
+  <!-- 4. How it Works -->
+  <section class="v2-how-it-works">
+    <div class="v2-step">
+      <div class="v2-step__icon">🔥</div>
+      <h3 class="v2-step__title">Wybierz Klimat</h3>
+      <p class="v2-step__desc">Ogień, Relacja czy Zabawa?</p>
+    </div>
+    <div class="v2-step">
+      <div class="v2-step__icon">🚀</div>
+      <h3 class="v2-step__title">Uruchom Grę</h3>
+      <p class="v2-step__desc">Bez instalacji, działa od razu.</p>
+    </div>
+    <div class="v2-step">
+      <div class="v2-step__icon">❤️</div>
+      <h3 class="v2-step__title">Budujcie Wspomnienia</h3>
+      <p class="v2-step__desc">Tylko Wy dwoje.</p>
+    </div>
+  </section>
+
+  <!-- 3. Mood Filter -->
+  <nav class="v2-mood-filter">
+    <button class="v2-mood-pill active" data-filter="all">Wszystkie ✨</button>
+    <button class="v2-mood-pill" data-filter="fire">Ogień 🔥</button>
+    <button class="v2-mood-pill" data-filter="chat">Rozmowa 💬</button>
+    <button class="v2-mood-pill" data-filter="fun">Zabawa 🎲</button>
+  </nav>
+
+  <!-- 4. Masonry Grid -->
+  <section class="v2-grid" id="games-grid">
+    <!-- Games injected by JS -->
+  </section>
+
+  </div>
+
+  <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="assets/js/home.js"></script>
 </body>
+
 </html>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,20 +10,19 @@
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&family=Outfit:wght@400;700;800&display=swap"
+    rel="stylesheet">
   <script type="module" src="assets/js/app.js"></script>
   <script type="module" src="assets/js/plan-wieczoru.js"></script>
 </head>
+
 <body class="page page--game" data-theme="light">
   <main class="container">
-    <header class="hero">
+    <header class="hero animate-in">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
-          <img
-            class="hero__logo"
-            src="https://sklep.allemedia.pl/momenty/logo.png"
-            alt="Momenty"
-          />
+          <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
         </a>
         <div class="hero__text">
           <h1>Plan Wieczoru – We Dwoje</h1>
@@ -34,11 +34,13 @@
             <ul class="game-switcher__list">
               <li><a class="game-switcher__link" href="pytania-dla-par.html">Pytania dla par</a></li>
               <li><a class="game-switcher__link" href="nigdy-przenigdy.html">Nigdy przenigdy</a></li>
-              <li><a class="game-switcher__link" href="plan-wieczoru.html" aria-current="page">Plan Wieczoru – We Dwoje</a></li>
+              <li><a class="game-switcher__link" href="plan-wieczoru.html" aria-current="page">Plan Wieczoru – We
+                  Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
-              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
+              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna,
+                  zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="trio-challenge.html">Kółko i krzyżyk Wyzwanie</a></li>
-              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
+              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zaparowane Lustro</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
@@ -51,7 +53,7 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--game" id="plan-card">
+    <section class="card card--play animate-in delay-200" id="game-card">
       <header class="card__header">
         <h2>Twój plan</h2>
         <p id="plan-caption">Wybierz odpowiedzi w kolejnych krokach. Wszystko zapisujemy tylko dla Was.</p>
@@ -81,28 +83,17 @@
           </div>
           <label class="form__field">
             <span>Twój e-mail</span>
-            <input
-              type="email"
-              id="plan-your-email"
-              name="your_email"
-              placeholder="np. ja@adres.pl"
-              autocomplete="email"
-              required
-            />
+            <input type="email" id="plan-your-email" name="your_email" placeholder="np. ja@adres.pl"
+              autocomplete="email" required />
           </label>
           <label class="form__field">
             <span>E-mail partnera</span>
-            <input
-              type="email"
-              id="plan-partner-email"
-              name="partner_email"
-              placeholder="np. partner@adres.pl"
-              autocomplete="email"
-              required
-            />
+            <input type="email" id="plan-partner-email" name="partner_email" placeholder="np. partner@adres.pl"
+              autocomplete="email" required />
           </label>
           <p class="form__hint" id="plan-email-hint">
-            Na Twój adres wyślemy informację, gdy partner kliknie „Zgadzam się” lub „Nie zgadzam się”. Możesz też odpisać na wiadomość prosto z e-maila.
+            Na Twój adres wyślemy informację, gdy partner kliknie „Zgadzam się” lub „Nie zgadzam się”. Możesz też
+            odpisać na wiadomość prosto z e-maila.
           </p>
           <div class="form__actions">
             <button type="submit" class="btn btn--primary" id="plan-send">Wyślij plan do partnera</button>
@@ -120,8 +111,10 @@
           <h3>Historia propozycji</h3>
           <p class="plan-history__hint">Zobacz wcześniejsze pomysły zgłoszone w tym pokoju.</p>
         </header>
-        <p class="plan-history__empty" id="plan-history-empty" hidden>Jeszcze nikt nic nie zaproponował. Zacznij od wysłania pierwszego planu!</p>
-        <p class="plan-history__error" id="plan-history-error" hidden>Nie udało się pobrać historii. Spróbuj odświeżyć stronę.</p>
+        <p class="plan-history__empty" id="plan-history-empty" hidden>Jeszcze nikt nic nie zaproponował. Zacznij od
+          wysłania pierwszego planu!</p>
+        <p class="plan-history__error" id="plan-history-error" hidden>Nie udało się pobrać historii. Spróbuj odświeżyć
+          stronę.</p>
         <ol class="plan-history__list" id="plan-history-list"></ol>
       </section>
     </section>
@@ -133,4 +126,5 @@
     </footer>
   </main>
 </body>
+
 </html>

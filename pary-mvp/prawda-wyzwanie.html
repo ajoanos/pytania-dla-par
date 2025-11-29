@@ -1,20 +1,24 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Prawda czy Wyzwanie – Hasło dostępu</title>
+  <title>Prawda czy Wyzwanie – Start gry</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&family=Outfit:wght@400;700;800&display=swap"
+    rel="stylesheet" />
   <script type="module" src="assets/js/app.js"></script>
 </head>
+
 <body class="page page--access" data-theme="light">
   <main class="container">
-    <header class="hero">
+    <header class="hero animate-in">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
           <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
@@ -31,15 +35,17 @@
               <li><a class="game-switcher__link" href="nigdy-przenigdy.html">Nigdy przenigdy</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
-              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
+              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna,
+                  zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="trio-challenge.html">Kółko i krzyżyk Wyzwanie</a></li>
-              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
+              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zaparowane Lustro</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
               <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder z pozycjami</a></li>
               <li><a class="game-switcher__link" href="5-7-10.html">5 • 7 • 10 sekund</a></li>
-              <li><a class="game-switcher__link" href="prawda-wyzwanie.html" aria-current="page">Prawda czy Wyzwanie</a></li>
+              <li><a class="game-switcher__link" href="prawda-wyzwanie.html" aria-current="page">Prawda czy Wyzwanie</a>
+              </li>
             </ul>
           </div>
         </details>
@@ -47,32 +53,17 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--password" id="password-card">
-      <h2>Podaj hasło dostępu</h2>
-      <form
-        id="password-form"
-        class="form form--inline"
-        data-success="prawda-wyzwanie-room.html"
-        data-storage-key="momenty.truthdare.access"
-        data-skip-room-key="true"
-      >
-        <label class="form__field">
-          <span>Hasło</span>
-          <input
-            type="password"
-            id="access-password"
-            name="access_password"
-            placeholder="••••"
-            autocomplete="current-password"
-            required
-          />
-        </label>
+    <section class="card card--password animate-in delay-200" id="password-card">
+      <h2>Wejdź do gry</h2>
+      <p>Wystarczy token – przygotujemy pokój automatycznie.</p>
+      <form id="password-form" class="form form--inline" data-success="prawda-wyzwanie-room.html"
+        data-storage-key="momenty.truthdare.access" data-skip-room-key="true">
         <div class="form__actions">
-          <button type="submit" class="btn btn--primary">Potwierdź</button>
+          <button type="submit" class="btn btn--primary">Zagraj teraz</button>
           <button type="button" class="btn btn--ghost" id="password-cancel" data-back="index.html">Wróć</button>
         </div>
       </form>
-      <p class="form__hint" id="password-error" hidden>Niepoprawne hasło. Spróbuj ponownie.</p>
+      <p class="form__hint" id="password-error" hidden>Nie udało się przygotować pokoju. Spróbuj ponownie.</p>
     </section>
 
     <footer class="footer">
@@ -82,4 +73,5 @@
     </footer>
   </main>
 </body>
+
 </html>

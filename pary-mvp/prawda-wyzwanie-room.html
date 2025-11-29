@@ -1,20 +1,24 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial=" initial-scale=1" />
   <meta name="robots" content="noindex" />
   <title>Prawda czy Wyzwanie – Gra</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&family=Outfit:wght@400;700;800&display=swap"
+    rel="stylesheet">
   <script type="module" src="assets/js/prawda-wyzwanie.js"></script>
 </head>
+
 <body class="page page--game page--timer" data-theme="light">
   <main class="container">
-    <header class="hero">
+    <header class="hero animate-in">
       <div class="hero__branding">
         <a class="hero__logo-link" href="index.html">
           <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
@@ -31,15 +35,17 @@
               <li><a class="game-switcher__link" href="nigdy-przenigdy.html">Nigdy przenigdy</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
-              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
+              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna,
+                  zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="trio-challenge.html">Kółko i krzyżyk Wyzwanie</a></li>
-              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zdrapka pozycji</a></li>
+              <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zaparowane Lustro</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
               <li><a class="game-switcher__link" href="niegrzeczne-kolo.html">Niegrzeczne koło</a></li>
               <li><a class="game-switcher__link" href="poznaj-wszystkie-pozycje.html">Poznaj wszystkie pozycje</a></li>
               <li><a class="game-switcher__link" href="tinder-dla-sexu.html">Tinder z pozycjami</a></li>
               <li><a class="game-switcher__link" href="5-7-10.html">5 • 7 • 10 sekund</a></li>
-              <li><a class="game-switcher__link" href="prawda-wyzwanie.html" aria-current="page">Prawda czy Wyzwanie</a></li>
+              <li><a class="game-switcher__link" href="prawda-wyzwanie.html" aria-current="page">Prawda czy Wyzwanie</a>
+              </li>
             </ul>
           </div>
         </details>
@@ -47,7 +53,7 @@
       <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
-    <section class="card card--play card--setup" id="intro-card">
+    <section class="card card--play card--setup animate-in delay-200" id="intro-card">
       <header class="card__header">
         <p class="card__eyebrow">Krok 1 z 2</p>
         <h2>Podaj imię gracza</h2>
@@ -87,7 +93,8 @@
             <span class="question-card__text" id="truth-text">Kliknij, aby odsłonić prawdę.</span>
             <span class="question-card__overlay">Prawda</span>
           </button>
-          <button class="question-card question-card--reveal question-card--action question-card--dare" type="button" id="dare-card">
+          <button class="question-card question-card--reveal question-card--action question-card--dare" type="button"
+            id="dare-card">
             <span class="question-card__text" id="dare-text">Kliknij, aby odsłonić wyzwanie.</span>
             <span class="question-card__overlay">Wyzwanie</span>
           </button>
@@ -99,13 +106,8 @@
           <button type="button" class="btn btn--thumb" id="mark-success" aria-label="Zadanie wykonane" disabled>
             👍
           </button>
-          <button
-            type="button"
-            class="btn btn--thumb btn--thumb-down"
-            id="mark-fail"
-            aria-label="Zadanie niewykonane"
-            disabled
-          >
+          <button type="button" class="btn btn--thumb btn--thumb-down" id="mark-fail" aria-label="Zadanie niewykonane"
+            disabled>
             👎
           </button>
         </div>
@@ -124,10 +126,57 @@
     </section>
 
     <div class="share-bar" id="share-bar">
-      <button class="btn btn--primary share-bar__button" type="button" id="share-room">Udostępnij pokój</button>
-      <button class="btn btn--ghost share-bar__button" type="button" id="single-device">Gramy na jednym urządzeniu</button>
+      <button class="btn btn--primary share-bar__button" type="button" id="share-open" aria-haspopup="dialog"
+        aria-controls="share-card" aria-expanded="false">Udostępnij pokój</button>
+      <button class="btn btn--ghost share-bar__button" type="button" id="single-device">Gramy na jednym
+        urządzeniu</button>
     </div>
     <p class="form__hint" id="share-feedback" hidden></p>
+
+    <section class="share-layer" id="share-layer" data-open="false" aria-hidden="true" hidden>
+      <div class="share-layer__backdrop" id="share-backdrop"></div>
+      <section class="card card--share share-layer__panel" id="share-card" role="dialog" aria-modal="true"
+        aria-labelledby="share-card-title" tabindex="-1">
+        <div class="share-card__header">
+          <h2 id="share-card-title">Udostępnij pokój</h2>
+          <button type="button" class="share-card__close" id="share-close">
+            <span aria-hidden="true">×</span>
+            <span class="visually-hidden">Zamknij okno „Udostępnij pokój”</span>
+          </button>
+        </div>
+        <div class="share-card__body">
+          <p id="share-hint">Wyślij partnerowi link, aby dołączył do pokoju.</p>
+          <p class="share-feedback" id="share-share-feedback" hidden role="status" aria-live="polite"></p>
+          <div class="share__actions">
+            <button type="button" class="btn btn--ghost" id="share-copy" disabled>Kopiuj link</button>
+            <button type="button" class="btn btn--ghost" id="share-show-qr" disabled>Zeskanuj QR dla partnera</button>
+            <div class="share-links" id="share-links">
+              <a class="share-link" data-share-channel="messenger" href="#" aria-disabled="true" tabindex="-1">Messenger</a>
+              <a class="share-link" data-share-channel="whatsapp" href="#" aria-disabled="true" tabindex="-1">WhatsApp</a>
+              <a class="share-link" data-share-channel="sms" href="#" aria-disabled="true" tabindex="-1">SMS</a>
+            </div>
+          </div>
+          <form class="share-email" id="share-email">
+            <label class="share-email__field" for="share-email-input">
+              <span class="share-email__label">Adres e-mail partnera</span>
+              <input type="email" id="share-email-input" name="partner_email" placeholder="partner@przyklad.pl"
+                autocomplete="email" required />
+            </label>
+            <button type="submit" class="btn btn--primary">Wyślij</button>
+            <p class="share-email__feedback" id="share-email-feedback" hidden role="status"></p>
+          </form>
+        </div>
+      </section>
+    </section>
+
+    <div id="share-qr-modal" class="qr-modal" hidden aria-hidden="true">
+      <div class="qr-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="share-qr-title">
+        <h2 id="share-qr-title">Zeskanuj kod QR</h2>
+        <img id="share-qr-image" class="qr-modal__image" alt="Kod QR prowadzący do pokoju" loading="lazy" />
+        <a id="share-qr-url" class="qr-modal__link" href="#" target="_blank" rel="noreferrer">Otwórz link</a>
+        <button id="share-qr-close" class="qr-modal__close" type="button">Zamknij</button>
+      </div>
+    </div>
 
     <footer class="footer">
       <nav class="footer__nav">
@@ -136,4 +185,5 @@
     </footer>
   </main>
 </body>
+
 </html>

@@ -6,7 +6,7 @@ define('BOOTSTRAP_EMIT_JSON', true);
 require_once __DIR__ . '/bootstrap.php';
 
 $relativePath = '../obrazy/zdrapki';
-$directory = realpath(__DIR__ . '/' . $relativePath);
+$directory = realpath(__DIR__ . DIRECTORY_SEPARATOR . $relativePath);
 
 if ($directory === false || !is_dir($directory)) {
     echo json_encode([

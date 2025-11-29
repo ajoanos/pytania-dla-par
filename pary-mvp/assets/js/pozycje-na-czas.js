@@ -1,17 +1,24 @@
-import { getJson, initThemeToggle } from './app.js';
+// Global error handler for this module
+window.addEventListener('error', (e) => {
+  const status = document.getElementById('timer-status');
+  if (status) status.textContent = `Błąd krytyczny: ${e.message}`;
+});
 
+import { getJson, initThemeToggle } from './app.js';
+import { STATIC_CARDS } from './pozycje-data.js';
+
+// ... constants ...
 const ACCESS_KEY = 'momenty.timer.access';
 const ACCESS_PAGE = 'pozycje-na-czas.html';
-const LIST_ENDPOINT = 'api/list_scratchcards.php';
 const DEFAULT_DURATION = 60;
-const ALERT_THRESHOLD = 10; // seconds
-const FINAL_COUNTDOWN_START = 10; // seconds
-const CELEBRATION_DURATION = 3000; // ms
-const CELEBRATION_DELAY = 400; // ms to briefly show "0"
+const ALERT_THRESHOLD = 10;
+const FINAL_COUNTDOWN_START = 10;
+const CELEBRATION_DURATION = 3000;
+const CELEBRATION_DELAY = 400;
 
+// ... ensureAccess and formatTime ...
 function ensureAccess() {
   const params = new URLSearchParams(window.location.search);
-
   if (params.has('auto')) {
     sessionStorage.setItem(ACCESS_KEY, 'true');
     if (window.history.replaceState) {
@@ -20,304 +27,313 @@ function ensureAccess() {
       window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
     }
   }
-
-  if (sessionStorage.getItem(ACCESS_KEY) === 'true') {
-    return true;
-  }
-
+  if (sessionStorage.getItem(ACCESS_KEY) === 'true') return true;
   window.location.replace(ACCESS_PAGE);
   return false;
 }
 
 function formatTime(seconds) {
   const safeSeconds = Math.max(0, Math.floor(seconds));
-  const minutes = Math.floor(safeSeconds / 60)
-    .toString()
-    .padStart(2, '0');
+  const minutes = Math.floor(safeSeconds / 60).toString().padStart(2, '0');
   const remaining = (safeSeconds % 60).toString().padStart(2, '0');
   return `${minutes}:${remaining}`;
 }
 
 function selectRandomIndex(list, currentIndex) {
-  if (!Array.isArray(list) || list.length === 0) {
-    return -1;
-  }
-  if (list.length === 1) {
-    return 0;
-  }
+  if (!Array.isArray(list) || list.length === 0) return -1;
+  if (list.length === 1) return 0;
   let index = Math.floor(Math.random() * list.length);
-  if (index === currentIndex) {
-    index = (index + 1) % list.length;
-  }
+  if (index === currentIndex) index = (index + 1) % list.length;
   return index;
 }
 
 function initTimerGame() {
-  const timerCard = document.getElementById('timer-card');
   const timerStatus = document.getElementById('timer-status');
-  const timerImage = document.getElementById('timer-image');
-  const timerMedia = document.getElementById('timer-media');
-  const progressBar = document.getElementById('timer-progress');
-  const timerRemaining = document.getElementById('timer-remaining');
-  const startButton = document.getElementById('start-timer');
-  const skipButton = document.getElementById('skip-position');
-  const durationRadios = document.querySelectorAll('input[name="timer_duration"]');
-  const overlay = document.getElementById('timer-overlay');
-  const countdownOverlay = document.getElementById('timer-countdown');
+  if (timerStatus) timerStatus.textContent = 'Inicjalizacja gry...';
 
-  const hasOverlaySupport = overlay && countdownOverlay;
+  try {
+    // Elements
+    const timerCard = document.getElementById('game-card');
+    const timerImage = document.getElementById('timer-image');
+    const progressRing = document.getElementById('timer-progress-ring');
+    const timerRemaining = document.getElementById('timer-remaining');
+    const startButton = document.getElementById('start-timer');
+    const skipButton = document.getElementById('skip-position');
+    const durationRadios = document.querySelectorAll('input[name="timer_duration"]');
+    const overlay = document.getElementById('timer-overlay');
+    const countdownOverlay = document.getElementById('timer-countdown');
 
-  if (!timerCard || !timerStatus || !timerImage || !timerMedia || !progressBar || !timerRemaining || !startButton || !skipButton) {
-    return;
-  }
-
-  let availableCards = [];
-  let currentIndex = -1;
-  let timerId = null;
-  let timerEndsAt = 0;
-  let timerTotal = DEFAULT_DURATION;
-  let countdownActive = false;
-  let lastFinalCountdownValue = null;
-  let celebrationTimeoutId = null;
-  let celebrationDelayId = null;
-
-  function clearCelebrationDelay() {
-    if (celebrationDelayId) {
-      window.clearTimeout(celebrationDelayId);
-      celebrationDelayId = null;
+    if (!timerCard || !timerStatus || !timerImage || !progressRing || !timerRemaining || !startButton || !skipButton) {
+      throw new Error('Brakuje elementów HTML. Odśwież stronę.');
     }
-  }
 
-  function hideCelebration() {
-    if (celebrationTimeoutId) {
-      window.clearTimeout(celebrationTimeoutId);
-      celebrationTimeoutId = null;
-    }
-    if (overlay?.dataset?.mode === 'celebration') {
-      overlay.dataset.mode = 'hidden';
-    }
-  }
+    // State
+    let availableCards = [];
+    let currentIndex = -1;
+    let timerId = null;
+    let timerEndsAt = 0;
+    let timerTotal = DEFAULT_DURATION;
+    let countdownActive = false;
+    let lastFinalCountdownValue = null;
+    let celebrationTimeoutId = null;
+    let celebrationDelayId = null;
+    const hasOverlaySupport = overlay && countdownOverlay;
 
-  function hideFinalCountdown() {
-    lastFinalCountdownValue = null;
-    if (overlay?.dataset?.mode === 'countdown') {
-      overlay.dataset.mode = 'hidden';
-    }
-    if (countdownOverlay) {
-      countdownOverlay.textContent = '';
-    }
-  }
-
-  function showFinalCountdown(value) {
-    if (!hasOverlaySupport) {
-      return;
-    }
-    overlay.dataset.mode = 'countdown';
-    countdownOverlay.textContent = String(value);
-  }
-
-  function triggerCelebration() {
-    if (!overlay) {
-      return;
-    }
-    hideFinalCountdown();
-    hideCelebration();
-    overlay.dataset.mode = 'celebration';
-    celebrationTimeoutId = window.setTimeout(() => {
-      if (overlay.dataset.mode === 'celebration') {
-        overlay.dataset.mode = 'hidden';
-      }
-      celebrationTimeoutId = null;
-    }, CELEBRATION_DURATION);
-  }
-
-  function getSelectedDuration() {
-    for (const radio of durationRadios) {
-      if (radio instanceof HTMLInputElement && radio.checked) {
-        const value = Number(radio.value) || DEFAULT_DURATION;
-        return Math.min(600, Math.max(10, value));
+    // Haptics Helper
+    function vibrate(pattern) {
+      if (navigator.vibrate) {
+        navigator.vibrate(pattern);
       }
     }
-    return DEFAULT_DURATION;
-  }
 
-  function stopCountdown({ silent = false, preserveCountdownOverlay = false } = {}) {
-    if (timerId) {
-      window.clearInterval(timerId);
-      timerId = null;
+    // Helper Functions
+    function clearCelebrationDelay() {
+      if (celebrationDelayId) { clearTimeout(celebrationDelayId); celebrationDelayId = null; }
     }
-    countdownActive = false;
-    timerEndsAt = 0;
-    progressBar.value = 0;
-    progressBar.max = timerTotal;
-    timerRemaining.textContent = formatTime(0);
-    document.body.classList.remove('timer-alert');
-    clearCelebrationDelay();
-    hideCelebration();
-    if (!preserveCountdownOverlay) {
+
+    function hideCelebration() {
+      if (celebrationTimeoutId) { clearTimeout(celebrationTimeoutId); celebrationTimeoutId = null; }
+      if (overlay?.dataset?.mode === 'celebration') overlay.dataset.mode = 'hidden';
+    }
+
+    function hideFinalCountdown() {
+      lastFinalCountdownValue = null;
+      if (overlay?.dataset?.mode === 'countdown') overlay.dataset.mode = 'hidden';
+      if (countdownOverlay) countdownOverlay.textContent = '';
+    }
+
+    function showFinalCountdown(value) {
+      if (!hasOverlaySupport) return;
+      overlay.dataset.mode = 'countdown';
+      countdownOverlay.textContent = String(value);
+    }
+
+    function triggerCelebration() {
+      if (!overlay) return;
       hideFinalCountdown();
-    }
-    if (!silent) {
-      startButton.textContent = 'Zaczynamy zabawę';
-    }
-  }
-
-  function updateCountdown() {
-    if (!countdownActive || !timerEndsAt) {
-      return;
-    }
-    const now = Date.now();
-    const remainingMs = Math.max(0, timerEndsAt - now);
-    const remainingSeconds = remainingMs / 1000;
-    const elapsed = timerTotal - remainingSeconds;
-    progressBar.max = timerTotal;
-    progressBar.value = Math.min(timerTotal, Math.max(0, elapsed));
-    timerRemaining.textContent = formatTime(Math.ceil(remainingSeconds));
-
-    if (remainingSeconds <= ALERT_THRESHOLD) {
-      document.body.classList.add('timer-alert');
-    } else {
-      document.body.classList.remove('timer-alert');
+      hideCelebration();
+      overlay.dataset.mode = 'celebration';
+      vibrate([100, 50, 100, 50, 200]); // Celebration vibration
+      celebrationTimeoutId = setTimeout(() => {
+        if (overlay.dataset.mode === 'celebration') overlay.dataset.mode = 'hidden';
+        celebrationTimeoutId = null;
+      }, CELEBRATION_DURATION);
     }
 
-    if (remainingSeconds > 0 && remainingSeconds <= FINAL_COUNTDOWN_START) {
-      const displayValue = Math.ceil(remainingSeconds);
-      if (displayValue !== lastFinalCountdownValue) {
-        lastFinalCountdownValue = displayValue;
-        showFinalCountdown(displayValue);
+    function getSelectedDuration() {
+      for (const radio of durationRadios) {
+        if (radio.checked) return Math.min(600, Math.max(10, Number(radio.value) || DEFAULT_DURATION));
       }
-    } else if (lastFinalCountdownValue !== null) {
-      hideFinalCountdown();
+      return DEFAULT_DURATION;
     }
 
-    if (remainingMs <= 0) {
-      stopCountdown({ silent: true, preserveCountdownOverlay: true });
-      timerRemaining.textContent = '00:00';
-      timerStatus.textContent = 'Czas minął!';
-      startButton.textContent = 'Uruchom ponownie';
-      document.body.classList.remove('timer-alert');
+    function setProgress(percent) {
+      // pathLength="1" in SVG makes this easy: 1 = full, 0 = empty
+      // We want to go from 1 (full) to 0 (empty) or 0 (full) to 1 (empty) depending on stroke-dashoffset
+      // Usually dasharray=1, dashoffset=0 is full. dashoffset=1 is empty.
+      const offset = 1 - percent;
+      progressRing.style.strokeDashoffset = offset;
+    }
+
+    function stopCountdown({ silent = false, preserveCountdownOverlay = false } = {}) {
+      if (timerId) { clearInterval(timerId); timerId = null; }
       countdownActive = false;
-      lastFinalCountdownValue = 0;
-      showFinalCountdown(0);
+      timerEndsAt = 0;
+
+      setProgress(0); // Reset ring
+      timerRemaining.textContent = formatTime(0);
+
+      document.body.classList.remove('timer-alert');
+      progressRing.classList.remove('danger');
+      timerCard.classList.remove('pulse-danger');
+
       clearCelebrationDelay();
-      celebrationDelayId = window.setTimeout(() => {
-        triggerCelebration();
-      }, CELEBRATION_DELAY);
-    }
-  }
+      hideCelebration();
+      if (!preserveCountdownOverlay) hideFinalCountdown();
 
-  function startCountdown() {
-    if (!availableCards.length) {
-      return;
-    }
-    clearCelebrationDelay();
-    hideCelebration();
-    hideFinalCountdown();
-    timerTotal = getSelectedDuration();
-    progressBar.value = 0;
-    progressBar.max = timerTotal;
-    timerRemaining.textContent = formatTime(timerTotal);
-    timerEndsAt = Date.now() + timerTotal * 1000;
-    countdownActive = true;
-    document.body.classList.remove('timer-alert');
-    timerStatus.textContent = 'Odliczanie w toku...';
-    startButton.textContent = 'Restartuj odliczanie';
-    if (timerId) {
-      window.clearInterval(timerId);
-    }
-    timerId = window.setInterval(updateCountdown, 100);
-    updateCountdown();
-  }
-
-  async function loadCards() {
-    timerStatus.textContent = 'Ładuję pozycję...';
-    startButton.disabled = true;
-    skipButton.disabled = true;
-    try {
-      const payload = await getJson(LIST_ENDPOINT);
-      if (!payload?.ok) {
-        throw new Error(payload?.error || 'Nie udało się wczytać pozycji.');
+      if (!silent) {
+        startButton.innerHTML = '<span class="icon">▶️</span> Start';
+        timerStatus.textContent = 'Gotowi?';
       }
-      if (!Array.isArray(payload.files) || payload.files.length === 0) {
-        timerStatus.textContent = 'Dodaj obrazy do folderu obrazy/zdrapki i spróbuj ponownie.';
+    }
+
+    function updateCountdown() {
+      if (!countdownActive || !timerEndsAt) return;
+      const now = Date.now();
+      const remainingMs = Math.max(0, timerEndsAt - now);
+      const remainingSeconds = remainingMs / 1000;
+      const elapsed = timerTotal - remainingSeconds;
+      const percent = Math.max(0, remainingSeconds / timerTotal);
+
+      setProgress(percent);
+      timerRemaining.textContent = formatTime(Math.ceil(remainingSeconds));
+
+      // Danger State (Last 10s)
+      if (remainingSeconds <= ALERT_THRESHOLD && remainingSeconds > 0) {
+        document.body.classList.add('timer-alert');
+        progressRing.classList.add('danger');
+        timerCard.classList.add('pulse-danger');
+      } else {
+        document.body.classList.remove('timer-alert');
+        progressRing.classList.remove('danger');
+        timerCard.classList.remove('pulse-danger');
+      }
+
+      // Final Countdown Overlay & Haptics
+      if (remainingSeconds > 0 && remainingSeconds <= FINAL_COUNTDOWN_START) {
+        const displayValue = Math.ceil(remainingSeconds);
+        if (displayValue !== lastFinalCountdownValue) {
+          lastFinalCountdownValue = displayValue;
+          showFinalCountdown(displayValue);
+          vibrate(50); // Tick vibration
+        }
+      } else if (lastFinalCountdownValue !== null) {
+        hideFinalCountdown();
+      }
+
+      // Finish
+      if (remainingMs <= 0) {
+        stopCountdown({ silent: true, preserveCountdownOverlay: true });
+        timerRemaining.textContent = '00:00';
+        timerStatus.textContent = 'Czas minął!';
+        startButton.innerHTML = '<span class="icon">🔄</span> Powtórz';
+
+        countdownActive = false;
+        lastFinalCountdownValue = 0;
+        showFinalCountdown(0);
+
+        clearCelebrationDelay();
+        celebrationDelayId = setTimeout(triggerCelebration, CELEBRATION_DELAY);
+      }
+    }
+
+    function startCountdown() {
+      if (!availableCards.length) return;
+      clearCelebrationDelay();
+      hideCelebration();
+      hideFinalCountdown();
+
+      timerTotal = getSelectedDuration();
+      setProgress(1); // Full ring
+      timerRemaining.textContent = formatTime(timerTotal);
+
+      timerEndsAt = Date.now() + timerTotal * 1000;
+      countdownActive = true;
+
+      document.body.classList.remove('timer-alert');
+      progressRing.classList.remove('danger');
+      timerCard.classList.remove('pulse-danger');
+
+      timerStatus.textContent = 'Bawcie się dobrze!';
+      startButton.innerHTML = '<span class="icon">⏹️</span> Stop';
+
+      if (timerId) clearInterval(timerId);
+      timerId = setInterval(updateCountdown, 50); // Smoother update
+      updateCountdown();
+    }
+
+
+
+    // Roulette Logic
+    let rouletteInterval = null;
+
+    function startRoulette() {
+      if (countdownActive) stopCountdown();
+      if (rouletteInterval) clearInterval(rouletteInterval);
+
+      timerStatus.textContent = 'Losowanie...';
+      timerImage.classList.add('roulette-spin');
+
+      let spins = 0;
+      const maxSpins = 15;
+      const speed = 80;
+
+      rouletteInterval = setInterval(() => {
+        showRandomCard({ silent: true });
+        vibrate(10); // Light tick
+        spins++;
+
+        if (spins >= maxSpins) {
+          clearInterval(rouletteInterval);
+          timerImage.classList.remove('roulette-spin');
+          timerStatus.textContent = 'Wylosowano! Zaczynamy?';
+          vibrate([50, 50, 50]); // Success vibration
+        }
+      }, speed);
+    }
+
+    function showRandomCard({ silent = false } = {}) {
+      if (!availableCards.length) return;
+      const nextIndex = selectRandomIndex(availableCards, currentIndex);
+      if (nextIndex < 0) {
+        timerStatus.textContent = 'Brak dostępnych pozycji.';
         return;
       }
-      availableCards = payload.files;
-      timerStatus.textContent = 'Pozycja gotowa. Naciśnij start lub pomiń, aby wylosować inną.';
-      showRandomCard();
-      startButton.disabled = false;
-      skipButton.disabled = false;
-    } catch (error) {
-      console.error(error);
-      timerStatus.textContent = error.message || 'Nie udało się pobrać pozycji. Odśwież stronę i spróbuj ponownie.';
+      currentIndex = nextIndex;
+      const source = availableCards[nextIndex];
+
+      // Preload next few images if possible? 
+      // For now just set src
+      timerImage.src = source;
+      if (!silent) timerStatus.textContent = 'Nowa pozycja.';
     }
-  }
 
-  function showRandomCard() {
-    if (!availableCards.length) {
-      return;
+    function handleSkip() {
+      startRoulette();
     }
-    const nextIndex = selectRandomIndex(availableCards, currentIndex);
-    if (nextIndex < 0) {
-      timerStatus.textContent = 'Brak dostępnych pozycji.';
-      return;
-    }
-    currentIndex = nextIndex;
-    const source = availableCards[nextIndex];
-    timerMedia.dataset.ready = 'false';
-    timerImage.src = source;
-    timerImage.alt = 'Losowa pozycja';
-  }
 
-  function handleSkip() {
-    showRandomCard();
-    timerStatus.textContent = 'Pozycja zmieniona. Startujcie, gdy będziecie gotowi!';
-    if (countdownActive) {
-      startCountdown();
-    }
-  }
+    // Event Listeners
+    timerImage.addEventListener('load', () => {
+      // Optional: fade in effect
+    });
 
-  timerImage.addEventListener('load', () => {
-    timerMedia.dataset.ready = 'true';
-  });
+    timerImage.addEventListener('error', (e) => {
+      console.error('Image load error:', e);
+      timerStatus.textContent = 'Błąd obrazka. Losuję inny...';
+      setTimeout(() => showRandomCard(), 500);
+    });
 
-  timerImage.addEventListener('error', () => {
-    timerStatus.textContent = 'Nie udało się wczytać tej pozycji. Sprawdź obrazy i spróbuj ponownie.';
-    timerMedia.dataset.ready = 'true';
-  });
-
-  startButton.addEventListener('click', () => {
-    if (!availableCards.length) {
-      return;
-    }
-    if (countdownActive) {
-      startCountdown();
-    } else {
-      startCountdown();
-    }
-  });
-
-  skipButton.addEventListener('click', handleSkip);
-
-  durationRadios.forEach((radio) => {
-    radio.addEventListener('change', () => {
-      timerTotal = getSelectedDuration();
-      progressBar.max = timerTotal;
-      if (!countdownActive) {
-        timerRemaining.textContent = formatTime(timerTotal);
+    startButton.addEventListener('click', () => {
+      if (countdownActive) {
+        stopCountdown();
+      } else {
+        startCountdown();
       }
     });
-  });
 
-  progressBar.max = DEFAULT_DURATION;
-  timerRemaining.textContent = formatTime(DEFAULT_DURATION);
-  loadCards();
+    skipButton.addEventListener('click', handleSkip);
+
+    durationRadios.forEach((radio) => {
+      radio.addEventListener('change', () => {
+        if (!countdownActive) {
+          timerTotal = getSelectedDuration();
+          timerRemaining.textContent = formatTime(timerTotal);
+        }
+      });
+    });
+
+    // Initial Setup
+    availableCards = STATIC_CARDS;
+
+    // Preload a few random images
+    for (let i = 0; i < 5; i++) {
+      const idx = Math.floor(Math.random() * availableCards.length);
+      new Image().src = availableCards[idx];
+    }
+
+    timerStatus.textContent = 'Gotowi?';
+    showRandomCard({ silent: true });
+    startButton.disabled = false;
+    skipButton.disabled = false;
+
+  } catch (err) {
+    console.error(err);
+    if (timerStatus) timerStatus.textContent = `Błąd skryptu: ${err.message}`;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (!ensureAccess()) {
-    return;
-  }
+  if (!ensureAccess()) return;
   initThemeToggle(document.getElementById('theme-toggle'));
   initTimerGame();
 });

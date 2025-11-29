@@ -1,7 +1,7 @@
 import { getJson, initThemeToggle } from './app.js';
 
 const CARD_SELECTOR = '[data-role="scratch-card"]';
-const SCRATCH_RADIUS = 24;
+const SCRATCH_RADIUS = 35;
 const ACCESS_KEY = 'momenty.scratch.access';
 const ACCESS_PAGE = 'zdrapka-pozycji.html';
 const LEGACY_KEY = 'pary.access.pdp';
@@ -109,6 +109,35 @@ function createScratchCard() {
     image.src = source;
   }
 
+  function drawSteamLayer() {
+    if (!image || canvas.width === 0 || canvas.height === 0) return;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. Draw blurred image
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.filter = 'blur(20px)';
+    if (image.complete && image.naturalWidth > 0 && image.naturalHeight > 0) {
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    }
+    ctx.filter = 'none';
+
+    // 2. Draw steam overlay
+    const gradient = ctx.createLinearGradient(
+      0, 0, canvas.width, canvas.height
+    );
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    gradient.addColorStop(1, 'rgba(220, 230, 240, 1)');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Reset for scratching
+    ctx.globalCompositeOperation = 'destination-out';
+  }
+
   function resizeCanvas() {
     const rect = container.getBoundingClientRect();
     dpr = window.devicePixelRatio || 1;
@@ -116,24 +145,43 @@ function createScratchCard() {
     canvas.height = rect.height * dpr;
     canvas.style.width = `${rect.width}px`;
     canvas.style.height = `${rect.height}px`;
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#c8102e';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.globalCompositeOperation = 'destination-out';
+
+    drawSteamLayer();
+  }
+
+  async function refreshSteamOverlay() {
+    if (!image.src) return;
+    try {
+      if (!image.complete) {
+        await image.decode();
+      }
+    } catch (err) {
+      console.warn('Nie udało się zdekodować obrazu przed rysowaniem płótna.', err);
+    }
+    resizeCanvas();
   }
 
   function scratch(event) {
     const rect = canvas.getBoundingClientRect();
     const pointerX = (event.clientX - rect.left) * dpr;
     const pointerY = (event.clientY - rect.top) * dpr;
+    const radius = SCRATCH_RADIUS * dpr;
+
+    const gradient = ctx.createRadialGradient(pointerX, pointerY, 0, pointerX, pointerY, radius);
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+    gradient.addColorStop(0.4, 'rgba(0, 0, 0, 1)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.arc(pointerX, pointerY, SCRATCH_RADIUS * dpr, 0, Math.PI * 2);
+    ctx.arc(pointerX, pointerY, radius, 0, Math.PI * 2);
     ctx.fill();
   }
 
   function startDrawing(event) {
     isDrawing = true;
     scratch(event);
+    createDrops(event);
     event.preventDefault();
   }
 
@@ -143,6 +191,37 @@ function createScratchCard() {
     }
     event.preventDefault();
     scratch(event);
+    if (Math.random() > 0.85) {
+      createDrops(event);
+    }
+  }
+
+  function createDrops(event) {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const drop = document.createElement('div');
+    drop.className = 'steam-drop';
+
+    // Randomize size and position slightly
+    const size = Math.random() * 15 + 15; // 15px to 30px
+    drop.style.width = `${size}px`;
+    drop.style.height = `${size}px`;
+
+    // Offset slightly so it doesn't look like it spawns EXACTLY under cursor
+    const offsetX = (Math.random() - 0.5) * 20;
+    drop.style.left = `${x + offsetX}px`;
+    drop.style.top = `${y}px`;
+
+    // Randomize fall duration (20% faster than 3-5s => ~2.4-4s)
+    const duration = Math.random() * 1.6 + 2.4;
+    drop.style.animationDuration = `${duration}s`;
+
+    container.appendChild(drop);
+
+    // Remove after animation
+    setTimeout(() => drop.remove(), duration * 1000);
   }
 
   function stopDrawing() {
@@ -157,14 +236,17 @@ function createScratchCard() {
   canvas.addEventListener('touchstart', (event) => event.preventDefault(), { passive: false });
 
   window.addEventListener('resize', resizeCanvas);
-  image.addEventListener('load', resizeCanvas);
+  image.addEventListener('load', () => {
+    // Ensure the canvas matches the image/container size before drawing the steam layer
+    refreshSteamOverlay();
+  });
   image.addEventListener('error', () => {
     setStatus('Nie udało się wczytać tej karty. Sprawdź nazwę pliku i spróbuj ponownie.');
   });
 
   nextButton.addEventListener('click', () => {
     showRandomCard();
-    resizeCanvas();
+    refreshSteamOverlay();
   });
 
   resizeCanvas();
