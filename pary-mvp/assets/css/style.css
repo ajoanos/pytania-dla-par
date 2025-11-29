@@ -163,6 +163,7 @@ html {
   background: linear-gradient(-45deg, var(--color-bg), var(--color-peach), var(--color-bg), var(--color-mint));
   background-size: 400% 400%;
   animation: meshGradient 60s ease infinite;
+  overflow-x: hidden;
 }
 
 [data-theme="dark"] html {
@@ -176,6 +177,7 @@ body {
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
+  overflow-x: hidden;
   /* Dynamic viewport height for mobile */
   color: var(--color-text);
   font-family: var(--font-family);
