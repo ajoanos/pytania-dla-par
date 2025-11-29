@@ -4030,8 +4030,8 @@ body.share-layer-open .share-bar {
   display: grid;
   place-items: center;
   margin: 0 auto 1.5rem;
-  width: min(420px, 100%);
-  max-width: 85vw;
+  width: 100%;
+  max-width: min(1100px, 96vw);
   aspect-ratio: 1 / 1;
   padding-top: var(--wheel-pointer-space);
 }
