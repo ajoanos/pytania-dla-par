@@ -22,7 +22,7 @@
   const now = Math.floor(Date.now() / 1000);
 
   if (stored && stored.token === token && Number(stored.expires) > now) {
-    notifyAccess(Number(stored.expires), false, { days: parseDays(stored.days) });
+    notifyAccess(Number(stored.expires));
     return;
   }
 
@@ -35,9 +35,9 @@
   }
 
   fetchAccess(token)
-    .then(({ expires, days }) => {
-      saveAccess(token, expires, days);
-      notifyAccess(expires, true, { days });
+    .then((expires) => {
+      saveAccess(token, expires);
+      notifyAccess(expires, true);
     })
     .catch((error) => {
       if (error?.type === 'access-denied') {
@@ -66,9 +66,7 @@
       })
       .then((data) => {
         if (data?.access === true && typeof data.expires !== 'undefined') {
-          const expires = Number(data.expires);
-          const days = parseDays(data.days);
-          return { expires, days };
+          return Number(data.expires);
         }
 
         const reason = data?.reason;
@@ -79,19 +77,12 @@
       });
   }
 
-  function parseDays(value) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return null;
-    return Math.max(0, Math.round(numeric));
-  }
-
-  function notifyAccess(expires, updatePendingFlag = true, meta = {}) {
+  function notifyAccess(expires, updatePendingFlag = true) {
     document.documentElement.removeAttribute('data-guard-hidden');
 
     const expiry = Number(expires);
     window.__momentyAccessConfirmed = true;
     window.__momentyAccessExpires = expiry;
-    window.__momentyAccessDaysLeft = typeof meta.days === 'number' ? meta.days : null;
 
     let handled = false;
     if (typeof window.momentyAccessOk === 'function') {
@@ -118,12 +109,9 @@
     }
   }
 
-  function saveAccess(currentToken, expires, days) {
+  function saveAccess(currentToken, expires) {
     try {
       const payload = { token: currentToken, expires: Number(expires) };
-      if (typeof days === 'number') {
-        payload.days = days;
-      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (error) {
       console.warn('Nie udało się zapisać danych dostępu:', error);
@@ -238,4 +226,3 @@
     document.body.appendChild(container);
   }
 })();
-
