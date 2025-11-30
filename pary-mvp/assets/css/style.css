@@ -202,6 +202,104 @@ body {
   padding-inline: 1rem;
 }
 
+#topbar {
+  align-self: stretch;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--color-card);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-bottom: var(--glass-border);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+}
+
+.topbar__inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.topbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: var(--color-text);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.topbar__logo {
+  display: block;
+  height: 44px;
+  width: auto;
+  border-radius: 14px;
+  background: var(--color-card);
+  padding: 0.35rem 0.5rem;
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.topbar__title {
+  font-size: 1.15rem;
+}
+
+.topbar__actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.topbar__theme-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--color-card-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  display: grid;
+  place-items: center;
+  box-shadow: var(--glass-shadow);
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 200ms ease, border-color 120ms ease;
+}
+
+.topbar__theme-toggle:hover,
+.topbar__theme-toggle:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+  box-shadow: 0 10px 30px rgba(242, 109, 111, 0.2);
+}
+
+.topbar__theme-toggle:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .topbar__logo {
+    height: 38px;
+    padding: 0.3rem 0.45rem;
+  }
+
+  .topbar__title {
+    display: none;
+  }
+}
+
 [data-theme="dark"] body {
   background: linear-gradient(-45deg, #1A1016, #2D1B2E, #1A1016, #251820);
   background-size: 400% 400%;

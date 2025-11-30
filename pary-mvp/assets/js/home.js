@@ -1,5 +1,6 @@
 import { appendTokenToUrl, ACTIVE_TOKEN } from './app.js';
 import { games } from './games-data.js';
+import { renderTopbar } from './topbar.js';
 
 // Utils
 function shuffleArray(array) {
@@ -121,6 +122,7 @@ function renderGameGrid() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderTopbar();
     renderHeroGame();
     renderGameGrid();
 
