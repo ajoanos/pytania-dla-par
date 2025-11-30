@@ -91,6 +91,10 @@ function queueApiUpdate(payload) {
   console.debug('Aktualizacja panelu (placeholder API):', payload);
 }
 
+function trackEvent(name, data = {}) {
+  queueApiUpdate({ type: 'panel-event', event: name, data });
+}
+
 function formatDate(date) {
   return new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long' }).format(date);
 }
@@ -310,6 +314,7 @@ function renderRandomVibe(state) {
   };
 
   randomBtn.addEventListener('click', pickScenario);
+  randomBtn.addEventListener('click', () => trackEvent('cta_random_game'));
   pickScenario();
 }
 
@@ -339,11 +344,13 @@ function attachActionHandlers(state) {
         }
         removeFromArray(state.backlog, id);
         saveState(state);
+        trackEvent('add_favorite', { gameId: id, note: button.dataset.note });
         break;
       }
       case 'remove-favorite': {
         removeFromArray(state.favorites, id);
         saveState(state);
+        trackEvent('remove_favorite', { gameId: id });
         break;
       }
       case 'mark-unfinished': {
@@ -352,11 +359,13 @@ function attachActionHandlers(state) {
           removeFromArray(state.backlog, id);
         }
         saveState(state);
+        trackEvent('mark_unfinished', { gameId: id, note: button.dataset.note });
         break;
       }
       case 'complete-progress': {
         state.inProgress = state.inProgress.filter((entry) => entry.id !== id);
         saveState(state);
+        trackEvent('complete_progress', { gameId: id });
         break;
       }
       default:
@@ -371,6 +380,22 @@ function initPanel() {
   const state = loadState();
   render(state);
   attachActionHandlers(state);
+
+  document.addEventListener('click', (event) => {
+    const target = event.target instanceof HTMLElement ? event.target.closest('[data-analytics]') : null;
+    if (!target) return;
+
+    const analyticsName = target.dataset.analytics;
+    if (!analyticsName) return;
+
+    const payload = {
+      id: target.dataset.id,
+      note: target.dataset.note,
+      label: target.dataset.analyticsLabel || target.textContent?.trim() || undefined,
+    };
+
+    trackEvent(analyticsName, payload);
+  });
 }
 
 if (document.readyState === 'loading') {
