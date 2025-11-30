@@ -15,15 +15,14 @@
     rel="stylesheet" />
   <script type="module" src="assets/js/app.js"></script>
   <script type="module" src="assets/js/trio-challenge.js"></script>
+  <script type="module" src="assets/js/topbar.js"></script>
 </head>
 
 <body class="page page--board trio-page" data-theme="light">
+  <header id="topbar"></header>
   <main class="planszowka-shell">
     <header class="hero planszowka-hero animate-in">
       <div class="hero__branding">
-        <a class="hero__logo-link" href="index.html">
-          <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
-        </a>
         <div class="hero__text">
           <h1>Kółko i krzyżyk Wyzwanie</h1>
           <p>Wybierz planszę 3×3 lub 4×4. Na mniejszej wystarczą trzy symbole w linii, na większej potrzebujesz
@@ -51,7 +50,6 @@
           </div>
         </details>
       </div>
-      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
     <div class="planszowka-main">
@@ -175,6 +173,10 @@
         </div>
       </div>
   </main>
+  <script type="module">
+    import { renderTopbar } from './assets/js/topbar.js';
+    document.addEventListener('DOMContentLoaded', () => renderTopbar());
+  </script>
 </body>
 
 </html>

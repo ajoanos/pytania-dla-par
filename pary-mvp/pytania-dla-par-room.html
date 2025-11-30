@@ -11,18 +11,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
   <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="assets/js/topbar.js"></script>
 </head>
 <body class="page page--game" data-theme="light">
+  <header id="topbar"></header>
   <main class="container">
     <header class="hero">
       <div class="hero__branding">
-        <a class="hero__logo-link" href="index.html">
-          <img
-            class="hero__logo"
-            src="https://sklep.allemedia.pl/momenty/logo.png"
-            alt="Momenty"
-          />
-        </a>
         <div class="hero__text">
           <h1>Pytania dla par</h1>
           <p>Stwórz pokój i zaproś partnera, aby rozpocząć grę.</p>
@@ -48,7 +43,6 @@
           </div>
         </details>
       </div>
-      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
     <section class="card card--game" id="game-card">
@@ -85,5 +79,9 @@
       </nav>
     </footer>
   </main>
+  <script type="module">
+    import { renderTopbar } from './assets/js/topbar.js';
+    document.addEventListener('DOMContentLoaded', () => renderTopbar());
+  </script>
 </body>
 </html>

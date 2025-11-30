@@ -15,16 +15,15 @@
     rel="stylesheet">
   <script type="module" src="assets/js/app.js"></script>
   <script type="module" src="assets/js/waiting-room.js"></script>
+  <script type="module" src="assets/js/topbar.js"></script>
 </head>
 
 <body class="page page--waiting" data-theme="light" data-host-page="tinder-wspolnych-pomyslow-room.html"
   data-home-page="tinder-wspolnych-pomyslow.html" data-room-page="tinder-wspolnych-pomyslow-play.html">
+  <header id="topbar"></header>
   <main class="container">
     <header class="hero animate-in">
       <div class="hero__branding">
-        <a class="hero__logo-link" href="index.html">
-          <img class="hero__logo" src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" />
-        </a>
         <div class="hero__text">
           <h1>Poczekalnia Tinder wspólnych pomysłów</h1>
           <p id="waiting-room-label"></p>
@@ -52,7 +51,6 @@
           </div>
         </details>
       </div>
-      <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
     </header>
 
     <section class="waiting-room">
@@ -66,6 +64,10 @@
       </section>
     </section>
   </main>
+  <script type="module">
+    import { renderTopbar } from './assets/js/topbar.js';
+    document.addEventListener('DOMContentLoaded', () => renderTopbar());
+  </script>
 </body>
 
 </html>
