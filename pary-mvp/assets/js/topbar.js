@@ -45,7 +45,6 @@ export function renderTopbar(options = {}) {
     <div class="topbar__inner">
       <a class="topbar__brand" href="${brandHref}">
         <img class="topbar__logo" src="${config.logoUrl}" alt="${config.logoAlt}">
-        <span class="topbar__title">${config.brandName}</span>
       </a>
       <div class="topbar__actions">
         <button class="topbar__theme-toggle" id="theme-toggle" type="button" aria-label="Przełącz motyw"></button>

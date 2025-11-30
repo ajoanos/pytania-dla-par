@@ -224,8 +224,8 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
 }
 
 .topbar__brand {
@@ -243,15 +243,6 @@ body {
   display: block;
   height: 44px;
   width: auto;
-  border-radius: 14px;
-  background: var(--color-card);
-  padding: 0.35rem 0.5rem;
-  border: var(--glass-border);
-  box-shadow: var(--glass-shadow);
-}
-
-.topbar__title {
-  font-size: 1.15rem;
 }
 
 .topbar__actions {
