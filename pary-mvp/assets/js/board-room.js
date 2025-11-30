@@ -234,7 +234,7 @@ async function startPolling() {
   if (!isPolling) return;
   await refreshState();
   if (isPolling) {
-    pollTimer = setTimeout(startPolling, 5000);
+    pollTimer = setTimeout(startPolling, 6000); // Increased from 5000ms
   }
 }
 
@@ -527,7 +527,7 @@ function isSelfActive() {
 
 function startPresencePing() {
   sendPresence();
-  presenceTimer = window.setInterval(sendPresence, 20000);
+  presenceTimer = window.setInterval(sendPresence, 30000); // Increased from 20000ms
 }
 
 async function sendPresence() {

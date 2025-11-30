@@ -354,19 +354,20 @@ function fetchQuestions(string $deck = 'default'): array
 
 function purgeExpiredRooms(): void
 {
-    $stmt = db()->query('SELECT id, room_key, created_at FROM rooms');
-    $idsToDelete = [];
-    while ($room = $stmt->fetch()) {
-        if (isRoomExpired($room)) {
-            $idsToDelete[] = (int)$room['id'];
-        }
-    }
-    if (empty($idsToDelete)) {
+    // Only run with ~1% probability to prevent locking the DB on every request
+    if (mt_rand(1, 100) !== 1) {
         return;
     }
-    $deleteStmt = db()->prepare('DELETE FROM rooms WHERE id = :id');
-    foreach ($idsToDelete as $id) {
-        $deleteStmt->execute(['id' => $id]);
+
+    // Calculate cutoff time (UTC)
+    $cutoff = gmdate('Y-m-d H:i:s', time() - ROOM_LIFETIME_SECONDS);
+
+    // Execute single DELETE query for all expired rooms
+    try {
+        $stmt = db()->prepare('DELETE FROM rooms WHERE created_at < :cutoff');
+        $stmt->execute(['cutoff' => $cutoff]);
+    } catch (Exception $e) {
+        // Silently fail on cleanup to not interrupt the main request
     }
 }
 

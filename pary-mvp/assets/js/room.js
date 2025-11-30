@@ -2130,12 +2130,12 @@ async function startPolling() {
   if (!isPolling) return;
   await refreshState();
   if (isPolling) {
-    pollTimer = setTimeout(startPolling, 4000);
+    pollTimer = setTimeout(startPolling, 6000); // Increased from 4000ms to 6000ms
   }
 }
 
 startPolling();
-presenceTimer = setInterval(sendPresence, 15000);
+presenceTimer = setInterval(sendPresence, 30000); // Increased from 15000ms to 30000ms
 sendPresence();
 adjustChatInputHeight();
 

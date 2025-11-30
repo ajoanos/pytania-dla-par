@@ -148,19 +148,27 @@ function createWheel() {
   function resizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const rect = spinner.getBoundingClientRect();
-    const baseSize = spinner.clientWidth || spinner.offsetWidth || rect.width || 0;
-    const size = Math.max(baseSize, 240);
+    // Use the actual container width for the canvas internal resolution
+    const size = rect.width;
 
-    if (size === state.canvasSize && dpr === state.devicePixelRatio) {
+    if (size === 0) return;
+
+    // Only update if dimensions changed significantly or DPR changed
+    if (Math.abs(state.canvasSize - size) < 1 && dpr === state.devicePixelRatio) {
       return;
     }
 
     state.canvasSize = size;
     state.devicePixelRatio = dpr;
+
+    // Set internal resolution to match display size * pixel ratio
     canvas.width = size * dpr;
     canvas.height = size * dpr;
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
+
+    // IMPORTANT: Do NOT set canvas.style.width/height here.
+    // Let CSS handle the display size (width: 100%; height: 100%)
+    // to ensure it stays centered and fills the container.
+
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     if (center) {
@@ -171,6 +179,15 @@ function createWheel() {
 
     drawWheel();
   }
+
+  // Use ResizeObserver for robust responsiveness
+  const resizeObserver = new ResizeObserver(() => {
+    resizeCanvas();
+  });
+  resizeObserver.observe(spinner);
+
+  // Initial sizing
+  resizeCanvas();
 
   function drawWheel() {
     const { positions, images } = state;
@@ -417,8 +434,7 @@ function createWheel() {
 
   spinButton.addEventListener('click', spinWheel);
 
-  window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
+  // window.addEventListener('resize', resizeCanvas); // Removed in favor of ResizeObserver
 
   preparePositions().catch(() => {
     // handled
