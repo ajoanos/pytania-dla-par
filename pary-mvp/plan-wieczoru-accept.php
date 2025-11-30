@@ -9,9 +9,10 @@ require __DIR__ . '/api/mail_helpers.php';
 
 const FALLBACK_PLAN_BASE = 'https://sklep.allemedia.pl/anti15/';
 
-$token = trim((string)($_GET['token'] ?? ''));
+$inviteToken = trim((string)($_GET['invite_token'] ?? ''));
+$accessToken = trim((string)($_GET['token'] ?? ''));
 $decisionParam = strtolower(trim((string)($_GET['decision'] ?? 'accept')));
-$planToken = trim((string)($_GET['plan_token'] ?? ''));
+$planToken = trim((string)($_GET['plan_token'] ?? $accessToken));
 $decision = $decisionParam === 'decline' ? 'decline' : 'accept';
 $status = 'invalid';
 $headline = 'Ups!';
@@ -21,8 +22,10 @@ $ctaLabel = 'Zaproponuj własny plan wieczoru';
 $showProposalForm = false;
 $proposalIntro = '';
 
-if ($token !== '') {
-    $invite = getPlanInviteByToken($token);
+$lookupToken = $inviteToken !== '' ? $inviteToken : $accessToken;
+
+if ($lookupToken !== '') {
+    $invite = getPlanInviteByToken($lookupToken);
     if ($invite) {
         $planLink = normalizePlanLink(trim((string)($invite['plan_link'] ?? '')), $planToken);
         $alreadyAccepted = isset($invite['accepted_at']) && $invite['accepted_at'] !== '';
