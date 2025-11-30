@@ -206,6 +206,10 @@ body {
   align-self: stretch;
 }
 
+.page--access img[src*="logo.png"]:not(.topbar__logo) {
+  display: none;
+}
+
 .topbar {
   position: sticky;
   top: 0;
