@@ -1,19 +1,29 @@
 import { appendTokenToUrl } from './app.js';
 
 const STORAGE_KEY = 'momenty.userPanel.state';
+const ACCESS_STORAGE_KEY = 'momenty_access';
 const DEFAULT_DURATION_DAYS = 7;
+const BASE_PATH = '/anti15';
+
+function withBasePath(path = '') {
+  if (!path) return BASE_PATH;
+  if (path.startsWith('http')) return path;
+  if (path.startsWith(BASE_PATH)) return path;
+  if (path.startsWith('/')) return `${BASE_PATH}${path}`;
+  return `${BASE_PATH}/${path}`;
+}
 
 const gameLibrary = {
-  pdp: { id: 'pdp', title: 'Pytania dla par', tag: '💖 Warm', url: '/pytania-dla-par.html' },
-  trio: { id: 'trio', title: 'Trio Challenge', tag: '🔥 Spicy', url: '/trio-challenge.html' },
-  scratch: { id: 'scratch', title: 'Zdrapka pozycji', tag: '🎲 Fun', url: '/zdrapka-pozycji.html' },
-  romanticBoard: { id: 'romanticBoard', title: 'Planszowa romantyczna', tag: '💝 Soft', url: '/planszowa-romantyczna.html' },
-  truthDare: { id: 'truthDare', title: 'Prawda czy wyzwanie', tag: '🎯 Challenge', url: '/prawda-wyzwanie.html' },
-  neverEver: { id: 'neverEver', title: 'Nigdy przenigdy', tag: '🎉 Zabawa', url: '/nigdy-przenigdy.html' },
-  tinderIdeas: { id: 'tinderIdeas', title: 'Tinder wspólnych pomysłów', tag: '✨ Nowość', url: '/tinder-wspolnych-pomyslow.html' },
-  planEvening: { id: 'planEvening', title: 'Plan wieczoru', tag: '📓 Plan', url: '/plan-wieczoru.html' },
-  spicyWheel: { id: 'spicyWheel', title: 'Niegrzeczne Koło', tag: '🔥 Odważna', url: '/niegrzeczne-kolo.html' },
-  positions: { id: 'positions', title: 'Poznaj wszystkie pozycje', tag: '🧭 Eksploracja', url: '/poznaj-wszystkie-pozycje.html' },
+  pdp: { id: 'pdp', title: 'Pytania dla par', tag: '💖 Warm', url: withBasePath('/pytania-dla-par.html') },
+  trio: { id: 'trio', title: 'Trio Challenge', tag: '🔥 Spicy', url: withBasePath('/trio-challenge.html') },
+  scratch: { id: 'scratch', title: 'Zdrapka pozycji', tag: '🎲 Fun', url: withBasePath('/zdrapka-pozycji.html') },
+  romanticBoard: { id: 'romanticBoard', title: 'Planszowa romantyczna', tag: '💝 Soft', url: withBasePath('/planszowa-romantyczna.html') },
+  truthDare: { id: 'truthDare', title: 'Prawda czy wyzwanie', tag: '🎯 Challenge', url: withBasePath('/prawda-wyzwanie.html') },
+  neverEver: { id: 'neverEver', title: 'Nigdy przenigdy', tag: '🎉 Zabawa', url: withBasePath('/nigdy-przenigdy.html') },
+  tinderIdeas: { id: 'tinderIdeas', title: 'Tinder wspólnych pomysłów', tag: '✨ Nowość', url: withBasePath('/tinder-wspolnych-pomyslow.html') },
+  planEvening: { id: 'planEvening', title: 'Plan wieczoru', tag: '📓 Plan', url: withBasePath('/plan-wieczoru.html') },
+  spicyWheel: { id: 'spicyWheel', title: 'Niegrzeczne Koło', tag: '🔥 Odważna', url: withBasePath('/niegrzeczne-kolo.html') },
+  positions: { id: 'positions', title: 'Poznaj wszystkie pozycje', tag: '🧭 Eksploracja', url: withBasePath('/poznaj-wszystkie-pozycje.html') },
 };
 
 function createDefaultState() {
@@ -75,6 +85,49 @@ function loadState() {
     console.warn('Nie udało się wczytać stanu panelu:', error);
     return createDefaultState();
   }
+}
+
+function readGuardAccess() {
+  try {
+    const raw = localStorage.getItem(ACCESS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.expires === 'undefined') return null;
+    const days = typeof parsed.days === 'number' ? parsed.days : null;
+    return { expires: Number(parsed.expires), days: days };
+  } catch (error) {
+    console.warn('Nie udało się odczytać danych weryfikacji dostępu:', error);
+    return null;
+  }
+}
+
+function getAccessFromGuard() {
+  const expiresSeconds = typeof window.__momentyAccessExpires === 'number'
+    ? window.__momentyAccessExpires
+    : null;
+
+  const guardStored = readGuardAccess();
+  const fallbackExpires = guardStored && Number.isFinite(guardStored.expires) ? guardStored.expires : null;
+  const expiry = expiresSeconds || fallbackExpires;
+
+  if (!expiry || Number.isNaN(expiry)) return null;
+
+  const expiresAt = new Date(expiry * 1000);
+  const now = new Date();
+  const msInDay = 1000 * 60 * 60 * 24;
+  const daysLeft = Math.max(0, Math.round((expiresAt.getTime() - now.getTime()) / msInDay));
+
+  const daysFromGuard = typeof window.__momentyAccessDaysLeft === 'number'
+    ? window.__momentyAccessDaysLeft
+    : null;
+  const daysFromStorage = guardStored && typeof guardStored.days === 'number' ? guardStored.days : null;
+  const durationDays = daysFromGuard ?? daysFromStorage ?? Math.max(daysLeft, DEFAULT_DURATION_DAYS);
+
+  return {
+    expiresAt: expiresAt.toISOString(),
+    daysLeft,
+    durationDays,
+  };
 }
 
 function saveState(state) {
@@ -378,6 +431,14 @@ function attachActionHandlers(state) {
 
 function initPanel() {
   const state = loadState();
+  const guardAccess = getAccessFromGuard();
+
+  if (guardAccess) {
+    state.access.expiresAt = guardAccess.expiresAt;
+    state.access.durationDays = guardAccess.durationDays;
+    state.access.status = guardAccess.daysLeft > 0 ? 'Dostęp aktywny' : 'Dostęp wygasł';
+  }
+
   render(state);
   attachActionHandlers(state);
 
