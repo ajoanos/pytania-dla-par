@@ -186,8 +186,15 @@ $link = buildPlanUrl($planBase, [
 $proposalLink = buildPlanUrl($planBase, $hostParams);
 
 $acceptBase = $baseUrl !== '' ? $baseUrl : ($originUrl !== '' ? rtrim($originUrl, '/') . '/pary-mvp/' : $defaultPlanBase);
-$acceptUrl = $acceptBase . 'plan-wieczoru-accept.php?token=' . urlencode($inviteToken);
-$declineUrl = $acceptUrl . '&decision=decline';
+$acceptParams = ['token' => $inviteToken];
+if ($accessToken !== '') {
+    $acceptParams['plan_token'] = $accessToken;
+}
+
+$acceptUrl = $acceptBase . 'plan-wieczoru-accept.php?' . http_build_query($acceptParams, '', '&', PHP_QUERY_RFC3986);
+$declineParams = $acceptParams;
+$declineParams['decision'] = 'decline';
+$declineUrl = $acceptBase . 'plan-wieczoru-accept.php?' . http_build_query($declineParams, '', '&', PHP_QUERY_RFC3986);
 
 createPlanInvite(
     (int)$room['id'],
