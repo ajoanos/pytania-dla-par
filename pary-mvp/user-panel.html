@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel użytkownika - Momenty</title>
+  <meta name="description" content="Twoje gry, postępy i rekomendacje w jednym miejscu.">
+  <meta property="og:title" content="Momenty - Panel pary">
+  <meta property="og:description" content="Wróćcie do ulubionych gier i odkrywajcie nowe pomysły.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://sklep.allemedia.pl/momenty/logo.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="assets/css/style.css?v=2.1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&family=Outfit:wght@400;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    body {
+      background: radial-gradient(circle at 10% 20%, rgba(99, 185, 166, 0.18), transparent 25%),
+        radial-gradient(circle at 90% 10%, rgba(242, 109, 111, 0.18), transparent 22%),
+        radial-gradient(circle at 50% 90%, rgba(248, 200, 155, 0.2), transparent 30%),
+        var(--color-bg);
+    }
+
+    .panel-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .panel-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel-card {
+      background: var(--color-card);
+      border: var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: var(--radius-xl);
+      padding: 20px;
+      backdrop-filter: blur(var(--glass-blur));
+    }
+
+    .panel-card h2,
+    .panel-card h3,
+    .panel-card h4 {
+      margin: 0 0 8px 0;
+      font-family: var(--font-heading);
+      color: var(--color-text);
+    }
+
+    .panel-meta {
+      color: var(--color-muted);
+      font-size: 14px;
+      margin: 0 0 12px 0;
+    }
+
+    .panel-hero {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      align-items: center;
+    }
+
+    .hero-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--color-primary-soft);
+      display: grid;
+      place-items: center;
+      font-size: 32px;
+      margin-bottom: 12px;
+      border: 1px solid var(--color-card-border);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .hero-actions .btn {
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(242, 109, 111, 0.2);
+    }
+
+    .btn-ghost {
+      background: var(--color-ghost-bg);
+      color: var(--color-text);
+      border: var(--glass-border);
+    }
+
+    .progress {
+      height: 8px;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress__bar {
+      height: 100%;
+      width: 62%;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+      border-radius: 999px;
+    }
+
+    .list-grid,
+    .recommend-grid,
+    .badge-grid,
+    .history-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.35);
+      border: 1px solid var(--color-card-border);
+      color: var(--color-text);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--color-primary-soft);
+      color: var(--color-text);
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .faq-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 12px;
+    }
+
+    .faq-item {
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.45);
+      border: 1px solid var(--color-card-border);
+    }
+
+    .panel-access {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--color-card-border);
+      padding: 16px;
+      border-radius: var(--radius-xl);
+      background: linear-gradient(90deg, rgba(99, 185, 166, 0.18), rgba(242, 109, 111, 0.08));
+      margin-bottom: 16px;
+    }
+
+    .access-cta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .access-cta a {
+      font-weight: 800;
+      color: var(--color-text);
+      text-decoration: underline;
+    }
+
+    .timeline {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .timeline li {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.35);
+      border: 1px solid var(--color-card-border);
+      border-radius: 12px;
+    }
+
+    .badge-grid .panel-card {
+      text-align: center;
+    }
+
+    .badge-icon {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+
+    @media (max-width: 800px) {
+      .faq-grid,
+      .panel-access {
+        grid-template-columns: 1fr;
+      }
+
+      .access-cta {
+        justify-content: space-between;
+      }
+    }
+  </style>
+  <script src="assets/js/momenty-guard.js"></script>
+  <script>
+    window.momentyAccessOk = function (expires) {
+      const revealContent = () => {
+        document.documentElement.removeAttribute('data-guard-hidden');
+        const root = document.getElementById('panel-root');
+        if (root) root.classList.remove('is-hidden');
+
+        const token = new URLSearchParams(window.location.search).get('token');
+        if (!token) return;
+
+        document.querySelectorAll('#panel-root a[href]').forEach((link) => {
+          try {
+            const url = new URL(link.getAttribute('href'), window.location.href);
+            url.searchParams.set('token', token);
+            link.href = url.toString();
+          } catch (error) {
+            console.warn('Nie udało się zaktualizować linku panelu:', error);
+          }
+        });
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', revealContent, { once: true });
+        return;
+      }
+
+      revealContent();
+    };
+
+    if (window.__momentyAccessConfirmed && window.__momentyAccessPending) {
+      window.momentyAccessOk(window.__momentyAccessPending);
+      window.__momentyAccessPending = null;
+    }
+  </script>
+</head>
+
+<body class="page" data-theme="light">
+  <div id="panel-root" class="panel-wrap is-hidden">
+    <header class="v2-header" style="margin-bottom: 12px;">
+      <img src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" class="v2-logo">
+      <div class="hero-actions">
+        <a class="btn btn-ghost" href="/index.html">← Strona główna</a>
+        <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
+      </div>
+    </header>
+
+    <div class="panel-access">
+      <div>
+        <div class="pill">Dostęp aktywny</div>
+        <h3 style="margin: 6px 0 4px 0;">Dostęp do <span id="access-date">14 sierpnia</span></h3>
+        <p class="panel-meta" id="access-left">Pozostało 5 dni</p>
+        <div class="progress" aria-hidden="true">
+          <div class="progress__bar" style="width: 70%;"></div>
+        </div>
+      </div>
+      <div class="access-cta">
+        <span>Potrzebujesz więcej czasu?</span>
+        <a href="https://sklep.allemedia.pl/momenty">Przedłuż dostęp</a>
+      </div>
+    </div>
+
+    <section class="panel-grid panel-hero panel-card">
+      <div>
+        <div class="hero-avatar" aria-hidden="true">💑</div>
+        <p class="panel-meta">Cześć, Ania & Kuba</p>
+        <h1 style="margin: 0 0 10px 0;">Wasz panel użytkownika</h1>
+        <p class="panel-meta">Kontynuujcie wspólne wieczory, zapisujcie ulubione gry i odkrywajcie świeże inspiracje.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="/index.html">Wróć do gier</a>
+          <a class="btn btn-ghost" href="#favorites">Ulubione</a>
+          <button class="btn btn-ghost" id="random-cta" type="button">🎲 Losuj grę</button>
+        </div>
+      </div>
+      <div class="panel-card" style="height: 100%;">
+        <h3>Wasz dzisiejszy vibe</h3>
+        <p class="panel-meta" id="random-highlight">Ciepło, bliskość i trochę ryzyka.</p>
+        <div class="list-item">
+          <span>Rekomendacja dnia</span>
+          <span class="pill">🔥 Odważna</span>
+        </div>
+        <div class="list-item">
+          <span>Średni czas sesji</span>
+          <strong>24 min</strong>
+        </div>
+        <div class="list-item">
+          <span>Ostatni checkpoint</span>
+          <strong>Runda 3 w „Prawda czy wyzwanie”</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel-grid">
+      <div class="panel-card">
+        <div class="pill" style="margin-bottom: 10px;">Ostatnio grane</div>
+        <div class="history-grid">
+          <div class="panel-card">
+            <h3>Niegrzeczne Koło</h3>
+            <p class="panel-meta">Ostatnio: 2 dni temu</p>
+            <p>Rozgrzewka + 3 pełne tury. Lubiliście zadania z kategorii „Zmysły”.</p>
+            <a class="v2-btn-play" href="/niegrzeczne-kolo-play.html">Wznów</a>
+          </div>
+          <div class="panel-card">
+            <h3>Plan Wieczoru</h3>
+            <p class="panel-meta">Ostatnio: 5 dni temu</p>
+            <p>Zakończono sekcję „Lekkie zadania”. Kolejne: mini-wyzwanie + relaks.</p>
+            <a class="v2-btn-play" href="/plan-wieczoru-play.html">Otwórz plan</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="pill" style="margin-bottom: 10px;">Historia z partnerem</div>
+        <ul class="timeline">
+          <li>
+            <span>💬</span>
+            <div>
+              <strong>Nowa notatka</strong>
+              <p class="panel-meta">„Najlepsze było wyzwanie z kostkami lodu” – 2 dni temu</p>
+            </div>
+          </li>
+          <li>
+            <span>⭐</span>
+            <div>
+              <strong>Dodano do ulubionych</strong>
+              <p class="panel-meta">„Pytania dla par” – tydzień temu</p>
+            </div>
+          </li>
+          <li>
+            <span>🎯</span>
+            <div>
+              <strong>Cel ukończony</strong>
+              <p class="panel-meta">3 wieczory w tym miesiącu – brawo!</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="panel-card" id="favorites">
+      <div class="pill" style="margin-bottom: 10px;">Listy i statusy</div>
+      <div class="list-grid">
+        <div class="panel-card">
+          <h3>Ulubione</h3>
+          <div class="list-item"><span>Pytania dla par</span><span class="pill">💖 Warm</span></div>
+          <div class="list-item"><span>Trio Challenge</span><span class="pill">🔥 Spicy</span></div>
+          <div class="list-item"><span>Zdrapka pozycji</span><span class="pill">🎲 Fun</span></div>
+        </div>
+        <div class="panel-card">
+          <h3>Do wypróbowania</h3>
+          <div class="list-item"><span>Planszowa romantyczna</span><span class="pill">💝 Soft</span></div>
+          <div class="list-item"><span>Nigdy przenigdy</span><span class="pill">🎉 Zabawa</span></div>
+          <div class="list-item"><span>Tinder wspólnych pomysłów</span><span class="pill">✨ Nowość</span></div>
+        </div>
+        <div class="panel-card">
+          <h3>Niedokończone</h3>
+          <div class="list-item"><span>Prawda czy wyzwanie</span><span class="pill">Runda 3/5</span></div>
+          <div class="list-item"><span>Poznacie wszystkie pozycje</span><span class="pill">45%</span></div>
+          <div class="list-item"><span>Plan wieczoru</span><span class="pill">Etap 2</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="recommend-grid">
+      <div class="panel-card">
+        <h3>Na dziś</h3>
+        <p class="panel-meta">Krótka sesja 15-20 minut</p>
+        <ul class="timeline">
+          <li><span>🔥</span><div>Wylosuj 3 zadania z „Niegrzecznego Koła”.</div></li>
+          <li><span>🎧</span><div>Włącz playlistę „Slow & Glow”.</div></li>
+          <li><span>💡</span><div>Zakończcie pytaniem z kategorii „Ciekawość”.</div></li>
+        </ul>
+        <a class="v2-btn-play" href="/niegrzeczne-kolo.html">Rozpocznij mini sesję</a>
+      </div>
+      <div class="panel-card">
+        <h3>Wasz następny krok</h3>
+        <p class="panel-meta">Budujcie momentum i śledźcie postępy</p>
+        <div class="list-item"><span>Dodaj 1 nowe zdjęcie do galerii momentów</span><span class="pill">💾</span></div>
+        <div class="list-item"><span>Przejrzyjcie checklistę „komfort granic”</span><span class="pill">🛡️</span></div>
+        <div class="list-item"><span>Zaplanowany kolejny wieczór</span><strong>piątek, 21:00</strong></div>
+      </div>
+    </section>
+
+    <section class="panel-card">
+      <div class="faq-grid">
+        <div>
+          <h3>FAQ</h3>
+          <div class="faq-item">
+            <strong>Jak zachować postęp w grze?</strong>
+            <p class="panel-meta">Zostawcie kartę otwartą lub dodajcie do niedokończonych, by wrócić później.</p>
+          </div>
+          <div class="faq-item">
+            <strong>Jak dodać grę do ulubionych?</strong>
+            <p class="panel-meta">Na karcie gry wybierzcie ikonę serca – pojawi się w tej sekcji.</p>
+          </div>
+          <div class="faq-item">
+            <strong>Problemy z dostępem?</strong>
+            <p class="panel-meta">Sprawdźcie token w linku lub odświeżcie dostęp klikając „Przedłuż”.</p>
+          </div>
+        </div>
+        <div class="panel-card">
+          <h3>Masz feedback?</h3>
+          <p class="panel-meta">Podziel się tym, co zadziałało i co poprawić.</p>
+          <textarea rows="5" style="width: 100%; padding: 12px; border-radius: 12px; border: var(--glass-border); background: var(--color-input-bg); color: var(--color-text);"></textarea>
+          <button class="btn btn-primary" style="width: 100%; margin-top: 10px;">Wyślij opinię</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel-card">
+      <h3>Odznaki i cele</h3>
+      <div class="badge-grid">
+        <div class="panel-card">
+          <div class="badge-icon">🏁</div>
+          <strong>3 wieczory w tygodniu</strong>
+          <p class="panel-meta">Na dobrej drodze! Brakuje 1 spotkania.</p>
+        </div>
+        <div class="panel-card">
+          <div class="badge-icon">🔥</div>
+          <strong>Odważna runda</strong>
+          <p class="panel-meta">3/4 wyzwania ukończone.</p>
+        </div>
+        <div class="panel-card">
+          <div class="badge-icon">🎉</div>
+          <strong>Nowości odkryte</strong>
+          <p class="panel-meta">2 nowe gry w tym miesiącu.</p>
+        </div>
+        <div class="panel-card">
+          <div class="badge-icon">💌</div>
+          <strong>Happy vibes</strong>
+          <p class="panel-meta">5 zapisanych notatek wdzięczności.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="assets/js/app.js"></script>
+  <script type="module">
+    document.addEventListener('DOMContentLoaded', () => {
+      const randomScenarios = [
+        'Romantyczna randka z nutą ryzyka',
+        'Wieczór z pytaniami, które zbliżają',
+        'Ekspresowa sesja dla odważnych',
+        'Lekka zabawa + jedna nowość',
+      ];
+
+      const highlight = document.getElementById('random-highlight');
+      const randomBtn = document.getElementById('random-cta');
+      randomBtn?.addEventListener('click', () => {
+        const pick = randomScenarios[Math.floor(Math.random() * randomScenarios.length)];
+        if (highlight) highlight.textContent = pick;
+      });
+
+      const accessDate = document.getElementById('access-date');
+      const accessLeft = document.getElementById('access-left');
+      if (accessDate && accessLeft) {
+        const today = new Date();
+        const expires = new Date();
+        expires.setDate(today.getDate() + 5);
+        const formatter = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long' });
+        accessDate.textContent = formatter.format(expires);
+
+        const diffTime = expires - today;
+        const days = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24)));
+        accessLeft.textContent = `Pozostało ${days} dni`;
+      }
+    });
+  </script>
+</body>
+
+</html>
