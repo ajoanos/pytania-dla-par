@@ -11,6 +11,7 @@ const FALLBACK_PLAN_BASE = 'https://sklep.allemedia.pl/anti15/';
 
 $token = trim((string)($_GET['token'] ?? ''));
 $decisionParam = strtolower(trim((string)($_GET['decision'] ?? 'accept')));
+$planToken = trim((string)($_GET['plan_token'] ?? ''));
 $decision = $decisionParam === 'decline' ? 'decline' : 'accept';
 $status = 'invalid';
 $headline = 'Ups!';
@@ -23,10 +24,7 @@ $proposalIntro = '';
 if ($token !== '') {
     $invite = getPlanInviteByToken($token);
     if ($invite) {
-        $planLink = trim((string)($invite['plan_link'] ?? ''));
-        if ($planLink === '') {
-            $planLink = detectPlanBase() . 'plan-wieczoru-play.html';
-        }
+        $planLink = normalizePlanLink(trim((string)($invite['plan_link'] ?? '')), $planToken);
         $alreadyAccepted = isset($invite['accepted_at']) && $invite['accepted_at'] !== '';
         $alreadyDeclined = isset($invite['declined_at']) && $invite['declined_at'] !== '';
 
@@ -37,10 +35,7 @@ if ($token !== '') {
                 $senderEmail = trim((string)($invite['sender_email'] ?? ''));
                 $partnerEmail = trim((string)($invite['partner_email'] ?? ''));
                 $senderName = trim((string)($invite['sender_name'] ?? ''));
-                $proposalLink = trim((string)($invite['proposal_link'] ?? ''));
-                if ($proposalLink === '') {
-                    $proposalLink = detectPlanBase() . 'plan-wieczoru-play.html';
-                }
+                $proposalLink = normalizePlanLink(trim((string)($invite['proposal_link'] ?? '')), $planToken, true);
 
                 $summaryLines = buildSummaryLines($invite);
 
@@ -127,6 +122,8 @@ if ($token !== '') {
                 $headline = 'Zgoda zapisana!';
                 $message = 'Dziękujemy za potwierdzenie. Twój partner otrzymał wiadomość z informacją, że się zgadzasz.';
                 $ctaHref = $planLink;
+                $showProposalForm = true;
+                $proposalIntro = 'Chcesz dorzucić swój pomysł? Podaj imię, aby przygotować nową propozycję.';
             } elseif ($alreadyAccepted) {
                 $status = 'already';
                 $headline = 'Plan już potwierdzony';
@@ -163,6 +160,40 @@ function detectPlanBase(): string
     }
 
     return FALLBACK_PLAN_BASE;
+}
+
+function normalizePlanLink(string $link, string $planToken, bool $allowRoomLink = false): string
+{
+    $base = detectPlanBase();
+    $fallback = $base . ($allowRoomLink ? 'plan-wieczoru-room.html' : 'plan-wieczoru-play.html');
+
+    if ($link === '') {
+        $link = $fallback;
+    }
+
+    if ($planToken === '') {
+        return $link;
+    }
+
+    $parsed = parse_url($link);
+    $query = [];
+    if (isset($parsed['query'])) {
+        parse_str((string)$parsed['query'], $query);
+    }
+
+    if (!isset($query['token']) || trim((string)$query['token']) === '') {
+        $query['token'] = $planToken;
+
+        $fallbackParts = parse_url($fallback) ?: [];
+        $scheme = $parsed['scheme'] ?? ($fallbackParts['scheme'] ?? 'https');
+        $host = $parsed['host'] ?? ($fallbackParts['host'] ?? '');
+        $path = $parsed['path'] ?? ($fallbackParts['path'] ?? '/');
+        $port = isset($parsed['port']) ? ':' . $parsed['port'] : '';
+        $queryString = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        $link = $scheme . '://' . $host . $port . $path . ($queryString !== '' ? '?' . $queryString : '');
+    }
+
+    return $link;
 }
 
 function buildSummaryLines(array $invite): array
@@ -236,10 +267,10 @@ function buildSummaryLines(array $invite): array
       </header>
       <?php if ($showProposalForm): ?>
         <p><?= htmlspecialchars($proposalIntro !== '' ? $proposalIntro : 'Przygotuj swoją wersję planu wieczoru.', ENT_QUOTES, 'UTF-8') ?></p>
-        <form
+          <form
           id="decline-proposal-form"
           class="form form--stack"
-          data-success="plan-wieczoru-play.html"
+          data-success="<?= htmlspecialchars($ctaHref, ENT_QUOTES, 'UTF-8') ?>"
           data-storage-key="momenty.planWieczoru.access"
         >
           <label class="form__field">
