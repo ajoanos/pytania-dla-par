@@ -441,11 +441,17 @@ class Momenty_Access_Core {
             return;
         }
 
+        if ( 'POST' === $_SERVER['REQUEST_METHOD'] ) {
+            $this->handle_subscribers_actions();
+        }
+
         $search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
         $subscribers = $this->get_all_subscribers( $search );
         ?>
         <div class="wrap">
             <h1>Subskrybenci Momentów</h1>
+
+            <?php settings_errors( 'momenty_access_subscribers' ); ?>
 
             <form method="get" style="margin-bottom: 15px;">
                 <input type="hidden" name="page" value="momenty-access-subscribers" />
@@ -487,13 +493,18 @@ class Momenty_Access_Core {
                             </td>
                             <td>
                                 <?php
-                                if ( $s['expires'] ) {
-                                    $days_left = floor( ( $s['expires'] - time() ) / DAY_IN_SECONDS );
-                                    echo esc_html( $days_left );
-                                } else {
-                                    echo '&mdash;';
-                                }
+                                $days_left = $s['expires'] ? floor( ( $s['expires'] - time() ) / DAY_IN_SECONDS ) : 0;
                                 ?>
+                                <form method="post" style="display: flex; gap: 6px; align-items: center;">
+                                    <?php wp_nonce_field( 'momenty_access_subscribers_action', 'momenty_access_subscribers_nonce' ); ?>
+                                    <input type="hidden" name="momenty_subscriber_action" value="update_days" />
+                                    <input type="hidden" name="user_id" value="<?php echo esc_attr( $s['ID'] ); ?>" />
+                                    <input type="number" name="momenty_days_left" value="<?php echo esc_attr( $days_left ); ?>" min="0" style="width: 90px;" />
+                                    <button class="button button-small" type="submit">Zapisz</button>
+                                </form>
+                                <?php if ( ! $s['expires'] ) : ?>
+                                    <span style="margin-left: 6px; color: #666;">&mdash;</span>
+                                <?php endif; ?>
                             </td>
                             <td><?php echo esc_html( $s['renewals'] ); ?></td>
                             <td><?php echo $s['reminder_sent'] ? 'Tak' : 'Nie'; ?></td>
@@ -504,6 +515,37 @@ class Momenty_Access_Core {
             <?php endif; ?>
         </div>
         <?php
+    }
+
+    private function handle_subscribers_actions() {
+        if ( empty( $_POST['momenty_subscriber_action'] ) || 'update_days' !== $_POST['momenty_subscriber_action'] ) {
+            return;
+        }
+
+        if ( empty( $_POST['momenty_access_subscribers_nonce'] ) || ! wp_verify_nonce( $_POST['momenty_access_subscribers_nonce'], 'momenty_access_subscribers_action' ) ) {
+            return;
+        }
+
+        $user_id   = isset( $_POST['user_id'] ) ? intval( $_POST['user_id'] ) : 0;
+        $days_left = isset( $_POST['momenty_days_left'] ) ? max( 0, intval( $_POST['momenty_days_left'] ) ) : null;
+
+        if ( ! $user_id || null === $days_left ) {
+            add_settings_error( 'momenty_access_subscribers', 'momenty_access_subscribers_invalid', __( 'Nieprawidłowe dane subskrybenta.', 'momenty-access' ) );
+            return;
+        }
+
+        $user = get_user_by( 'ID', $user_id );
+        if ( ! $user ) {
+            add_settings_error( 'momenty_access_subscribers', 'momenty_access_subscribers_missing', __( 'Subskrybent nie istnieje.', 'momenty-access' ) );
+            return;
+        }
+
+        $new_expiry = time() + ( $days_left * DAY_IN_SECONDS );
+        update_user_meta( $user_id, 'momenty_expires', $new_expiry );
+
+        /* translators: %s: user email */
+        $message = sprintf( __( 'Zaktualizowano liczbę dni do końca dla %s.', 'momenty-access' ), $user->user_email );
+        add_settings_error( 'momenty_access_subscribers', 'momenty_access_subscribers_updated', $message, 'updated' );
     }
 
     /* -------------------------------------------------------------------------
