@@ -6571,6 +6571,14 @@ body.page--timer[data-theme="dark"] .question-card {
   padding: 0.8rem 1.2rem;
 }
 
+.hero-actions .btn:focus-visible,
+.panel-feedback__submit:focus-visible,
+.panel-feedback__link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 65%, transparent);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary-soft) 40%, transparent);
+}
+
 .progress {
   height: 8px;
   background: rgba(0, 0, 0, 0.05);
