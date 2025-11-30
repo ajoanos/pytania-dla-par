@@ -14,8 +14,10 @@
   const token = params.get('token');
 
   if (!token) {
-    renderMessage('Brak dostępu',
-      'Brakuje parametru <strong>token</strong> w adresie URL. Dodaj go lub wróć na stronę główną.');
+    renderMessage(
+      'Brak dostępu',
+      'Brakuje parametru <strong>token</strong> w adresie URL. Dodaj go lub wróć na stronę główną.'
+    );
     return;
   }
 
@@ -157,10 +159,24 @@
       return;
     }
 
-    renderMessage('Brak dostępu', 'Nie udało się potwierdzić dostępu.');
+    const noAccessBody = `
+      <p>Nie masz jeszcze dostępu.</p>
+      <p>Ta strona to strefa z grami „Momenty” tylko dla osób z wykupionym dostępem.<br>
+      Dzięki dostępowi:</p>
+      <ul style="list-style: none; padding: 0; margin: 0 0 12px; line-height: 1.4;">
+        <li>– zagracie w wiele różnych gier dla par i nie tylko</li>
+        <li>– macie dostęp 24/7 z telefonu lub laptopa</li>
+        <li>– możecie wracać do ulubionych zabaw kiedy chcecie</li>
+      </ul>
+    `;
+
+    renderMessage('Brak dostępu', noAccessBody, {
+      href: 'https://sklep.allemedia.pl/produkt/gry-dla-par/',
+      label: 'Kup dostęp',
+    });
   }
 
-  function renderMessage(title, body) {
+  function renderMessage(title, body, options = {}) {
     document.documentElement.removeAttribute('data-guard-hidden');
 
     if (!document.body) {
@@ -184,9 +200,11 @@
     paragraph.innerHTML = body;
     paragraph.style.marginBottom = '16px';
 
+    const { href = HOME_URL, label = 'Wróć do strony gier' } = options;
+
     const link = document.createElement('a');
-    link.href = HOME_URL;
-    link.textContent = 'Wróć do strony gier';
+    link.href = href;
+    link.textContent = label;
     link.style.display = 'inline-block';
     link.style.padding = '10px 16px';
     link.style.borderRadius = '8px';
