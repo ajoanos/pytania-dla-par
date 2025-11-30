@@ -3,7 +3,10 @@ import { games } from './games-data.js';
 const STORAGE_KEY_THEME = 'pary.theme';
 const ACCESS_STORAGE_KEY = 'pary.access.pdp';
 const PLAN_ACCESS_STORAGE_KEY = 'momenty.planWieczoru.access';
-export const ACTIVE_TOKEN = new URLSearchParams(window.location.search).get('token') || '';
+
+const urlParams = new URLSearchParams(window.location.search);
+const ACCESS_TOKEN = urlParams.get('plan_token') || urlParams.get('token') || '';
+export const ACTIVE_TOKEN = ACCESS_TOKEN;
 
 if (!window.__momentyAccessConfirmed && !document.documentElement.hasAttribute('data-guard-hidden')) {
   document.documentElement.setAttribute('data-guard-hidden', 'true');
