@@ -15,12 +15,14 @@ const state = {
   displayName: '',
   baseUrl: '',
   origin: '',
+  accessToken: '',
   history: [],
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token') || '';
+  state.accessToken = token;
 
   if (params.has('auto')) {
     sessionStorage.setItem(ACCESS_KEY, 'true');
@@ -591,6 +593,7 @@ async function sendPlanEmail(form) {
     subject: state.config.email?.subject || 'Wieczór we dwoje – krótki plan 💛',
     origin,
     base_url: state.baseUrl,
+    access_token: state.accessToken,
   };
 
   try {

@@ -5,7 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/mail_helpers.php';
 
-const DEFAULT_PLAN_BASE = 'https://sklep.allemedia.pl/momenty/';
+const FALLBACK_PLAN_BASE = 'https://sklep.allemedia.pl/anti15/';
 
 $data = requireJsonInput();
 
@@ -60,6 +60,7 @@ $closeness = sanitizeLine($data['closeness'] ?? '');
 $energy = sanitizeLine($data['energy'] ?? '');
 $energyContext = sanitizeParagraph($data['energyContext'] ?? '');
 $startTime = sanitizeLine($data['timing'] ?? '');
+$accessToken = sanitizeLine($data['access_token'] ?? '');
 $subject = sanitizeLine($data['subject'] ?? 'Wieczór we dwoje – krótki plan 💛');
 if ($subject === '') {
     $subject = 'Wieczór we dwoje – krótki plan 💛';
@@ -101,6 +102,8 @@ if ($proposalLink !== '' && filter_var($proposalLink, FILTER_VALIDATE_URL) === f
 $roomId = (int)$room['id'];
 $roomKeyValue = (string)($room['room_key'] ?? $roomKey);
 
+$defaultPlanBase = detectPlanBase();
+
 $planBase = '';
 if ($link !== '') {
     $planBase = preg_replace('/\?.*/', '', $link) ?: '';
@@ -114,7 +117,7 @@ if ($planBase === '') {
     } elseif ($originUrl !== '') {
         $planBase = rtrim($originUrl, '/') . '/pary-mvp/plan-wieczoru-play.html';
     } else {
-        $planBase = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
+        $planBase = $defaultPlanBase . 'plan-wieczoru-play.html';
     }
 }
 
@@ -124,6 +127,7 @@ $hostParams = [
     'pid' => (string)(int)$participant['id'],
     'auto' => '1',
     'via' => 'host',
+    'token' => $accessToken,
 ];
 if ($hostDisplayName !== '') {
     $hostParams['name'] = $hostDisplayName;
@@ -168,26 +172,27 @@ if ($partnerParticipantId <= 0) {
 $partnerDisplayName = sanitizeLine($partnerParticipant['display_name'] ?? '') ?: $partnerName;
 $partnerDisplayName = limitLength($partnerDisplayName, 40);
 
+$inviteToken = generateUniqueToken();
+
 $link = buildPlanUrl($planBase, [
     'room_key' => $roomKeyValue,
     'pid' => (string)$partnerParticipantId,
     'name' => $partnerDisplayName,
     'auto' => '1',
     'via' => 'invite',
+    'token' => $accessToken,
 ]);
 
 $proposalLink = buildPlanUrl($planBase, $hostParams);
 
-$token = generateUniqueToken();
-
-$acceptBase = $baseUrl !== '' ? $baseUrl : ($originUrl !== '' ? rtrim($originUrl, '/') . '/pary-mvp/' : DEFAULT_PLAN_BASE);
-$acceptUrl = $acceptBase . 'plan-wieczoru-accept.php?token=' . urlencode($token);
+$acceptBase = $baseUrl !== '' ? $baseUrl : ($originUrl !== '' ? rtrim($originUrl, '/') . '/pary-mvp/' : $defaultPlanBase);
+$acceptUrl = $acceptBase . 'plan-wieczoru-accept.php?token=' . urlencode($inviteToken);
 $declineUrl = $acceptUrl . '&decision=decline';
 
 createPlanInvite(
     (int)$room['id'],
     (int)$participant['id'],
-    $token,
+    $inviteToken,
     $senderEmail,
     $partnerEmail,
     $senderName,
@@ -233,6 +238,23 @@ if (!sendEmailMessage($partnerEmail, $subject, $body, $senderEmail)) {
 }
 
 respond(['ok' => true]);
+
+function detectPlanBase(): string
+{
+    $host = trim((string)($_SERVER['HTTP_HOST'] ?? ''));
+    $scheme = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') ? 'https' : 'http';
+
+    if ($host !== '') {
+        $scriptName = (string)($_SERVER['SCRIPT_NAME'] ?? '');
+        $scriptDir = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+        $baseDir = rtrim(str_replace('\\', '/', dirname($scriptDir)), '/');
+        $path = $baseDir !== '' ? $baseDir . '/' : '/';
+
+        return $scheme . '://' . $host . $path;
+    }
+
+    return FALLBACK_PLAN_BASE;
+}
 
 function sanitizeLine(mixed $value): string
 {
