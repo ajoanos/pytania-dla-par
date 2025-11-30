@@ -7,7 +7,7 @@ define('BOOTSTRAP_EMIT_JSON', false);
 require __DIR__ . '/api/bootstrap.php';
 require __DIR__ . '/api/mail_helpers.php';
 
-const DEFAULT_PLAN_BASE = 'https://sklep.allemedia.pl/momenty/';
+const FALLBACK_PLAN_BASE = 'https://sklep.allemedia.pl/anti15/';
 
 $token = trim((string)($_GET['token'] ?? ''));
 $decisionParam = strtolower(trim((string)($_GET['decision'] ?? 'accept')));
@@ -15,7 +15,7 @@ $decision = $decisionParam === 'decline' ? 'decline' : 'accept';
 $status = 'invalid';
 $headline = 'Ups!';
 $message = 'Link jest niepoprawny lub wygasł.';
-$ctaHref = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
+$ctaHref = detectPlanBase() . 'plan-wieczoru-play.html';
 $ctaLabel = 'Zaproponuj własny plan wieczoru';
 $showProposalForm = false;
 $proposalIntro = '';
@@ -25,7 +25,7 @@ if ($token !== '') {
     if ($invite) {
         $planLink = trim((string)($invite['plan_link'] ?? ''));
         if ($planLink === '') {
-            $planLink = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
+            $planLink = detectPlanBase() . 'plan-wieczoru-play.html';
         }
         $alreadyAccepted = isset($invite['accepted_at']) && $invite['accepted_at'] !== '';
         $alreadyDeclined = isset($invite['declined_at']) && $invite['declined_at'] !== '';
@@ -39,7 +39,7 @@ if ($token !== '') {
                 $senderName = trim((string)($invite['sender_name'] ?? ''));
                 $proposalLink = trim((string)($invite['proposal_link'] ?? ''));
                 if ($proposalLink === '') {
-                    $proposalLink = DEFAULT_PLAN_BASE . 'plan-wieczoru-play.html';
+                    $proposalLink = detectPlanBase() . 'plan-wieczoru-play.html';
                 }
 
                 $summaryLines = buildSummaryLines($invite);
@@ -146,6 +146,23 @@ function formatValue(mixed $value): string
 {
     $text = trim((string)($value ?? ''));
     return $text !== '' ? $text : '—';
+}
+
+function detectPlanBase(): string
+{
+    $host = trim((string)($_SERVER['HTTP_HOST'] ?? ''));
+    $scheme = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') ? 'https' : 'http';
+
+    if ($host !== '') {
+        $scriptName = (string)($_SERVER['SCRIPT_NAME'] ?? '');
+        $scriptDir = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+        $baseDir = rtrim(str_replace('\\', '/', dirname($scriptDir)), '/');
+        $path = $baseDir !== '' ? $baseDir . '/' : '/';
+
+        return $scheme . '://' . $host . $path;
+    }
+
+    return FALLBACK_PLAN_BASE;
 }
 
 function buildSummaryLines(array $invite): array
