@@ -17,242 +17,6 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&family=Outfit:wght@400;700;800&display=swap"
     rel="stylesheet">
-  <style>
-    body {
-      background: radial-gradient(circle at 10% 20%, rgba(99, 185, 166, 0.18), transparent 25%),
-        radial-gradient(circle at 90% 10%, rgba(242, 109, 111, 0.18), transparent 22%),
-        radial-gradient(circle at 50% 90%, rgba(248, 200, 155, 0.2), transparent 30%),
-        var(--color-bg);
-    }
-
-    .panel-wrap {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-
-    .panel-grid {
-      display: grid;
-      gap: 16px;
-    }
-
-    .panel-card {
-      background: var(--color-card);
-      border: var(--glass-border);
-      box-shadow: var(--glass-shadow);
-      border-radius: var(--radius-xl);
-      padding: 20px;
-      backdrop-filter: blur(var(--glass-blur));
-    }
-
-    .panel-card h2,
-    .panel-card h3,
-    .panel-card h4 {
-      margin: 0 0 8px 0;
-      font-family: var(--font-heading);
-      color: var(--color-text);
-    }
-
-    .panel-meta {
-      color: var(--color-muted);
-      font-size: 14px;
-      margin: 0 0 12px 0;
-    }
-
-    .panel-hero {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
-      align-items: center;
-    }
-
-    .hero-avatar {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      background: var(--color-primary-soft);
-      display: grid;
-      place-items: center;
-      font-size: 32px;
-      margin-bottom: 12px;
-      border: 1px solid var(--color-card-border);
-    }
-
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .hero-actions .btn {
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-weight: 700;
-      border: none;
-      cursor: pointer;
-    }
-
-    .btn-primary {
-      background: var(--color-primary);
-      color: #fff;
-      box-shadow: 0 10px 20px rgba(242, 109, 111, 0.2);
-    }
-
-    .btn-ghost {
-      background: var(--color-ghost-bg);
-      color: var(--color-text);
-      border: var(--glass-border);
-    }
-
-    .progress {
-      height: 8px;
-      background: rgba(0, 0, 0, 0.05);
-      border-radius: 999px;
-      overflow: hidden;
-      margin-top: 8px;
-    }
-
-    .progress__bar {
-      height: 100%;
-      width: 62%;
-      background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
-      border-radius: 999px;
-    }
-
-    .list-grid,
-    .recommend-grid,
-    .badge-grid,
-    .history-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 12px;
-    }
-
-    .list-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.35);
-      border: 1px solid var(--color-card-border);
-      color: var(--color-text);
-      gap: 10px;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: var(--color-primary-soft);
-      color: var(--color-text);
-      font-weight: 700;
-      font-size: 13px;
-    }
-
-    .list-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .pill-action {
-      border: none;
-      cursor: pointer;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-weight: 700;
-      background: var(--color-ghost-bg);
-      color: var(--color-text);
-      border: 1px solid var(--color-card-border);
-    }
-
-    .pill-action[data-variant="primary"] {
-      background: var(--color-primary);
-      color: #fff;
-      border-color: transparent;
-    }
-
-    .faq-grid {
-      display: grid;
-      grid-template-columns: 1.5fr 1fr;
-      gap: 12px;
-    }
-
-    .faq-item {
-      padding: 12px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.45);
-      border: 1px solid var(--color-card-border);
-    }
-
-    .panel-access {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: center;
-      gap: 12px;
-      border: 1px solid var(--color-card-border);
-      padding: 16px;
-      border-radius: var(--radius-xl);
-      background: linear-gradient(90deg, rgba(99, 185, 166, 0.18), rgba(242, 109, 111, 0.08));
-      margin-bottom: 16px;
-    }
-
-    .access-cta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .access-cta a {
-      font-weight: 800;
-      color: var(--color-text);
-      text-decoration: underline;
-    }
-
-    .timeline {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 8px;
-    }
-
-    .timeline li {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 8px;
-      align-items: center;
-      padding: 10px;
-      background: rgba(255, 255, 255, 0.35);
-      border: 1px solid var(--color-card-border);
-      border-radius: 12px;
-    }
-
-    .badge-grid .panel-card {
-      text-align: center;
-    }
-
-    .badge-icon {
-      font-size: 28px;
-      margin-bottom: 6px;
-    }
-
-    @media (max-width: 800px) {
-      .faq-grid,
-      .panel-access {
-        grid-template-columns: 1fr;
-      }
-
-      .access-cta {
-        justify-content: space-between;
-      }
-    }
-  </style>
   <script src="assets/js/momenty-guard.js"></script>
   <script>
     window.momentyAccessOk = function (expires) {
@@ -290,24 +54,24 @@
   </script>
 </head>
 
-<body class="page" data-theme="light">
+<body class="page page--panel" data-theme="light">
   <div id="panel-root" class="panel-wrap is-hidden">
-    <header class="v2-header" style="margin-bottom: 12px;">
+    <header class="v2-header panel-header">
       <img src="https://sklep.allemedia.pl/momenty/logo.png" alt="Momenty" class="v2-logo">
       <div class="hero-actions">
-        <a class="btn btn-ghost" href="/index.html">← Strona główna</a>
+        <a class="btn btn--ghost" href="/index.html">← Strona główna</a>
         <button class="btn btn--ghost" id="theme-toggle" type="button" aria-label="Przełącz motyw">🌙</button>
       </div>
     </header>
 
     <div class="panel-access">
       <div>
-        <div class="pill" id="access-status">Dostęp aktywny</div>
-        <h3 style="margin: 6px 0 4px 0;">Dostęp do <span id="access-date">-</span></h3>
+        <div class="pill pill--section" id="access-status">Dostęp aktywny</div>
+        <h3 class="panel-heading">Dostęp do <span id="access-date">-</span></h3>
         <p class="panel-meta" id="access-left">–</p>
         <p class="panel-meta" id="access-tokens">–</p>
         <div class="progress" aria-hidden="true">
-          <div class="progress__bar" id="access-progress" style="width: 0;"></div>
+          <div class="progress__bar" id="access-progress"></div>
         </div>
       </div>
       <div class="access-cta">
@@ -320,15 +84,15 @@
       <div>
         <div class="hero-avatar" aria-hidden="true">💑</div>
         <p class="panel-meta">Cześć, Ania & Kuba</p>
-        <h1 style="margin: 0 0 10px 0;">Wasz panel użytkownika</h1>
+        <h1 class="panel-title">Wasz panel użytkownika</h1>
         <p class="panel-meta">Kontynuujcie wspólne wieczory, zapisujcie ulubione gry i odkrywajcie świeże inspiracje.</p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="/index.html">Wróć do gier</a>
-          <a class="btn btn-ghost" href="#favorites">Ulubione</a>
-          <button class="btn btn-ghost" id="random-cta" type="button">🎲 Losuj grę</button>
+          <a class="btn btn--primary" href="/index.html">Wróć do gier</a>
+          <a class="btn btn--ghost" href="#favorites">Ulubione</a>
+          <button class="btn btn--ghost" id="random-cta" type="button">🎲 Losuj grę</button>
         </div>
       </div>
-      <div class="panel-card" style="height: 100%;">
+      <div class="panel-card panel-card--fill">
         <h3>Wasz dzisiejszy vibe</h3>
         <p class="panel-meta" id="random-highlight">Ciepło, bliskość i trochę ryzyka.</p>
         <div class="list-item">
@@ -348,12 +112,12 @@
 
     <section class="panel-grid">
       <div class="panel-card">
-        <div class="pill" style="margin-bottom: 10px;">Ostatnio grane</div>
+        <div class="pill pill--section">Ostatnio grane</div>
         <div class="history-grid" id="recent-games"></div>
       </div>
 
       <div class="panel-card">
-        <div class="pill" style="margin-bottom: 10px;">Historia z partnerem</div>
+        <div class="pill pill--section">Historia z partnerem</div>
         <ul class="timeline">
           <li>
             <span>💬</span>
@@ -381,7 +145,7 @@
     </section>
 
     <section class="panel-card" id="favorites">
-      <div class="pill" style="margin-bottom: 10px;">Listy i statusy</div>
+      <div class="pill pill--section">Listy i statusy</div>
       <div class="list-grid">
         <div class="panel-card">
           <h3>Ulubione</h3>
@@ -438,8 +202,8 @@
         <div class="panel-card">
           <h3>Masz feedback?</h3>
           <p class="panel-meta">Podziel się tym, co zadziałało i co poprawić.</p>
-          <textarea rows="5" style="width: 100%; padding: 12px; border-radius: 12px; border: var(--glass-border); background: var(--color-input-bg); color: var(--color-text);"></textarea>
-          <button class="btn btn-primary" style="width: 100%; margin-top: 10px;">Wyślij opinię</button>
+          <textarea class="panel-feedback__input" rows="5"></textarea>
+          <button class="btn btn--primary panel-feedback__submit">Wyślij opinię</button>
         </div>
       </div>
     </section>
