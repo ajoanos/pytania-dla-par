@@ -14,8 +14,7 @@
   const token = params.get('token');
 
   if (!token) {
-    renderMessage('Brak dostępu',
-      'Brakuje parametru <strong>token</strong> w adresie URL. Dodaj go lub wróć na stronę główną.');
+    renderNoAccessMessage();
     return;
   }
 
@@ -157,10 +156,36 @@
       return;
     }
 
-    renderMessage('Brak dostępu', 'Nie udało się potwierdzić dostępu.');
+    renderNoAccessMessage();
   }
 
-  function renderMessage(title, body) {
+  function renderNoAccessMessage() {
+    const noAccessBody = `
+      <div style="display: inline-flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <span style="display: inline-flex; width: 48px; height: 48px; align-items: center; justify-content: center; border-radius: 12px; background: linear-gradient(135deg, #7f5af0, #2cb1ff); color: #fff; font-weight: 800; font-size: 20px;">M</span>
+        <div style="text-align: left;">
+          <div style="font-weight: 800; letter-spacing: 0.3px; font-size: 18px;">Momenty</div>
+          <div style="color: #6c6f78; font-size: 14px;">Strefa gier tylko dla posiadaczy dostępu</div>
+        </div>
+      </div>
+      <p style="font-size: 18px; margin: 0 0 12px;">Nie masz jeszcze dostępu <span aria-hidden="true">🔒</span></p>
+      <p>Ta strona to strefa z grami „Momenty” tylko dla osób z wykupionym dostępem.<br>
+      Dzięki dostępowi:</p>
+      <ul style="list-style: none; padding: 0; margin: 0 0 12px; line-height: 1.6;">
+        <li>– zagracie w wiele różnych gier dla par i nie tylko</li>
+        <li>– macie dostęp 24/7 z telefonu lub laptopa</li>
+        <li>– możecie wracać do ulubionych zabaw kiedy chcecie</li>
+      </ul>
+      <p style="margin-bottom: 12px; color: #6c6f78;">Kup dostęp w kilka kliknięć i wróć do zabawy!</p>
+    `;
+
+    renderMessage('Brak dostępu', noAccessBody, {
+      href: 'https://sklep.allemedia.pl/produkt/gry-dla-par/',
+      label: 'Kup dostęp',
+    });
+  }
+
+  function renderMessage(title, body, options = {}) {
     document.documentElement.removeAttribute('data-guard-hidden');
 
     if (!document.body) {
@@ -184,9 +209,11 @@
     paragraph.innerHTML = body;
     paragraph.style.marginBottom = '16px';
 
+    const { href = HOME_URL, label = 'Wróć do strony gier' } = options;
+
     const link = document.createElement('a');
-    link.href = HOME_URL;
-    link.textContent = 'Wróć do strony gier';
+    link.href = href;
+    link.textContent = label;
     link.style.display = 'inline-block';
     link.style.padding = '10px 16px';
     link.style.borderRadius = '8px';
