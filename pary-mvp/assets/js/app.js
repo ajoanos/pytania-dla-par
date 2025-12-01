@@ -7,6 +7,7 @@ export { appendTokenToUrl, postJson, getJson, ACTIVE_TOKEN } from './utils.js';
 const STORAGE_KEY_THEME = 'pary.theme';
 const ACCESS_STORAGE_KEY = 'pary.access.pdp';
 const PLAN_ACCESS_STORAGE_KEY = 'momenty.planWieczoru.access';
+const INITIAL_LOADER_TIMEOUT = 4500;
 
 let isLoaderVisible = false;
 let initialLoaderFallback = null;
@@ -98,7 +99,7 @@ function setupInitialLoader() {
       isLoaderVisible = false;
       hideLoader();
       initialLoaderFallback = null;
-    }, 5000);
+    }, INITIAL_LOADER_TIMEOUT);
   };
 
   const hideOnce = () => {

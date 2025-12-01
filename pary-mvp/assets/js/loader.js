@@ -38,6 +38,11 @@ function createLoader() {
   overlay.appendChild(content);
   document.body.appendChild(overlay);
 
+  const supportsBackdropFilter = window.CSS && CSS.supports('backdrop-filter', 'blur(4px)');
+  if (!supportsBackdropFilter) {
+    overlay.classList.add('page-loader--no-blur');
+  }
+
   loaderElement = overlay;
   messageElement = text;
 
