@@ -9,6 +9,7 @@ const ACCESS_STORAGE_KEY = 'pary.access.pdp';
 const PLAN_ACCESS_STORAGE_KEY = 'momenty.planWieczoru.access';
 
 let isLoaderVisible = false;
+let initialLoaderFallback = null;
 
 if (!window.__momentyAccessConfirmed && !document.documentElement.hasAttribute('data-guard-hidden')) {
   document.documentElement.setAttribute('data-guard-hidden', 'true');
@@ -80,16 +81,31 @@ function propagateToken(token = ACTIVE_TOKEN) {
 }
 
 function setupInitialLoader() {
+  const clearFallback = () => {
+    if (initialLoaderFallback) {
+      clearTimeout(initialLoaderFallback);
+      initialLoaderFallback = null;
+    }
+  };
+
   const showOnce = () => {
     if (isLoaderVisible) return;
     isLoaderVisible = true;
     showLoader();
+
+    initialLoaderFallback = setTimeout(() => {
+      if (!isLoaderVisible) return;
+      isLoaderVisible = false;
+      hideLoader();
+      initialLoaderFallback = null;
+    }, 5000);
   };
 
   const hideOnce = () => {
     if (!isLoaderVisible) return;
     isLoaderVisible = false;
     hideLoader();
+    clearFallback();
   };
 
   if (document.readyState === 'loading') {

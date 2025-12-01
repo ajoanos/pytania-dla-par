@@ -1,4 +1,5 @@
 import { appendTokenToUrl, postJson, getJson } from './app.js';
+import { showLoader, hideLoader } from './loader.js';
 
 const params = new URLSearchParams(window.location.search);
 const roomKey = (params.get('room_key') || '').toUpperCase();
@@ -377,7 +378,15 @@ shareSheetController = initializeShareSheet({
 });
 
 initializeShareEmailForm();
-applyVariant(currentDeck);
+
+async function runWithLoader(task) {
+  showLoader();
+  try {
+    return await task();
+  } finally {
+    hideLoader();
+  }
+}
 
 nextQuestionButton?.addEventListener('click', async () => {
   try {
@@ -2287,10 +2296,19 @@ function markInteraction() {
   }
 }
 
-startPolling();
-startPresencePing();
-resetIdleTimer();
-adjustChatInputHeight();
+async function initializeRoom() {
+  await runWithLoader(async () => {
+    await applyVariant(currentDeck);
+    await startPolling();
+    startPresencePing();
+    resetIdleTimer();
+    adjustChatInputHeight();
+  });
+}
+
+initializeRoom().catch((error) => {
+  console.error(error);
+});
 
 window.addEventListener('visibilitychange', handleVisibilityChange);
 window.addEventListener('pagehide', () => {
