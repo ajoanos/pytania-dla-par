@@ -62,6 +62,8 @@ let currentSession = null;
 let positions = [];
 let selfSwipes = new Map();
 let pollTimer = null;
+let idleTimer = null;
+let wasManuallyPaused = false;
 let submittingSwipe = false;
 let everyoneReady = false;
 let allFinished = false;
@@ -75,6 +77,9 @@ let lastSessionId = null;
 let isAnimatingSwipe = false;
 let replayVotes = new Set();
 let replayReady = false;
+
+const POLL_INTERVAL_MS = 10000;
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 
 function redirectToSetup() {
   window.location.replace(appendTokenToUrl('tinder-dla-sexu-room.html', token));
@@ -968,11 +973,65 @@ function initSwipeGestures() {
 
 let isPolling = true;
 
+function stopPolling() {
+  isPolling = false;
+  if (pollTimer) {
+    clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+}
+
+function resumePolling() {
+  if (isPolling) {
+    return;
+  }
+  isPolling = true;
+  startPolling();
+}
+
 async function startPolling() {
   if (!isPolling) return;
   await fetchState();
   if (isPolling) {
-    pollTimer = setTimeout(startPolling, 5000);
+    pollTimer = setTimeout(startPolling, POLL_INTERVAL_MS);
+  }
+}
+
+function pauseForInactivity() {
+  wasManuallyPaused = true;
+  stopPolling();
+}
+
+function resumeFromInactivity() {
+  if (!wasManuallyPaused) {
+    return;
+  }
+  wasManuallyPaused = false;
+  resumePolling();
+  resetIdleTimer();
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) {
+    stopPolling();
+  } else if (!wasManuallyPaused) {
+    resumePolling();
+    resetIdleTimer();
+  }
+}
+
+function resetIdleTimer() {
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+  }
+  idleTimer = setTimeout(pauseForInactivity, IDLE_TIMEOUT_MS);
+}
+
+function markInteraction() {
+  if (wasManuallyPaused) {
+    resumeFromInactivity();
+  } else {
+    resetIdleTimer();
   }
 }
 
@@ -993,6 +1052,7 @@ function init() {
     await startSession(undefined, { triggerButton: startButton });
   });
   startPolling();
+  resetIdleTimer();
 }
 
 if (document.readyState === 'loading') {
@@ -1001,9 +1061,15 @@ if (document.readyState === 'loading') {
   init();
 }
 
+window.addEventListener('visibilitychange', handleVisibilityChange);
+window.addEventListener('pagehide', stopPolling);
+window.addEventListener('focus', handleVisibilityChange);
+window.addEventListener('pointerdown', markInteraction, { passive: true });
+window.addEventListener('keydown', markInteraction, { passive: true });
+
 window.addEventListener('beforeunload', () => {
-  isPolling = false;
-  if (pollTimer) {
-    clearTimeout(pollTimer);
+  stopPolling();
+  if (idleTimer) {
+    clearTimeout(idleTimer);
   }
 });

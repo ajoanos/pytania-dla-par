@@ -90,6 +90,12 @@ let emojiPanelOpen = false;
 let shareSheetController = null;
 let activeParticipantCount = 0;
 let isCurrentUserHost = false;
+let idleTimer = null;
+let wasManuallyPaused = false;
+
+const POLL_INTERVAL_MS = 10000;
+const PRESENCE_INTERVAL_MS = 30000;
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 
 const defaultWaitingRoomPath = document.body?.dataset.waitingPage || 'room-waiting.html';
 const shareEmailForm = document.getElementById('share-email');
@@ -2123,24 +2129,105 @@ async function sendPresence() {
   }
 }
 
+function startPresencePing() {
+  stopPresencePing();
+  sendPresence();
+  presenceTimer = setInterval(sendPresence, PRESENCE_INTERVAL_MS);
+}
+
+function stopPresencePing() {
+  if (presenceTimer) {
+    clearInterval(presenceTimer);
+    presenceTimer = null;
+  }
+}
 
 let isPolling = true;
+
+function stopPolling() {
+  isPolling = false;
+  if (pollTimer) {
+    clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+}
+
+function resumePolling() {
+  if (isPolling) {
+    return;
+  }
+  isPolling = true;
+  startPolling();
+}
 
 async function startPolling() {
   if (!isPolling) return;
   await refreshState();
   if (isPolling) {
-    pollTimer = setTimeout(startPolling, 6000); // Increased from 4000ms to 6000ms
+    pollTimer = setTimeout(startPolling, POLL_INTERVAL_MS);
+  }
+}
+
+function pauseForInactivity() {
+  wasManuallyPaused = true;
+  stopPolling();
+  stopPresencePing();
+}
+
+function resumeFromInactivity() {
+  if (!wasManuallyPaused) {
+    return;
+  }
+  wasManuallyPaused = false;
+  resumePolling();
+  startPresencePing();
+  resetIdleTimer();
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) {
+    stopPolling();
+    stopPresencePing();
+  } else if (!wasManuallyPaused) {
+    resumePolling();
+    startPresencePing();
+    resetIdleTimer();
+  }
+}
+
+function resetIdleTimer() {
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+  }
+  idleTimer = setTimeout(pauseForInactivity, IDLE_TIMEOUT_MS);
+}
+
+function markInteraction() {
+  if (wasManuallyPaused) {
+    resumeFromInactivity();
+  } else {
+    resetIdleTimer();
   }
 }
 
 startPolling();
-presenceTimer = setInterval(sendPresence, 30000); // Increased from 15000ms to 30000ms
-sendPresence();
+startPresencePing();
+resetIdleTimer();
 adjustChatInputHeight();
 
+window.addEventListener('visibilitychange', handleVisibilityChange);
+window.addEventListener('pagehide', () => {
+  stopPolling();
+  stopPresencePing();
+});
+window.addEventListener('focus', handleVisibilityChange);
+window.addEventListener('pointerdown', markInteraction, { passive: true });
+window.addEventListener('keydown', markInteraction, { passive: true });
+
 window.addEventListener('beforeunload', () => {
-  isPolling = false;
-  if (pollTimer) clearTimeout(pollTimer);
-  clearInterval(presenceTimer);
+  stopPolling();
+  stopPresencePing();
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+  }
 });
