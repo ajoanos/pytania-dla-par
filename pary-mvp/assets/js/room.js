@@ -206,6 +206,8 @@ let questionsLoadedDeck = '';
 let currentQuestion = null;
 let pollTimer;
 let presenceTimer;
+let presenceInFlight = false;
+let presencePaused = false;
 let allQuestions = [];
 let activeCategory = '';
 let loadingCategories = false;
@@ -2116,9 +2118,18 @@ async function chooseQuestionById(questionId, triggerButton) {
 }
 
 async function sendPresence() {
-  if (selfInfo && selfInfo.status !== 'active') {
+  if (presencePaused) {
     return;
   }
+  if (selfInfo && selfInfo.status !== 'active') {
+    schedulePresencePing();
+    return;
+  }
+  if (presenceInFlight) {
+    schedulePresencePing();
+    return;
+  }
+  presenceInFlight = true;
   try {
     await postJson('api/presence.php', {
       room_key: roomKey,
@@ -2126,18 +2137,33 @@ async function sendPresence() {
     });
   } catch (error) {
     console.warn('Nie udało się zaktualizować obecności', error);
+  } finally {
+    presenceInFlight = false;
+    if (!presencePaused) {
+      schedulePresencePing();
+    }
   }
 }
 
+function schedulePresencePing(delay = PRESENCE_INTERVAL_MS) {
+  if (presenceTimer) {
+    clearTimeout(presenceTimer);
+  }
+  presenceTimer = setTimeout(sendPresence, delay);
+}
+
 function startPresencePing() {
-  stopPresencePing();
+  presencePaused = false;
+  if (presenceTimer) {
+    clearTimeout(presenceTimer);
+  }
   sendPresence();
-  presenceTimer = setInterval(sendPresence, PRESENCE_INTERVAL_MS);
 }
 
 function stopPresencePing() {
+  presencePaused = true;
   if (presenceTimer) {
-    clearInterval(presenceTimer);
+    clearTimeout(presenceTimer);
     presenceTimer = null;
   }
 }

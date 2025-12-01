@@ -36,6 +36,8 @@ let selfInfo = null;
 let displayedTile = null;
 let pollTimer = null;
 let presenceTimer = null;
+let presenceInFlight = false;
+let presencePaused = false;
 let copyFeedbackTimer = null;
 let idleTimer = null;
 let wasManuallyPaused = false;
@@ -541,22 +543,34 @@ function isSelfActive() {
 }
 
 function startPresencePing() {
-  stopPresencePing();
+  presencePaused = false;
+  if (presenceTimer) {
+    clearTimeout(presenceTimer);
+  }
   sendPresence();
-  presenceTimer = window.setInterval(sendPresence, PRESENCE_INTERVAL_MS);
 }
 
 function stopPresencePing() {
+  presencePaused = true;
   if (presenceTimer) {
-    clearInterval(presenceTimer);
+    clearTimeout(presenceTimer);
     presenceTimer = null;
   }
 }
 
 async function sendPresence() {
-  if (!selfInfo || !isSelfActive()) {
+  if (presencePaused) {
     return;
   }
+  if (!selfInfo || !isSelfActive()) {
+    schedulePresencePing();
+    return;
+  }
+  if (presenceInFlight) {
+    schedulePresencePing();
+    return;
+  }
+  presenceInFlight = true;
   try {
     await postJson('api/presence.php', {
       room_key: roomKey,
@@ -564,7 +578,19 @@ async function sendPresence() {
     });
   } catch (error) {
     console.error(error);
+  } finally {
+    presenceInFlight = false;
+    if (!presencePaused) {
+      schedulePresencePing();
+    }
   }
+}
+
+function schedulePresencePing(delay = PRESENCE_INTERVAL_MS) {
+  if (presenceTimer) {
+    clearTimeout(presenceTimer);
+  }
+  presenceTimer = window.setTimeout(sendPresence, delay);
 }
 
 function showCopyFeedback(message) {

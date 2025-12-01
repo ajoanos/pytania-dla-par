@@ -21,3 +21,8 @@ Zgłoszenie o wyczerpywaniu się procesów PHP/FPM można powiązać z pętlami 
 - Zmniejszenie częstotliwości odpytywania lub łączenie wielu aktualizacji w jedno wywołanie.
 - Wprowadzenie limitów czasu sesji po stronie frontendowej (auto-stop po X minutach bez interakcji) oraz agresywniejszego czyszczenia wygaszonych pokojów.
 - Docelowo zastąpienie częstych pollingów WebSocketem lub SSE, aby utrzymać stałe, lekkie połączenie zamiast wielu krótkich requestów.
+
+## Uwagi do przesłanego logu serwera
+- Log pokazuje próby skanowania i enumeracji plików WordPressa (błędy `autoindex`, `client denied`, `Primary script unknown`, reguły WAF), co jest typowym ruchem botów.
+- Te wpisy nie wyjaśniają wyczerpywania procesów w naszej aplikacji – ruch dotyczy innej instalacji (WordPress), a nie endpointów gier.
+- Aby ograniczyć hałas z takich skanów, warto w .htaccess/WAF doprecyzować blokady katalogów publicznych, włączyć rate limiting lub wykorzystywać CDN z filtrowaniem botów, ale nie wymaga to zmian w kodzie gier.
