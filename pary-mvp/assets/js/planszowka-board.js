@@ -28,6 +28,9 @@ const floatingDiceMediaQuery = window.matchMedia('(min-width: 1024px)');
 const MOVEMENT_INITIAL_DELAY_MS = 600;
 const MOVEMENT_STEP_DELAY_MS = 450;
 const MOVEMENT_RECENT_THRESHOLD_MS = 20000;
+const VISIBLE_POLL_INTERVAL_MS = 2500;
+const HIDDEN_POLL_INTERVAL_MS = 12000;
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 
 const visualPositions = {};
 let movementAnimation = null;
@@ -95,6 +98,9 @@ let lastParticipantsSignature = '';
 let lastFocusedFieldIndex = null;
 let isCurrentUserHost = false;
 let shareSheetController = initializeShareSheet(shareElements);
+let pausedForIdle = false;
+let idleTimer = null;
+let realtimePollCallback = null;
 
 setupFloatingDiceObservers();
 
@@ -310,11 +316,51 @@ function handleTaskActionClick(event) {
   }
 }
 
-function setupRealtimeBridge() {
+function getPollInterval() {
+  return document.visibilityState === 'hidden' ? HIDDEN_POLL_INTERVAL_MS : VISIBLE_POLL_INTERVAL_MS;
+}
+
+function clearRealtimePoll() {
   if (pollHandle) {
     window.clearTimeout(pollHandle);
     pollHandle = null;
   }
+}
+
+function scheduleRealtimePoll(callback) {
+  if (pausedForIdle) {
+    return;
+  }
+  clearRealtimePoll();
+  pollHandle = window.setTimeout(callback, getPollInterval());
+}
+
+function pauseRealtimeBridge() {
+  if (pausedForIdle) {
+    return;
+  }
+  pausedForIdle = true;
+  clearRealtimePoll();
+}
+
+function resumeRealtimeBridge(callback) {
+  if (!pausedForIdle) {
+    return;
+  }
+  pausedForIdle = false;
+  resetIdleTimer();
+  callback();
+}
+
+function resetIdleTimer() {
+  if (idleTimer) {
+    window.clearTimeout(idleTimer);
+  }
+  idleTimer = window.setTimeout(pauseRealtimeBridge, IDLE_TIMEOUT_MS);
+}
+
+function setupRealtimeBridge() {
+  clearRealtimePoll();
   onGameStateFromServer((incoming, participants) => {
     if (!incoming) {
       return;
@@ -888,10 +934,36 @@ function pickColor(usedColors) {
 }
 
 window.addEventListener('beforeunload', () => {
-  if (pollHandle) {
-    window.clearTimeout(pollHandle);
-    pollHandle = null;
+  clearRealtimePoll();
+  if (idleTimer) {
+    window.clearTimeout(idleTimer);
   }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (!realtimePollCallback) {
+    return;
+  }
+  if (pausedForIdle && document.visibilityState === 'visible') {
+    resumeRealtimeBridge(realtimePollCallback);
+    return;
+  }
+  if (!pausedForIdle) {
+    scheduleRealtimePoll(realtimePollCallback);
+  }
+});
+
+['pointerdown', 'keydown', 'touchstart', 'visibilitychange'].forEach((eventName) => {
+  document.addEventListener(eventName, () => {
+    if (!realtimePollCallback) {
+      return;
+    }
+    if (pausedForIdle) {
+      resumeRealtimeBridge(realtimePollCallback);
+      return;
+    }
+    resetIdleTimer();
+  });
 });
 
 function renderBoardSkeleton() {
@@ -2134,6 +2206,9 @@ function sendGameStateToServer(state) {
 
 function onGameStateFromServer(callback) {
   async function poll() {
+    if (pausedForIdle) {
+      return;
+    }
     try {
       const snapshot = await requestBoardSnapshot();
       if (snapshot) {
@@ -2151,9 +2226,11 @@ function onGameStateFromServer(callback) {
     } catch (error) {
       console.error('Nie udało się pobrać aktualnego stanu planszówki.', error);
     } finally {
-      pollHandle = window.setTimeout(poll, 2500);
+      scheduleRealtimePoll(poll);
     }
   }
 
+  resetIdleTimer();
+  realtimePollCallback = poll;
   poll();
 }
