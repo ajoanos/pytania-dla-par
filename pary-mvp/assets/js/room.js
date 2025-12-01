@@ -93,6 +93,12 @@ let isCurrentUserHost = false;
 let idleTimer = null;
 let wasManuallyPaused = false;
 
+// Differential updates state
+let lastMessageId = 0;
+let lastReactionId = 0;
+let currentETag = null;
+let allReactions = [];
+
 const POLL_INTERVAL_MS = 10000;
 const PRESENCE_INTERVAL_MS = 30000;
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
@@ -617,12 +623,32 @@ document.addEventListener('click', (event) => {
 
 async function refreshState() {
   try {
-    const payload = await getJson(
-      `api/state.php?room_key=${encodeURIComponent(roomKey)}&participant_id=${encodeURIComponent(participantId)}`,
-    );
+    const headers = {};
+    if (currentETag) {
+      headers['If-None-Match'] = currentETag;
+    }
+
+    const params = new URLSearchParams({
+      room_key: roomKey,
+      participant_id: participantId,
+      since_message_id: lastMessageId,
+      since_reaction_id: lastReactionId,
+    });
+
+    const payload = await getJson(`api/state.php?${params.toString()}`, headers);
+
+    if (payload.notModified) {
+      return;
+    }
+
     if (!payload.ok) {
       throw new Error(payload.error || 'Nie udało się pobrać stanu.');
     }
+
+    if (payload._etag) {
+      currentETag = payload._etag;
+    }
+
     const incomingDeck = (payload.deck || '').toLowerCase();
     if (incomingDeck && incomingDeck !== currentDeck) {
       await applyVariant(incomingDeck);
@@ -635,26 +661,51 @@ async function refreshState() {
     const participants = Array.isArray(payload.participants) ? payload.participants : [];
     renderParticipants(participants);
     const reactionsAllowed = areReactionsEnabled();
-    const reactions = reactionsAllowed ? payload.reactions || [] : [];
-    if (payload.current_question) {
-      applyQuestion(payload.current_question);
-      if (reactionsAllowed) {
-        updateQuestionHighlight(reactions);
-      } else {
-        setQuestionHighlight(null);
-      }
-    } else {
-      clearQuestion();
-      if (!reactionsAllowed) {
-        setQuestionHighlight(null);
-      }
-    }
+
+    // Handle Reactions (Differential Merge)
+    const newReactions = reactionsAllowed ? (payload.reactions || []) : [];
     if (reactionsAllowed) {
-      renderReactions(reactions);
-    } else if (reactionsList) {
-      reactionsList.innerHTML = '';
+      if (lastReactionId === 0) {
+        allReactions = newReactions;
+      } else if (newReactions.length > 0) {
+        const existingIds = new Set(allReactions.map((r) => r.id));
+        const uniqueNew = newReactions.filter((r) => !existingIds.has(r.id));
+        allReactions = [...uniqueNew, ...allReactions].slice(0, 50);
+      }
+
+      if (newReactions.length > 0) {
+        const maxId = newReactions.reduce((max, r) => Math.max(max, Number(r.id)), lastReactionId);
+        lastReactionId = maxId;
+      }
+
+      if (payload.current_question) {
+        applyQuestion(payload.current_question);
+        updateQuestionHighlight(allReactions);
+      } else {
+        clearQuestion();
+        setQuestionHighlight(null);
+      }
+      renderReactions(allReactions);
+    } else {
+      if (payload.current_question) {
+        applyQuestion(payload.current_question);
+      } else {
+        clearQuestion();
+      }
+      if (reactionsList) {
+        reactionsList.innerHTML = '';
+      }
+      setQuestionHighlight(null);
     }
-    renderChatMessages(payload.messages || []);
+
+    // Handle Messages (Differential Append)
+    const newMessages = payload.messages || [];
+    if (newMessages.length > 0) {
+      renderChatMessages(newMessages);
+      const maxId = newMessages.reduce((max, m) => Math.max(max, Number(m.id)), lastMessageId);
+      lastMessageId = maxId;
+    }
+
     renderHostRequests(payload.pending_requests || []);
   } catch (error) {
     console.error(error);

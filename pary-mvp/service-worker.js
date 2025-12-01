@@ -49,7 +49,19 @@ const ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const results = await Promise.allSettled(
+        ASSETS.map((url) =>
+          cache.add(url).catch((error) => {
+            console.warn(`Failed to cache ${url}:`, error);
+            // Return null to indicate failure but don't throw
+            return null;
+          })
+        )
+      );
+      // Optional: Check if core assets (like index.html, app.js) failed and throw if so.
+      // For now, we proceed to allow the app to work online even if offline cache is partial.
+    })
   );
 });
 

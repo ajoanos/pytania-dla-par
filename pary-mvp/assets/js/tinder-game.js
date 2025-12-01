@@ -1,4 +1,5 @@
 import { appendTokenToUrl, getJson, postJson } from './app.js';
+import { initShareSheet, initShareQrModal, initShareEmailForm, updateShareLinks } from './share.js';
 
 const EMAIL_ENDPOINT = 'api/send_positions_email.php';
 const SHARE_EMAIL_SUBJECT = 'Tinder z pozycjami – dołącz do mnie';
@@ -110,257 +111,54 @@ function buildShareMessage(url) {
   return `Dołącz do mnie w Tinder z pozycjami. Kliknij, aby dołączyć: ${safeUrl}`;
 }
 
-function updateShareLinks() {
-  if (!shareOpen || !shareCopy || !shareLinks) {
-    return;
-  }
-  const url = normalizeShareUrl();
-  if (!url) {
-    shareOpen.disabled = true;
-    shareCopy.disabled = true;
-    shareLinks.querySelectorAll('a').forEach((anchor) => {
-      anchor.setAttribute('aria-disabled', 'true');
-      anchor.setAttribute('tabindex', '-1');
-      anchor.removeAttribute('href');
-    });
-    if (shareQrButton) {
-      shareQrButton.disabled = true;
-      shareQrButton.removeAttribute('data-share-url');
-    }
-    if (shareEmailForm) {
-      shareEmailForm.dataset.shareUrl = '';
-      shareEmailForm.dataset.shareMessage = '';
-    }
-    return;
-  }
-  shareOpen.disabled = false;
-  const message = buildShareMessage(url);
-  shareCopy.disabled = false;
-  shareLinks.querySelectorAll('a').forEach((anchor) => {
-    const channel = anchor.dataset.shareChannel;
-    let target = '';
-    if (channel === 'messenger') {
-      target = `https://m.me/?text=${encodeURIComponent(message)}`;
-    } else if (channel === 'whatsapp') {
-      target = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    } else if (channel === 'sms') {
-      target = `sms:&body=${encodeURIComponent(message)}`;
-    }
-    if (target) {
-      anchor.href = target;
-      anchor.removeAttribute('aria-disabled');
-      anchor.removeAttribute('tabindex');
-    }
+function updateShareLinksWrapper() {
+  updateShareLinks({
+    shareOpen,
+    shareCopy,
+    shareLinks,
+    shareQrButton,
+    shareEmailForm,
+    getShareUrl: normalizeShareUrl,
+    getShareMessage: buildShareMessage
   });
-  if (shareQrButton) {
-    shareQrButton.disabled = false;
-    shareQrButton.dataset.shareUrl = url;
-  }
-  if (shareEmailForm) {
-    shareEmailForm.dataset.shareUrl = url;
-    shareEmailForm.dataset.shareMessage = message;
-  }
 }
 
-function initShareSheet() {
-  if (!shareLayer || !shareCard || !shareOpen || !shareClose) {
-    return;
-  }
-  shareLayer.hidden = false;
-  shareLayer.dataset.open = 'false';
-  shareLayer.setAttribute('aria-hidden', 'true');
-  shareOpen.disabled = false;
-  shareOpen.setAttribute('aria-expanded', 'false');
-
-  const closeSheet = () => {
-    shareLayer.dataset.open = 'false';
-    shareLayer.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('share-layer-open');
-    shareOpen.setAttribute('aria-expanded', 'false');
-  };
-
-  const openSheet = () => {
-    if (shareLayer.dataset.open === 'true') {
-      closeSheet();
-      return;
-    }
-    shareLayer.dataset.open = 'true';
-    shareLayer.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('share-layer-open');
-    shareOpen.setAttribute('aria-expanded', 'true');
-    requestAnimationFrame(() => {
-      shareCard.focus({ preventScroll: true });
-    });
-  };
-
-  shareOpen.addEventListener('click', () => {
-    openSheet();
+function initShareSheetWrapper() {
+  initShareSheet({
+    shareLayer,
+    shareCard,
+    shareOpen,
+    shareClose,
+    shareBackdrop,
+    shareCopy,
+    shareFeedback,
+    getShareUrl: normalizeShareUrl
   });
-
-  shareClose.addEventListener('click', () => {
-    closeSheet();
-  });
-
-  if (shareBackdrop) {
-    shareBackdrop.addEventListener('click', () => closeSheet());
-  }
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && shareLayer.dataset.open === 'true') {
-      event.preventDefault();
-      closeSheet();
-    }
-  });
-
-  shareCopy?.addEventListener('click', async () => {
-    const url = normalizeShareUrl();
-    if (!url || !shareFeedback) {
-      return;
-    }
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = url;
-        textarea.style.position = 'fixed';
-        textarea.style.top = '-1000px';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
-      shareFeedback.textContent = 'Skopiowano link do schowka.';
-      shareFeedback.hidden = false;
-      shareFeedback.dataset.tone = 'success';
-      setTimeout(() => {
-        shareFeedback.hidden = true;
-      }, 4000);
-    } catch (error) {
-      console.error(error);
-      shareFeedback.textContent = 'Nie udało się skopiować linku. Spróbuj ręcznie.';
-      shareFeedback.hidden = false;
-      shareFeedback.dataset.tone = 'error';
-    }
-  });
-
   shareSheetReady = true;
-  updateShareLinks();
+  updateShareLinksWrapper();
 }
 
-function initShareQrModal() {
-  if (!shareQrButton || !shareQrModal) {
-    return;
-  }
-
-  const closeModal = () => {
-    shareQrModal.hidden = true;
-    shareQrModal.setAttribute('aria-hidden', 'true');
-  };
-
-  const openModal = () => {
-    const url = shareQrButton.dataset.shareUrl || normalizeShareUrl();
-    if (!url) {
-      return;
-    }
-    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`;
-    if (shareQrImage) {
-      shareQrImage.src = qrSrc;
-    }
-    if (shareQrUrl) {
-      shareQrUrl.href = url;
-    }
-    shareQrModal.hidden = false;
-    shareQrModal.setAttribute('aria-hidden', 'false');
-  };
-
-  shareQrButton.addEventListener('click', () => {
-    openModal();
-  });
-
-  shareQrClose?.addEventListener('click', () => {
-    closeModal();
-  });
-
-  shareQrModal.addEventListener('click', (event) => {
-    if (event.target === shareQrModal) {
-      closeModal();
-    }
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !shareQrModal.hidden) {
-      closeModal();
-    }
+function initShareQrModalWrapper() {
+  initShareQrModal({
+    shareQrButton,
+    shareQrModal,
+    shareQrImage,
+    shareQrUrl,
+    shareQrClose,
+    getShareUrl: normalizeShareUrl
   });
 }
 
-function initShareEmailForm() {
-  if (!shareEmailForm || !shareEmailInput) {
-    return;
-  }
-
-  const submitButton = shareEmailForm.querySelector('button[type="submit"]');
-
-  shareEmailForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (!shareEmailInput.checkValidity()) {
-      shareEmailInput.reportValidity();
-      return;
-    }
-
-    const email = shareEmailInput.value.trim();
-    const url = shareEmailForm.dataset.shareUrl || normalizeShareUrl();
-    const message = shareEmailForm.dataset.shareMessage || buildShareMessage(url);
-
-    if (!email || !url) {
-      return;
-    }
-
-    if (shareEmailFeedback) {
-      shareEmailFeedback.hidden = false;
-      shareEmailFeedback.textContent = 'Wysyłamy wiadomość…';
-      shareEmailFeedback.removeAttribute('data-tone');
-    }
-
-    if (submitButton) {
-      submitButton.disabled = true;
-    }
-
-    try {
-      const payload = await postJson(EMAIL_ENDPOINT, {
-        partner_email: email,
-        share_url: url,
-        message,
-        subject: SHARE_EMAIL_SUBJECT,
-        sender_name: selfDisplayName,
-        like_count: 0,
-      });
-
-      if (!payload?.ok) {
-        throw new Error(payload?.error || 'Nie udało się wysłać wiadomości.');
-      }
-
-      if (shareEmailFeedback) {
-        shareEmailFeedback.hidden = false;
-        shareEmailFeedback.dataset.tone = 'success';
-        shareEmailFeedback.textContent = 'Wiadomość wysłana! Daj partnerowi znać, żeby sprawdził skrzynkę.';
-      }
-      shareEmailInput.value = '';
-    } catch (error) {
-      console.error(error);
-      if (shareEmailFeedback) {
-        shareEmailFeedback.hidden = false;
-        shareEmailFeedback.dataset.tone = 'error';
-        shareEmailFeedback.textContent = error instanceof Error && error.message
-          ? error.message
-          : 'Nie udało się wysłać wiadomości.';
-      }
-    } finally {
-      if (submitButton) {
-        submitButton.disabled = false;
-      }
-    }
+function initShareEmailFormWrapper() {
+  initShareEmailForm({
+    shareEmailForm,
+    shareEmailInput,
+    shareEmailFeedback,
+    getShareUrl: normalizeShareUrl,
+    getShareMessage: buildShareMessage,
+    emailEndpoint: EMAIL_ENDPOINT,
+    subject: SHARE_EMAIL_SUBJECT,
+    senderName: selfDisplayName
   });
 }
 
@@ -375,7 +173,9 @@ function updateShareVisibility() {
     if (shouldShow) {
       shareOpen.removeAttribute('tabindex');
       if (!shareSheetReady) {
-        initShareSheet();
+        initShareSheetWrapper();
+        initShareQrModalWrapper();
+        initShareEmailFormWrapper();
       }
     } else {
       shareOpen.setAttribute('tabindex', '-1');
@@ -708,7 +508,7 @@ function handleState(payload) {
   updatePartnerProgress(progressMap, positions.length);
   updateSwipeCard();
   updateSummary(payload.matches || []);
-  updateShareLinks();
+  updateShareLinksWrapper();
 }
 
 async function startSession(countOverride, options = {}) {
@@ -766,7 +566,8 @@ async function startSession(countOverride, options = {}) {
 }
 
 async function submitSwipe(choice) {
-  if (submittingSwipe || !currentSession || !roomKey || !participantId) {
+  // Optimistic UI: Allow rapid swiping without blocking
+  if (!currentSession || !roomKey || !participantId) {
     return;
   }
   const index = getCurrentIndex();
@@ -774,10 +575,12 @@ async function submitSwipe(choice) {
     return;
   }
   const position = positions[index];
-  submittingSwipe = true;
-  swipeButtons.forEach((button) => {
-    button.disabled = true;
-  });
+
+  // 1. Optimistic Update
+  selfSwipes.set(position.id, choice);
+  updateSwipeCard();
+
+  // 2. Background Sync
   try {
     const payload = await postJson(swipeEndpoint, {
       room_key: roomKey,
@@ -789,17 +592,14 @@ async function submitSwipe(choice) {
     if (!payload.ok) {
       throw new Error(payload.error || 'Nie udało się zapisać wyboru.');
     }
-    selfSwipes.set(position.id, choice);
-    updateSwipeCard();
+    // Sync state after successful save (fire and forget)
     fetchState();
   } catch (error) {
     console.error(error);
-    alert(error.message || 'Nie udało się zapisać wyboru.');
-  } finally {
-    submittingSwipe = false;
-    swipeButtons.forEach((button) => {
-      button.disabled = false;
-    });
+    // 3. Rollback on Failure
+    selfSwipes.delete(position.id);
+    updateSwipeCard();
+    alert(error.message || 'Nie udało się zapisać wyboru. Spróbuj ponownie.');
   }
 }
 
@@ -1040,10 +840,10 @@ function init() {
     redirectToSetup();
     return;
   }
-  updateShareLinks();
-  initShareSheet();
-  initShareQrModal();
-  initShareEmailForm();
+  updateShareLinksWrapper();
+  initShareSheetWrapper();
+  initShareQrModalWrapper();
+  initShareEmailFormWrapper();
   initSlider();
   initSwipeButtons();
   initPlayAgain();

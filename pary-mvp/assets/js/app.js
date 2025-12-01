@@ -1,12 +1,11 @@
 import { games } from './games-data.js';
+import { appendTokenToUrl, postJson, ACTIVE_TOKEN } from './utils.js';
+
+export { appendTokenToUrl, postJson, getJson, ACTIVE_TOKEN } from './utils.js';
 
 const STORAGE_KEY_THEME = 'pary.theme';
 const ACCESS_STORAGE_KEY = 'pary.access.pdp';
 const PLAN_ACCESS_STORAGE_KEY = 'momenty.planWieczoru.access';
-
-const urlParams = new URLSearchParams(window.location.search);
-const ACCESS_TOKEN = urlParams.get('plan_token') || urlParams.get('token') || '';
-export const ACTIVE_TOKEN = ACCESS_TOKEN;
 
 if (!window.__momentyAccessConfirmed && !document.documentElement.hasAttribute('data-guard-hidden')) {
   document.documentElement.setAttribute('data-guard-hidden', 'true');
@@ -32,20 +31,6 @@ function ensureMomentyGuard() {
     script.onerror = () => reject(new Error('momenty-guard.js nie został załadowany'));
     document.head.appendChild(script);
   });
-}
-
-export function appendTokenToUrl(value, token = ACTIVE_TOKEN) {
-  if (!value) return value;
-  if (!token) return value;
-
-  try {
-    const url = new URL(value, window.location.href);
-    url.searchParams.set('token', token);
-    return url.toString();
-  } catch (error) {
-    console.warn('Nie udało się zaktualizować adresu z tokenem:', error);
-    return value;
-  }
 }
 
 function propagateToken(token = ACTIVE_TOKEN) {
@@ -112,32 +97,6 @@ function setupDefaultAccessHandler() {
     window.momentyAccessOk(window.__momentyAccessPending);
     window.__momentyAccessPending = null;
   }
-}
-
-export async function postJson(url, data) {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error(`Błąd sieci ${response.status}`);
-  }
-  return response.json();
-}
-
-export async function getJson(url) {
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Błąd sieci ${response.status}`);
-  }
-  return response.json();
 }
 
 async function requestNewRoomKey(options = {}) {

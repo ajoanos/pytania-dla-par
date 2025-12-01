@@ -10,6 +10,60 @@ if (BOOTSTRAP_EMIT_JSON) {
     header('Content-Type: application/json; charset=utf-8');
 }
 
+// Simple Rate Limiting
+// Simple Rate Limiting
+if (!function_exists('checkRateLimit')) {
+    function checkRateLimit(): void {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        // Allow localhost without limits
+        if ($ip === '127.0.0.1' || $ip === '::1') {
+            return;
+        }
+        
+        $limit = 300; // requests
+        $period = 60; // seconds
+        
+        $tempDir = sys_get_temp_dir();
+        $file = $tempDir . '/pary_rl_' . md5($ip);
+        $data = ['count' => 0, 'start' => time()];
+        
+        // Suppress errors to avoid breaking the app on file permission issues
+        try {
+            if (file_exists($file)) {
+                $content = @file_get_contents($file);
+                if ($content) {
+                    $decoded = json_decode($content, true);
+                    if (is_array($decoded)) {
+                        $data = $decoded;
+                    }
+                }
+            }
+            
+            if (time() - $data['start'] > $period) {
+                $data['count'] = 1;
+                $data['start'] = time();
+            } else {
+                $data['count']++;
+            }
+            
+            if ($data['count'] > $limit) {
+                http_response_code(429);
+                echo json_encode(['ok' => false, 'error' => 'Zbyt wiele zapytań. Spróbuj za chwilę.']);
+                exit;
+            }
+            
+            // Optimization: only write every 5th request or if near limit to save IO
+            if ($data['count'] % 5 === 0 || $data['count'] > $limit - 10) {
+                @file_put_contents($file, json_encode($data), LOCK_EX);
+            }
+        } catch (Throwable $e) {
+            // Ignore rate limiting errors to keep app working
+        }
+    }
+}
+
+checkRateLimit();
+
 define('DB_FILE', __DIR__ . '/../db/data.sqlite');
 const ROOM_LIFETIME_SECONDS = 6 * 60 * 60;
 const QUESTION_DECKS = [
@@ -339,17 +393,52 @@ function normalizeDeck(?string $deck): string
 
 function fetchQuestions(string $deck = 'default'): array
 {
+    static $memoryCache = [];
+    
     $deck = normalizeDeck($deck);
-    $file = QUESTION_DECKS[$deck] ?? QUESTION_DECKS['default'];
-    if (!file_exists($file)) {
+    if (isset($memoryCache[$deck])) {
+        return $memoryCache[$deck];
+    }
+
+    $sourceFile = QUESTION_DECKS[$deck] ?? QUESTION_DECKS['default'];
+    if (!file_exists($sourceFile)) {
         return [];
     }
-    $content = file_get_contents($file);
+
+    // Cache Warmer: Use PHP file to leverage OpCache
+    $tempDir = sys_get_temp_dir();
+    $cacheFile = $tempDir . '/pary_q_cache_' . md5($sourceFile) . '.php';
+    
+    $sourceMtime = @filemtime($sourceFile);
+    $cacheMtime = @filemtime($cacheFile);
+
+    if ($cacheMtime && $sourceMtime && $cacheMtime >= $sourceMtime) {
+        // Load from PHP cache (fast)
+        $result = @include $cacheFile;
+        if (is_array($result)) {
+            $memoryCache[$deck] = $result;
+            return $result;
+        }
+    }
+
+    // Regenerate cache
+    $content = file_get_contents($sourceFile);
     if ($content === false) {
         return [];
     }
     $decoded = json_decode($content, true);
-    return is_array($decoded) ? $decoded : [];
+    $result = is_array($decoded) ? $decoded : [];
+    
+    // Write to PHP cache file
+    try {
+        $phpCode = '<?php return ' . var_export($result, true) . ';';
+        @file_put_contents($cacheFile, $phpCode, LOCK_EX);
+    } catch (Throwable $e) {
+        // Ignore cache write errors
+    }
+    
+    $memoryCache[$deck] = $result;
+    return $result;
 }
 
 function purgeExpiredRooms(): void
@@ -441,15 +530,16 @@ function decryptChatMessage(string $ciphertext, string $iv, string $tag, string 
     return $plain === false ? null : $plain;
 }
 
-function fetchChatMessages(int $roomId, string $roomKey, int $limit = 50): array
+function fetchChatMessages(int $roomId, string $roomKey, int $limit = 50, int $sinceId = 0): array
 {
     $stmt = db()->prepare('SELECT m.id, m.participant_id, m.ciphertext, m.iv, m.tag, m.created_at, p.display_name
         FROM chat_messages m
         JOIN participants p ON p.id = m.participant_id
-        WHERE m.room_id = :room_id
+        WHERE m.room_id = :room_id AND m.id > :since_id
         ORDER BY m.id DESC
         LIMIT :limit');
     $stmt->bindValue(':room_id', $roomId, PDO::PARAM_INT);
+    $stmt->bindValue(':since_id', $sinceId, PDO::PARAM_INT);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
     $rows = $stmt->fetchAll();
@@ -1378,3 +1468,39 @@ function appendBoardHistory(array &$state, string $message): void
         $state['history'] = array_slice($state['history'], -40);
     }
 }
+function checkRateLimit(): void
+{
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $file = sys_get_temp_dir() . '/rate_limit_' . md5($ip);
+    $limit = 60; // requests per minute
+    $window = 60; // seconds
+
+    $current = time();
+    $data = ['count' => 0, 'start_time' => $current];
+
+    if (file_exists($file)) {
+        $content = file_get_contents($file);
+        if ($content !== false) {
+            $decoded = json_decode($content, true);
+            if (is_array($decoded)) {
+                $data = $decoded;
+            }
+        }
+    }
+
+    if ($current - $data['start_time'] > $window) {
+        $data['count'] = 1;
+        $data['start_time'] = $current;
+    } else {
+        $data['count']++;
+    }
+
+    if ($data['count'] > $limit) {
+        http_response_code(429);
+        die(json_encode(['ok' => false, 'error' => 'Zbyt wiele zapytań. Spróbuj później.']));
+    }
+
+    file_put_contents($file, json_encode($data));
+}
+
+checkRateLimit();

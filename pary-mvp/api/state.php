@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/bootstrap.php';
 
 $roomKey = strtoupper(trim((string)($_GET['room_key'] ?? '')));
 if ($roomKey === '') {
@@ -13,6 +13,9 @@ purgeExpiredRooms();
 
 $room = getRoomByKeyOrFail($roomKey);
 $roomDeck = normalizeDeck($room['deck'] ?? 'default');
+
+$sinceMessageId = (int)($_GET['since_message_id'] ?? 0);
+$sinceReactionId = (int)($_GET['since_reaction_id'] ?? 0);
 
 $participantId = (int)($_GET['participant_id'] ?? 0);
 $participant = null;
@@ -38,11 +41,14 @@ $pendingRequests = array_map(static function (array $item): array {
 
 $reactions = [];
 if ($hasFullAccess) {
-    $stmt = db()->prepare('SELECT r.question_id, r.action, r.created_at, p.display_name FROM reactions r
+    $stmt = db()->prepare('SELECT r.id, r.question_id, r.action, r.created_at, p.display_name FROM reactions r
         JOIN participants p ON p.id = r.participant_id
-        WHERE r.room_id = :room_id
+        WHERE r.room_id = :room_id AND r.id > :since_id
         ORDER BY r.created_at DESC LIMIT 50');
-    $stmt->execute(['room_id' => $room['id']]);
+    $stmt->execute([
+        'room_id' => $room['id'],
+        'since_id' => $sinceReactionId,
+    ]);
     $reactionsRaw = $stmt->fetchAll();
 
     $questions = fetchQuestions($roomDeck);
@@ -61,6 +67,7 @@ if ($hasFullAccess) {
         $questionId = (string)($reaction['question_id'] ?? '');
         $question = $questionMap[$questionId] ?? ['text' => ''];
         return [
+            'id' => (int)($reaction['id'] ?? 0),
             'question_id' => $questionId,
             'action' => (string)($reaction['action'] ?? ''),
             'created_at' => (string)($reaction['created_at'] ?? ''),
@@ -71,7 +78,7 @@ if ($hasFullAccess) {
 }
 
 $currentQuestion = $hasFullAccess ? getLatestQuestion((int)$room['id'], $roomDeck) : null;
-$messages = $hasFullAccess ? fetchChatMessages((int)$room['id'], $roomKey, 60) : [];
+$messages = $hasFullAccess ? fetchChatMessages((int)$room['id'], $roomKey, 60, $sinceMessageId) : [];
 
 $self = null;
 if ($participant) {
@@ -83,7 +90,7 @@ if ($participant) {
     ];
 }
 
-respond([
+$response = [
     'ok' => true,
     'participants' => $participants,
     'current_question' => $currentQuestion,
@@ -92,4 +99,23 @@ respond([
     'messages' => $messages,
     'self' => $self,
     'deck' => $roomDeck,
+];
+
+// ETag generation
+$hashData = json_encode([
+    'p' => $participants,
+    'q' => $currentQuestion,
+    'r' => $reactions,
+    'pr' => $pendingRequests,
+    'm' => $messages,
+    's' => $self,
 ]);
+$etag = '"' . md5($hashData) . '"';
+
+if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && trim($_SERVER['HTTP_IF_NONE_MATCH']) === $etag) {
+    header('HTTP/1.1 304 Not Modified');
+    exit;
+}
+
+header('ETag: ' . $etag);
+respond($response);
