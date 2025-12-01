@@ -11,6 +11,9 @@ if (!roomKey || !localPlayerId) {
 
 const EMAIL_ENDPOINT = 'api/send_positions_email.php';
 const SHARE_EMAIL_SUBJECT = 'Kółko i krzyżyk Wyzwanie – dołącz do mnie';
+const VISIBLE_POLL_INTERVAL_MS = 2500;
+const HIDDEN_POLL_INTERVAL_MS = 12000;
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 
 const elements = {
   roundLabel: document.getElementById('trio-round-label'),
@@ -118,6 +121,9 @@ let gameState = null;
 let pollHandle = null;
 let lastSnapshotSignature = '';
 let shareSheetController = null;
+let pausedForIdle = false;
+let idleTimer = null;
+let realtimePollCallback = null;
 let shareFeedbackTimer = null;
 let isCurrentUserHost = false;
 let selfInfo = null;
@@ -136,6 +142,7 @@ init();
 
 async function init() {
   await loadInitialState();
+  resetIdleTimer();
   startRealtimeBridge();
 }
 
@@ -858,12 +865,58 @@ function requestBoardSnapshot() {
     });
 }
 
+function getPollInterval() {
+  return document.visibilityState === 'hidden' ? HIDDEN_POLL_INTERVAL_MS : VISIBLE_POLL_INTERVAL_MS;
+}
+
+function clearRealtimePoll() {
+  if (pollHandle) {
+    window.clearTimeout(pollHandle);
+    pollHandle = null;
+  }
+}
+
+function scheduleRealtimePoll(callback) {
+  if (pausedForIdle) {
+    return;
+  }
+  clearRealtimePoll();
+  pollHandle = window.setTimeout(callback, getPollInterval());
+}
+
+function pauseRealtimeBridge() {
+  if (pausedForIdle) {
+    return;
+  }
+  pausedForIdle = true;
+  clearRealtimePoll();
+}
+
+function resumeRealtimeBridge(callback) {
+  if (!pausedForIdle) {
+    return;
+  }
+  pausedForIdle = false;
+  resetIdleTimer();
+  callback();
+}
+
+function resetIdleTimer() {
+  if (idleTimer) {
+    window.clearTimeout(idleTimer);
+  }
+  idleTimer = window.setTimeout(pauseRealtimeBridge, IDLE_TIMEOUT_MS);
+}
+
 function startRealtimeBridge() {
   if (pollHandle) {
     window.clearTimeout(pollHandle);
     pollHandle = null;
   }
   const poll = async () => {
+    if (pausedForIdle) {
+      return;
+    }
     try {
       const snapshot = await requestBoardSnapshot();
       if (snapshot) {
@@ -876,11 +929,46 @@ function startRealtimeBridge() {
         }
       }
     } finally {
-      pollHandle = window.setTimeout(poll, 2500);
+      scheduleRealtimePoll(poll);
     }
   };
+  resetIdleTimer();
+  realtimePollCallback = poll;
   poll();
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (!realtimePollCallback) {
+    return;
+  }
+  if (pausedForIdle && document.visibilityState === 'visible') {
+    resumeRealtimeBridge(realtimePollCallback);
+    return;
+  }
+  if (!pausedForIdle) {
+    scheduleRealtimePoll(realtimePollCallback);
+  }
+});
+
+['pointerdown', 'keydown', 'touchstart', 'visibilitychange'].forEach((eventName) => {
+  document.addEventListener(eventName, () => {
+    if (!realtimePollCallback) {
+      return;
+    }
+    if (pausedForIdle) {
+      resumeRealtimeBridge(realtimePollCallback);
+      return;
+    }
+    resetIdleTimer();
+  });
+});
+
+window.addEventListener('beforeunload', () => {
+  clearRealtimePoll();
+  if (idleTimer) {
+    window.clearTimeout(idleTimer);
+  }
+});
 
 function normalizeParticipants(list) {
   if (!Array.isArray(list)) {

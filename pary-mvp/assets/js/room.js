@@ -90,6 +90,12 @@ let emojiPanelOpen = false;
 let shareSheetController = null;
 let activeParticipantCount = 0;
 let isCurrentUserHost = false;
+let idleTimer = null;
+let wasManuallyPaused = false;
+
+const POLL_INTERVAL_MS = 10000;
+const PRESENCE_INTERVAL_MS = 30000;
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 
 const defaultWaitingRoomPath = document.body?.dataset.waitingPage || 'room-waiting.html';
 const shareEmailForm = document.getElementById('share-email');
@@ -200,6 +206,8 @@ let questionsLoadedDeck = '';
 let currentQuestion = null;
 let pollTimer;
 let presenceTimer;
+let presenceInFlight = false;
+let presencePaused = false;
 let allQuestions = [];
 let activeCategory = '';
 let loadingCategories = false;
@@ -2110,9 +2118,18 @@ async function chooseQuestionById(questionId, triggerButton) {
 }
 
 async function sendPresence() {
-  if (selfInfo && selfInfo.status !== 'active') {
+  if (presencePaused) {
     return;
   }
+  if (selfInfo && selfInfo.status !== 'active') {
+    schedulePresencePing();
+    return;
+  }
+  if (presenceInFlight) {
+    schedulePresencePing();
+    return;
+  }
+  presenceInFlight = true;
   try {
     await postJson('api/presence.php', {
       room_key: roomKey,
@@ -2120,27 +2137,123 @@ async function sendPresence() {
     });
   } catch (error) {
     console.warn('Nie udało się zaktualizować obecności', error);
+  } finally {
+    presenceInFlight = false;
+    if (!presencePaused) {
+      schedulePresencePing();
+    }
   }
 }
 
+function schedulePresencePing(delay = PRESENCE_INTERVAL_MS) {
+  if (presenceTimer) {
+    clearTimeout(presenceTimer);
+  }
+  presenceTimer = setTimeout(sendPresence, delay);
+}
+
+function startPresencePing() {
+  presencePaused = false;
+  if (presenceTimer) {
+    clearTimeout(presenceTimer);
+  }
+  sendPresence();
+}
+
+function stopPresencePing() {
+  presencePaused = true;
+  if (presenceTimer) {
+    clearTimeout(presenceTimer);
+    presenceTimer = null;
+  }
+}
 
 let isPolling = true;
+
+function stopPolling() {
+  isPolling = false;
+  if (pollTimer) {
+    clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+}
+
+function resumePolling() {
+  if (isPolling) {
+    return;
+  }
+  isPolling = true;
+  startPolling();
+}
 
 async function startPolling() {
   if (!isPolling) return;
   await refreshState();
   if (isPolling) {
-    pollTimer = setTimeout(startPolling, 6000); // Increased from 4000ms to 6000ms
+    pollTimer = setTimeout(startPolling, POLL_INTERVAL_MS);
+  }
+}
+
+function pauseForInactivity() {
+  wasManuallyPaused = true;
+  stopPolling();
+  stopPresencePing();
+}
+
+function resumeFromInactivity() {
+  if (!wasManuallyPaused) {
+    return;
+  }
+  wasManuallyPaused = false;
+  resumePolling();
+  startPresencePing();
+  resetIdleTimer();
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) {
+    stopPolling();
+    stopPresencePing();
+  } else if (!wasManuallyPaused) {
+    resumePolling();
+    startPresencePing();
+    resetIdleTimer();
+  }
+}
+
+function resetIdleTimer() {
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+  }
+  idleTimer = setTimeout(pauseForInactivity, IDLE_TIMEOUT_MS);
+}
+
+function markInteraction() {
+  if (wasManuallyPaused) {
+    resumeFromInactivity();
+  } else {
+    resetIdleTimer();
   }
 }
 
 startPolling();
-presenceTimer = setInterval(sendPresence, 30000); // Increased from 15000ms to 30000ms
-sendPresence();
+startPresencePing();
+resetIdleTimer();
 adjustChatInputHeight();
 
+window.addEventListener('visibilitychange', handleVisibilityChange);
+window.addEventListener('pagehide', () => {
+  stopPolling();
+  stopPresencePing();
+});
+window.addEventListener('focus', handleVisibilityChange);
+window.addEventListener('pointerdown', markInteraction, { passive: true });
+window.addEventListener('keydown', markInteraction, { passive: true });
+
 window.addEventListener('beforeunload', () => {
-  isPolling = false;
-  if (pollTimer) clearTimeout(pollTimer);
-  clearInterval(presenceTimer);
+  stopPolling();
+  stopPresencePing();
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+  }
 });

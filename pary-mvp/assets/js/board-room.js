@@ -36,12 +36,21 @@ let selfInfo = null;
 let displayedTile = null;
 let pollTimer = null;
 let presenceTimer = null;
+let presenceInFlight = false;
+let presencePaused = false;
 let copyFeedbackTimer = null;
+let idleTimer = null;
+let wasManuallyPaused = false;
+
+const POLL_INTERVAL_MS = 10000;
+const PRESENCE_INTERVAL_MS = 30000;
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 
 initializeBoard();
 setupShareArea();
 startPolling();
 startPresencePing();
+resetIdleTimer();
 
 boardGrid?.addEventListener('click', (event) => {
   const target = event.target;
@@ -234,7 +243,7 @@ async function startPolling() {
   if (!isPolling) return;
   await refreshState();
   if (isPolling) {
-    pollTimer = setTimeout(startPolling, 6000); // Increased from 5000ms
+    pollTimer = setTimeout(startPolling, POLL_INTERVAL_MS);
   }
 }
 
@@ -244,6 +253,14 @@ function stopPolling() {
     clearTimeout(pollTimer);
     pollTimer = null;
   }
+}
+
+function resumePolling() {
+  if (isPolling) {
+    return;
+  }
+  isPolling = true;
+  startPolling();
 }
 
 async function refreshState() {
@@ -526,14 +543,34 @@ function isSelfActive() {
 }
 
 function startPresencePing() {
+  presencePaused = false;
+  if (presenceTimer) {
+    clearTimeout(presenceTimer);
+  }
   sendPresence();
-  presenceTimer = window.setInterval(sendPresence, 30000); // Increased from 20000ms
+}
+
+function stopPresencePing() {
+  presencePaused = true;
+  if (presenceTimer) {
+    clearTimeout(presenceTimer);
+    presenceTimer = null;
+  }
 }
 
 async function sendPresence() {
-  if (!selfInfo || !isSelfActive()) {
+  if (presencePaused) {
     return;
   }
+  if (!selfInfo || !isSelfActive()) {
+    schedulePresencePing();
+    return;
+  }
+  if (presenceInFlight) {
+    schedulePresencePing();
+    return;
+  }
+  presenceInFlight = true;
   try {
     await postJson('api/presence.php', {
       room_key: roomKey,
@@ -541,7 +578,19 @@ async function sendPresence() {
     });
   } catch (error) {
     console.error(error);
+  } finally {
+    presenceInFlight = false;
+    if (!presencePaused) {
+      schedulePresencePing();
+    }
   }
+}
+
+function schedulePresencePing(delay = PRESENCE_INTERVAL_MS) {
+  if (presenceTimer) {
+    clearTimeout(presenceTimer);
+  }
+  presenceTimer = window.setTimeout(sendPresence, delay);
 }
 
 function showCopyFeedback(message) {
@@ -557,12 +606,64 @@ function showCopyFeedback(message) {
   }, 4000);
 }
 
+function resetIdleTimer() {
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+  }
+  idleTimer = window.setTimeout(pauseForInactivity, IDLE_TIMEOUT_MS);
+}
+
+function pauseForInactivity() {
+  wasManuallyPaused = true;
+  stopPolling();
+  stopPresencePing();
+}
+
+function resumeFromInactivity() {
+  if (!wasManuallyPaused) {
+    return;
+  }
+  wasManuallyPaused = false;
+  resumePolling();
+  startPresencePing();
+  resetIdleTimer();
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) {
+    stopPolling();
+    stopPresencePing();
+  } else if (!wasManuallyPaused) {
+    resumePolling();
+    startPresencePing();
+    resetIdleTimer();
+  }
+}
+
+function markInteraction() {
+  if (wasManuallyPaused) {
+    resumeFromInactivity();
+  } else {
+    resetIdleTimer();
+  }
+}
+
+window.addEventListener('visibilitychange', handleVisibilityChange);
+window.addEventListener('pagehide', () => {
+  stopPolling();
+  stopPresencePing();
+});
+window.addEventListener('focus', handleVisibilityChange);
+window.addEventListener('pointerdown', markInteraction, { passive: true });
+window.addEventListener('keydown', markInteraction, { passive: true });
+
 window.addEventListener('beforeunload', () => {
   stopPolling();
-  if (presenceTimer) {
-    clearInterval(presenceTimer);
-  }
+  stopPresencePing();
   if (copyFeedbackTimer) {
     clearTimeout(copyFeedbackTimer);
+  }
+  if (idleTimer) {
+    clearTimeout(idleTimer);
   }
 });

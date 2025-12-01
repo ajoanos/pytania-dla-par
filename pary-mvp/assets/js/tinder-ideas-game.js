@@ -14,6 +14,9 @@ const stateEndpoint = 'api/tinder_ideas_state.php';
 const startEndpoint = 'api/tinder_ideas_start.php';
 const swipeEndpoint = 'api/tinder_ideas_swipe.php';
 const replayVoteEndpoint = 'api/tinder_ideas_replay_vote.php';
+const VISIBLE_POLL_INTERVAL_MS = 5000;
+const HIDDEN_POLL_INTERVAL_MS = 20000;
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const hostSetupCard = document.getElementById('host-setup');
 const categoryList = document.getElementById('idea-category-list');
 const selectAllButton = document.getElementById('idea-select-all');
@@ -79,6 +82,8 @@ let replayVotes = new Set();
 let replayReady = false;
 let ideaCategories = [];
 let selectedCategories = new Set();
+let idleTimer = null;
+let pausedForIdle = false;
 
 function redirectToSetup() {
   window.location.replace(appendTokenToUrl('tinder-wspolnych-pomyslow-room.html', token));
@@ -1057,11 +1062,67 @@ function initSwipeGestures() {
 
 let isPolling = true;
 
+function getPollInterval() {
+  return document.visibilityState === 'hidden' ? HIDDEN_POLL_INTERVAL_MS : VISIBLE_POLL_INTERVAL_MS;
+}
+
+function resetIdleTimer() {
+  if (!isPolling) {
+    return;
+  }
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+  }
+  idleTimer = setTimeout(pauseForIdle, IDLE_TIMEOUT_MS);
+}
+
+function scheduleNextPoll() {
+  if (!isPolling || pausedForIdle) {
+    return;
+  }
+  if (pollTimer) {
+    clearTimeout(pollTimer);
+  }
+  pollTimer = setTimeout(startPolling, getPollInterval());
+}
+
 async function startPolling() {
-  if (!isPolling) return;
+  if (!isPolling || pausedForIdle) return;
   await fetchState();
-  if (isPolling) {
-    pollTimer = setTimeout(startPolling, 5000);
+  if (isPolling && !pausedForIdle) {
+    scheduleNextPoll();
+  }
+}
+
+function pauseForIdle() {
+  if (pausedForIdle || !isPolling) {
+    return;
+  }
+  pausedForIdle = true;
+  if (pollTimer) {
+    clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+}
+
+function resumeAfterIdle() {
+  if (!pausedForIdle || !isPolling) {
+    return;
+  }
+  pausedForIdle = false;
+  resetIdleTimer();
+  startPolling();
+}
+
+function stopPolling() {
+  isPolling = false;
+  if (pollTimer) {
+    clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+    idleTimer = null;
   }
 }
 
@@ -1084,6 +1145,7 @@ function init() {
   startButton?.addEventListener('click', async () => {
     await startSession(undefined, { triggerButton: startButton });
   });
+  resetIdleTimer();
   startPolling();
 }
 
@@ -1113,8 +1175,29 @@ if (window.__momentyAccessConfirmed) {
 }
 
 window.addEventListener('beforeunload', () => {
-  isPolling = false;
-  if (pollTimer) {
-    clearTimeout(pollTimer);
+  stopPolling();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (!isPolling) {
+    return;
   }
+  if (pausedForIdle && document.visibilityState === 'visible') {
+    resumeAfterIdle();
+    return;
+  }
+  scheduleNextPoll();
+});
+
+['pointerdown', 'keydown', 'touchstart', 'visibilitychange'].forEach((eventName) => {
+  document.addEventListener(eventName, () => {
+    if (!isPolling) {
+      return;
+    }
+    if (pausedForIdle) {
+      resumeAfterIdle();
+      return;
+    }
+    resetIdleTimer();
+  });
 });

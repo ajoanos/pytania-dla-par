@@ -30,8 +30,39 @@ if (!roomKey || !participantId) {
     window.location.href = backToGames;
   });
 
+  const VISIBLE_POLL_INTERVAL_MS = 5000;
+  const HIDDEN_POLL_INTERVAL_MS = 20000;
+  const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
+
   let pollTimer = null;
+  let idleTimer = null;
+  let pollingStopped = false;
+  let pausedForIdle = false;
   let lastStatus = '';
+
+  function getPollInterval() {
+    return document.visibilityState === 'hidden' ? HIDDEN_POLL_INTERVAL_MS : VISIBLE_POLL_INTERVAL_MS;
+  }
+
+  function scheduleNextPoll() {
+    if (pollTimer) {
+      clearTimeout(pollTimer);
+    }
+    if (pollingStopped || pausedForIdle) {
+      return;
+    }
+    pollTimer = setTimeout(startPolling, getPollInterval());
+  }
+
+  function resetIdleTimer() {
+    if (pollingStopped) {
+      return;
+    }
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+    }
+    idleTimer = setTimeout(pauseForIdle, IDLE_TIMEOUT_MS);
+  }
 
   async function refreshStatus() {
     try {
@@ -108,22 +139,80 @@ if (!roomKey || !participantId) {
   }
 
   function startPolling() {
+    if (pollingStopped || pausedForIdle) {
+      return;
+    }
     refreshStatus().finally(() => {
-      if (pollTimer !== null) { // Check if not stopped
-        pollTimer = setTimeout(startPolling, 5000);
+      if (!pollingStopped && !pausedForIdle) {
+        scheduleNextPoll();
       }
     });
   }
 
   function stopPolling() {
+    pollingStopped = true;
     if (pollTimer) {
       clearTimeout(pollTimer);
       pollTimer = null;
     }
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+      idleTimer = null;
+    }
+  }
+
+  function pauseForIdle() {
+    if (pausedForIdle || pollingStopped) {
+      return;
+    }
+    pausedForIdle = true;
+    if (pollTimer) {
+      clearTimeout(pollTimer);
+      pollTimer = null;
+    }
+    if (waitingMessage) {
+      waitingMessage.textContent =
+        'Wstrzymaliśmy sprawdzanie stanu po dłuższej bezczynności. Wróć do karty, aby wznowić.';
+    }
+  }
+
+  function resumeAfterIdle() {
+    if (!pausedForIdle || pollingStopped) {
+      return;
+    }
+    pausedForIdle = false;
+    showWaitingState();
+    resetIdleTimer();
+    startPolling();
   }
 
   // Initial start
   pollTimer = setTimeout(startPolling, 0);
+  resetIdleTimer();
+
+  document.addEventListener('visibilitychange', () => {
+    if (pollingStopped) {
+      return;
+    }
+    if (pausedForIdle && document.visibilityState === 'visible') {
+      resumeAfterIdle();
+      return;
+    }
+    scheduleNextPoll();
+  });
+
+  ['pointerdown', 'keydown', 'touchstart', 'visibilitychange'].forEach((eventName) => {
+    document.addEventListener(eventName, () => {
+      if (pollingStopped) {
+        return;
+      }
+      if (pausedForIdle) {
+        resumeAfterIdle();
+        return;
+      }
+      resetIdleTimer();
+    });
+  });
 
   window.addEventListener('beforeunload', () => {
     stopPolling();
