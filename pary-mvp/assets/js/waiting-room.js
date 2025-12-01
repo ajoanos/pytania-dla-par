@@ -1,4 +1,5 @@
 import { appendTokenToUrl, getJson } from './app.js';
+import { showLoader, hideLoader } from './loader.js';
 
 const params = new URLSearchParams(window.location.search);
 const roomKey = (params.get('room_key') || '').toUpperCase();
@@ -39,6 +40,7 @@ if (!roomKey || !participantId) {
   let pollingStopped = false;
   let pausedForIdle = false;
   let lastStatus = '';
+  let hasCompletedInitialRefresh = false;
 
   function getPollInterval() {
     return document.visibilityState === 'hidden' ? HIDDEN_POLL_INTERVAL_MS : VISIBLE_POLL_INTERVAL_MS;
@@ -138,15 +140,28 @@ if (!roomKey || !participantId) {
     window.location.replace(targetUrl.toString());
   }
 
-  function startPolling() {
+  async function startPolling() {
     if (pollingStopped || pausedForIdle) {
       return;
     }
-    refreshStatus().finally(() => {
+
+    const shouldShowLoader = !hasCompletedInitialRefresh;
+
+    if (shouldShowLoader) {
+      showLoader();
+    }
+
+    try {
+      await refreshStatus();
+      hasCompletedInitialRefresh = true;
+    } finally {
+      if (shouldShowLoader) {
+        hideLoader();
+      }
       if (!pollingStopped && !pausedForIdle) {
         scheduleNextPoll();
       }
-    });
+    }
   }
 
   function stopPolling() {

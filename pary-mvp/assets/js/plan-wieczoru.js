@@ -1,4 +1,5 @@
 import { appendTokenToUrl, postJson } from './app.js';
+import { showLoader, hideLoader } from './loader.js';
 
 const CONFIG_URL = 'assets/data/plan-wieczoru.json';
 const ACCESS_KEY = 'momenty.planWieczoru.access';
@@ -18,6 +19,15 @@ const state = {
   accessToken: '',
   history: [],
 };
+
+async function runWithLoader(task) {
+  showLoader();
+  try {
+    return await task();
+  } finally {
+    hideLoader();
+  }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
@@ -71,27 +81,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loader = document.getElementById('plan-loader');
   const errorBox = document.getElementById('plan-error');
 
-  try {
-    const response = await fetch(CONFIG_URL, { cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error('Nie udało się pobrać konfiguracji zabawy.');
+  loader?.setAttribute('hidden', '');
+
+  await runWithLoader(async () => {
+    try {
+      const response = await fetch(CONFIG_URL, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('Nie udało się pobrać konfiguracji zabawy.');
+      }
+      const config = await response.json();
+      if (!config || !Array.isArray(config.steps)) {
+        throw new Error('Niepoprawna struktura konfiguracji.');
+      }
+      state.config = config;
+      initializePlan(config);
+      await loadPlanHistory({ showOverlay: false });
+    } catch (error) {
+      console.error(error);
+      if (errorBox) {
+        errorBox.textContent = error.message || 'Wystąpił nieoczekiwany błąd.';
+        errorBox.hidden = false;
+      }
     }
-    const config = await response.json();
-    if (!config || !Array.isArray(config.steps)) {
-      throw new Error('Niepoprawna struktura konfiguracji.');
-    }
-    state.config = config;
-    loader?.setAttribute('hidden', '');
-    initializePlan(config);
-    loadPlanHistory();
-  } catch (error) {
-    console.error(error);
-    loader?.setAttribute('hidden', '');
-    if (errorBox) {
-      errorBox.textContent = error.message || 'Wystąpił nieoczekiwany błąd.';
-      errorBox.hidden = false;
-    }
-  }
+  });
 });
 
 function initializePlan(config) {
@@ -565,100 +577,113 @@ async function sendPlanEmail(form) {
     return;
   }
 
-  sendButton.disabled = true;
-  feedback.textContent = 'Wysyłamy wiadomość…';
-
-  const baseDetailsLink = state.baseUrl
-    ? `${state.baseUrl}plan-wieczoru-play.html`
-    : `${window.location.origin}/pary-mvp/plan-wieczoru-play.html`;
-  const baseProposalLink = state.baseUrl
-    ? `${state.baseUrl}plan-wieczoru-room.html`
-    : `${window.location.origin}/pary-mvp/plan-wieczoru-room.html`;
-  const origin = state.origin || window.location.origin;
-
-  const payload = {
-    partner_email: email,
-    sender_email: yourEmail,
-    sender_name: state.displayName,
-    room_key: state.roomKey,
-    participant_id: state.participantId,
-    mood: state.selections.get('mood')?.label || '',
-    closeness: state.selections.get('closeness')?.label || '',
-    extras: (state.selections.get('extras') || []).map((item) => item.label),
-    energy: state.selections.get('energy')?.label || '',
-    energyContext: state.selections.get('energy')?.emailContext || '',
-    timing: state.selections.get('timing')?.label || '',
-    link: state.config.email?.detailsLink || state.config.email?.link || baseDetailsLink,
-    proposal_link: state.config.email?.proposalLink || baseProposalLink,
-    subject: state.config.email?.subject || 'Wieczór we dwoje – krótki plan 💛',
-    origin,
-    base_url: state.baseUrl,
-    access_token: state.accessToken,
-  };
-
-  try {
-    const response = await postJson(MAIL_ENDPOINT, payload);
-    if (!response.ok) {
-      throw new Error(response.error || 'Nie udało się wysłać wiadomości.');
-    }
-    feedback.textContent = 'Plan wysłany! Partner otrzyma linki „Zgadzam się” i „Nie zgadzam się”. Powiadomimy Cię e-mailem, gdy odpowie.';
+  await runWithLoader(async () => {
     sendButton.disabled = true;
-    form.querySelectorAll('input, button').forEach((element) => {
-      if (element instanceof HTMLButtonElement && element.id === 'plan-reset') {
-        element.disabled = false;
-        return;
-      }
-      if (element instanceof HTMLButtonElement) {
-        element.disabled = true;
-      }
-      if (element instanceof HTMLInputElement) {
-        element.disabled = true;
-      }
-    });
-    loadPlanHistory();
-  } catch (error) {
-    console.error(error);
-    feedback.textContent = error.message || 'Nie udało się wysłać wiadomości.';
-    sendButton.disabled = false;
-  }
-}
+    feedback.textContent = 'Wysyłamy wiadomość…';
 
-async function loadPlanHistory() {
-  if (!state.roomKey || !state.participantId) {
-    return;
-  }
+    const baseDetailsLink = state.baseUrl
+      ? `${state.baseUrl}plan-wieczoru-play.html`
+      : `${window.location.origin}/pary-mvp/plan-wieczoru-play.html`;
+    const baseProposalLink = state.baseUrl
+      ? `${state.baseUrl}plan-wieczoru-room.html`
+      : `${window.location.origin}/pary-mvp/plan-wieczoru-room.html`;
+    const origin = state.origin || window.location.origin;
 
-  const section = document.getElementById('plan-history');
-  const list = document.getElementById('plan-history-list');
-  const emptyState = document.getElementById('plan-history-empty');
-  const errorState = document.getElementById('plan-history-error');
-
-  if (!section || !list || !emptyState || !errorState) {
-    return;
-  }
-
-  errorState.hidden = true;
-
-  try {
-    const response = await postJson(HISTORY_ENDPOINT, {
+    const payload = {
+      partner_email: email,
+      sender_email: yourEmail,
+      sender_name: state.displayName,
       room_key: state.roomKey,
       participant_id: state.participantId,
-    });
+      mood: state.selections.get('mood')?.label || '',
+      closeness: state.selections.get('closeness')?.label || '',
+      extras: (state.selections.get('extras') || []).map((item) => item.label),
+      energy: state.selections.get('energy')?.label || '',
+      energyContext: state.selections.get('energy')?.emailContext || '',
+      timing: state.selections.get('timing')?.label || '',
+      link: state.config.email?.detailsLink || state.config.email?.link || baseDetailsLink,
+      proposal_link: state.config.email?.proposalLink || baseProposalLink,
+      subject: state.config.email?.subject || 'Wieczór we dwoje – krótki plan 💛',
+      origin,
+      base_url: state.baseUrl,
+      access_token: state.accessToken,
+    };
 
-    if (!response.ok) {
-      throw new Error(response.error || 'Nie udało się pobrać historii.');
+    try {
+      const response = await postJson(MAIL_ENDPOINT, payload);
+      if (!response.ok) {
+        throw new Error(response.error || 'Nie udało się wysłać wiadomości.');
+      }
+      feedback.textContent = 'Plan wysłany! Partner otrzyma linki „Zgadzam się” i „Nie zgadzam się”. Powiadomimy Cię e-mailem, gdy odpowie.';
+      sendButton.disabled = true;
+      form.querySelectorAll('input, button').forEach((element) => {
+        if (element instanceof HTMLButtonElement && element.id === 'plan-reset') {
+          element.disabled = false;
+          return;
+        }
+        if (element instanceof HTMLButtonElement) {
+          element.disabled = true;
+        }
+        if (element instanceof HTMLInputElement) {
+          element.disabled = true;
+        }
+      });
+      loadPlanHistory({ showOverlay: false });
+    } catch (error) {
+      console.error(error);
+      feedback.textContent = error.message || 'Nie udało się wysłać wiadomości.';
+      sendButton.disabled = false;
+    }
+  });
+}
+
+async function loadPlanHistory(options = {}) {
+  const { showOverlay = true } = options;
+
+  const execute = async () => {
+    if (!state.roomKey || !state.participantId) {
+      return;
     }
 
-    const invites = Array.isArray(response.invites) ? response.invites : [];
-    state.history = invites;
-    renderPlanHistory(invites, { section, list, emptyState });
-  } catch (error) {
-    console.error(error);
-    list.innerHTML = '';
-    emptyState.hidden = true;
-    errorState.hidden = false;
-    section.hidden = false;
+    const section = document.getElementById('plan-history');
+    const list = document.getElementById('plan-history-list');
+    const emptyState = document.getElementById('plan-history-empty');
+    const errorState = document.getElementById('plan-history-error');
+
+    if (!section || !list || !emptyState || !errorState) {
+      return;
+    }
+
+    errorState.hidden = true;
+
+    try {
+      const response = await postJson(HISTORY_ENDPOINT, {
+        room_key: state.roomKey,
+        participant_id: state.participantId,
+      });
+
+      if (!response.ok) {
+        throw new Error(response.error || 'Nie udało się pobrać historii.');
+      }
+
+      const invites = Array.isArray(response.invites) ? response.invites : [];
+      state.history = invites;
+      renderPlanHistory(invites, { section, list, emptyState });
+    } catch (error) {
+      console.error(error);
+      list.innerHTML = '';
+      emptyState.hidden = true;
+      errorState.hidden = false;
+      section.hidden = false;
+    }
+  };
+
+  if (showOverlay) {
+    await runWithLoader(execute);
+    return;
   }
+
+  await execute();
 }
 
 function renderPlanHistory(invites, elements) {
