@@ -1,11 +1,14 @@
 import { games } from './games-data.js';
 import { appendTokenToUrl, postJson, ACTIVE_TOKEN } from './utils.js';
+import { showLoader, hideLoader } from './loader.js';
 
 export { appendTokenToUrl, postJson, getJson, ACTIVE_TOKEN } from './utils.js';
 
 const STORAGE_KEY_THEME = 'pary.theme';
 const ACCESS_STORAGE_KEY = 'pary.access.pdp';
 const PLAN_ACCESS_STORAGE_KEY = 'momenty.planWieczoru.access';
+
+let isLoaderVisible = false;
 
 if (!window.__momentyAccessConfirmed && !document.documentElement.hasAttribute('data-guard-hidden')) {
   document.documentElement.setAttribute('data-guard-hidden', 'true');
@@ -17,6 +20,7 @@ ensureMomentyGuard().catch((error) => {
 });
 
 setupDefaultAccessHandler();
+setupInitialLoader();
 
 function ensureMomentyGuard() {
   if (window.__momentyGuardLoaded) {
@@ -34,8 +38,6 @@ function ensureMomentyGuard() {
 }
 
 function propagateToken(token = ACTIVE_TOKEN) {
-  if (!token) return;
-
   const mergeToken = (value) => appendTokenToUrl(value, token);
 
   document.querySelectorAll('a[href]').forEach((link) => {
@@ -45,6 +47,7 @@ function propagateToken(token = ACTIVE_TOKEN) {
     if (next !== href) {
       link.setAttribute('href', next);
     }
+    bindLoaderNavigation(link);
   });
 
   document.querySelectorAll('form[action]').forEach((form) => {
@@ -74,6 +77,72 @@ function propagateToken(token = ACTIVE_TOKEN) {
       }
     });
   });
+}
+
+function setupInitialLoader() {
+  const showOnce = () => {
+    if (isLoaderVisible) return;
+    isLoaderVisible = true;
+    showLoader();
+  };
+
+  const hideOnce = () => {
+    if (!isLoaderVisible) return;
+    isLoaderVisible = false;
+    hideLoader();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showOnce, { once: true });
+  } else {
+    showOnce();
+  }
+
+  if (document.readyState === 'complete') {
+    hideOnce();
+  } else {
+    window.addEventListener('load', hideOnce, { once: true });
+  }
+}
+
+function bindLoaderNavigation(link) {
+  if (!(link instanceof HTMLAnchorElement)) return;
+  if (link.dataset.loaderBound === 'true') return;
+
+  let linkUrl;
+  try {
+    linkUrl = new URL(link.href, window.location.href);
+  } catch (error) {
+    return;
+  }
+
+  if (linkUrl.origin !== window.location.origin) {
+    link.dataset.loaderBound = 'true';
+    return;
+  }
+
+  const isHashOnly = linkUrl.pathname === window.location.pathname &&
+    linkUrl.search === window.location.search &&
+    !!linkUrl.hash;
+
+  if (isHashOnly) {
+    link.dataset.loaderBound = 'true';
+    return;
+  }
+
+  const handleClick = (event) => {
+    if (event.defaultPrevented) return;
+    if (event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (link.target && link.target !== '_self') return;
+    if (link.closest('form')) return;
+
+    isLoaderVisible = true;
+    showLoader();
+  };
+
+  link.addEventListener('click', handleClick);
+  link.dataset.loaderBound = 'true';
 }
 
 function setupDefaultAccessHandler() {
