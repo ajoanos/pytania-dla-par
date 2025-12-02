@@ -1,0 +1,31 @@
+# Environment and security configuration for Pytania dla par
+
+Options -Indexes
+
+<IfModule mod_env.c>
+    SetEnv DB_DSN "mysql:host=mariadb118.server537967.nazwa.pl;port=3306;dbname=server537967_momenty;charset=utf8mb4"
+    SetEnv DB_USER "server537967_momenty"
+    SetEnv DB_PASSWORD "090787Az44!?"
+</IfModule>
+
+# Hide PHP errors from visitors
+<IfModule mod_php.c>
+    php_flag display_errors Off
+</IfModule>
+
+# Basic hardening headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "same-origin"
+</IfModule>
+
+# Block access to sensitive folders
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(?:db|data)/ - [F,L]
+</IfModule>
+
+<FilesMatch "^(config\.php|\.env)$">
+    Require all denied
+</FilesMatch>
