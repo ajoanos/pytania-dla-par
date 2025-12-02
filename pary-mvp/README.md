@@ -12,7 +12,7 @@ Lekki projekt webowy (PHP 8 + SQLite + Vanilla JS) do losowania pytań dla par, 
 
 1. Skopiuj katalog `pary-mvp/` na hosting lub do środowiska lokalnego obsługującego PHP.
 2. Jeśli używasz wbudowanej bazy SQLite, upewnij się, że katalog `db/` jest pusty i ma prawa zapisu (plik bazy zostanie utworzony automatycznie przy pierwszym żądaniu API).
-3. Jeśli chcesz korzystać z zewnętrznej bazy MariaDB/MySQL, ustaw zmienne środowiskowe (np. w `.htaccess` lub konfiguracji FPM):
+3. Jeśli chcesz korzystać z zewnętrznej bazy MariaDB/MySQL, ustaw zmienne środowiskowe (np. w `.htaccess` lub konfiguracji FPM) albo wpisz dane w `config.php` (domyślnie ustawiono MariaDB 11.8 z dostarczonym loginem):
 
    ```
    DB_DSN="mysql:host=mariadb118.server537967.nazwa.pl;port=3306;dbname=server537967_momenty;charset=utf8mb4"

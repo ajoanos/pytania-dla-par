@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../config.php';
+
 if (!defined('BOOTSTRAP_EMIT_JSON')) {
     define('BOOTSTRAP_EMIT_JSON', true);
 }
@@ -64,8 +66,13 @@ if (!function_exists('checkRateLimit')) {
 
 checkRateLimit();
 
-define('DB_FILE', __DIR__ . '/../db/data.sqlite');
-const ROOM_LIFETIME_SECONDS = 6 * 60 * 60;
+if (!defined('DB_FILE')) {
+    define('DB_FILE', __DIR__ . '/../db/data.sqlite');
+}
+
+if (!defined('ROOM_LIFETIME_SECONDS')) {
+    define('ROOM_LIFETIME_SECONDS', 6 * 60 * 60);
+}
 const QUESTION_DECKS = [
     'default' => __DIR__ . '/../data/questions.json',
     'never' => __DIR__ . '/../data/nigdy-przenigdy.json',
@@ -96,9 +103,9 @@ function db(): PDO
         return $pdo;
     }
 
-    $dsn = getenv('DB_DSN');
-    $user = getenv('DB_USER') ?: null;
-    $password = getenv('DB_PASSWORD') ?: null;
+    $dsn = getenv('DB_DSN') ?: (defined('DB_DSN') ? DB_DSN : null);
+    $user = getenv('DB_USER') ?: (defined('DB_USER') ? DB_USER : null);
+    $password = getenv('DB_PASSWORD') ?: (defined('DB_PASSWORD') ? DB_PASSWORD : null);
 
     if (!$dsn) {
         $dsn = 'sqlite:' . DB_FILE;
@@ -113,7 +120,16 @@ function db(): PDO
         $options[PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES utf8mb4';
     }
 
-    $pdo = new PDO($dsn, $user, $password, $options);
+    try {
+        $pdo = new PDO($dsn, $user, $password, $options);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode([
+            'ok' => false,
+            'error' => 'Błąd połączenia z bazą danych. Sprawdź ustawienia DB_DSN/DB_USER/DB_PASSWORD.',
+        ]);
+        exit;
+    }
 
     if (isSqlite($pdo)) {
         $pdo->exec('PRAGMA foreign_keys = ON');
