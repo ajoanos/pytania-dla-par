@@ -1,51 +1,56 @@
-const CACHE_NAME = 'pary-mvp-v21';
-const ASSETS = [
-  '/pary-mvp/',
-  '/pary-mvp/index.html',
-  '/pary-mvp/trio-challenge.html',
-  '/pary-mvp/trio-challenge-room.html',
-  '/pary-mvp/trio-challenge-waiting.html',
-  '/pary-mvp/trio-challenge-board.html',
-  '/pary-mvp/zdrapka-pozycji.html',
-  '/pary-mvp/zdrapka-pozycji-play.html',
-  '/pary-mvp/pozycje-na-czas.html',
-  '/pary-mvp/pozycje-na-czas-play.html',
-  '/pary-mvp/niegrzeczne-kolo.html',
-  '/pary-mvp/niegrzeczne-kolo-play.html',
-  '/pary-mvp/5-7-10.html',
-  '/pary-mvp/5-7-10-room.html',
-  '/pary-mvp/pytania-dla-par.html',
-  '/pary-mvp/jak-dobrze-mnie-znasz.html',
-  '/pary-mvp/plan-wieczoru.html',
-  '/pary-mvp/plan-wieczoru-room.html',
-  '/pary-mvp/plan-wieczoru-play.html',
-  '/pary-mvp/room.html',
-  '/pary-mvp/room-waiting.html',
-  '/pary-mvp/room-invite.html',
-  '/pary-mvp/nigdy-przenigdy.html',
-  '/pary-mvp/nigdy-przenigdy-room.html',
-  '/pary-mvp/nigdy-przenigdy-waiting.html',
-  '/pary-mvp/jak-dobrze-mnie-znasz-room.html',
-  '/pary-mvp/jak-dobrze-mnie-znasz-waiting.html',
-  '/pary-mvp/admin-import.html',
-  '/pary-mvp/assets/css/style.css',
-  '/pary-mvp/assets/js/app.js',
-  '/pary-mvp/assets/js/plan-wieczoru.js',
-  '/pary-mvp/assets/js/room.js',
-  '/pary-mvp/assets/js/invite.js',
-  '/pary-mvp/assets/js/waiting-room.js',
-  '/pary-mvp/assets/js/trio-challenge.js',
-  '/pary-mvp/assets/js/import.js',
-  '/pary-mvp/assets/js/zdrapka-pozycji.js',
-  '/pary-mvp/assets/js/pozycje-na-czas.js',
-  '/pary-mvp/assets/js/niegrzeczne-kolo.js',
-  '/pary-mvp/assets/js/sekundy.js',
-  '/pary-mvp/data/questions.json',
-  '/pary-mvp/data/nigdy-przenigdy.json',
-  '/pary-mvp/data/jak-dobrze-mnie-znasz.json',
-  '/pary-mvp/assets/data/plan-wieczoru.json',
-  '/pary-mvp/manifest.webmanifest',
+const CACHE_NAME = 'pary-mvp-v22';
+
+const BASE_PATH = new URL('./', self.location).pathname.replace(/\/service-worker\.js$/, '');
+
+const RELATIVE_ASSETS = [
+  './',
+  './index.html',
+  './trio-challenge.html',
+  './trio-challenge-room.html',
+  './trio-challenge-waiting.html',
+  './trio-challenge-board.html',
+  './zdrapka-pozycji.html',
+  './zdrapka-pozycji-play.html',
+  './pozycje-na-czas.html',
+  './pozycje-na-czas-play.html',
+  './niegrzeczne-kolo.html',
+  './niegrzeczne-kolo-play.html',
+  './5-7-10.html',
+  './5-7-10-room.html',
+  './pytania-dla-par.html',
+  './jak-dobrze-mnie-znasz.html',
+  './plan-wieczoru.html',
+  './plan-wieczoru-room.html',
+  './plan-wieczoru-play.html',
+  './room.html',
+  './room-waiting.html',
+  './room-invite.html',
+  './nigdy-przenigdy.html',
+  './nigdy-przenigdy-room.html',
+  './nigdy-przenigdy-waiting.html',
+  './jak-dobrze-mnie-znasz-room.html',
+  './jak-dobrze-mnie-znasz-waiting.html',
+  './admin-import.html',
+  './assets/css/style.css',
+  './assets/js/app.js',
+  './assets/js/plan-wieczoru.js',
+  './assets/js/room.js',
+  './assets/js/invite.js',
+  './assets/js/waiting-room.js',
+  './assets/js/trio-challenge.js',
+  './assets/js/import.js',
+  './assets/js/zdrapka-pozycji.js',
+  './assets/js/pozycje-na-czas.js',
+  './assets/js/niegrzeczne-kolo.js',
+  './assets/js/sekundy.js',
+  './data/questions.json',
+  './data/nigdy-przenigdy.json',
+  './data/jak-dobrze-mnie-znasz.json',
+  './assets/data/plan-wieczoru.json',
+  './manifest.webmanifest',
 ];
+
+const ASSETS = RELATIVE_ASSETS.map((path) => new URL(path, BASE_PATH).pathname);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -93,7 +98,7 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => {
           if (request.destination === 'document') {
-            return caches.match('/pary-mvp/index.html');
+            return caches.match(new URL('./index.html', BASE_PATH).pathname);
           }
           return new Response(
             JSON.stringify({

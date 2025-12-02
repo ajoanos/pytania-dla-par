@@ -37,8 +37,14 @@ if (($participant['status'] ?? '') !== 'active') {
     respond(['ok' => false, 'error' => 'Tylko zatwierdzeni uczestnicy mogą reagować.']);
 }
 
-$stmt = db()->prepare('INSERT INTO reactions (room_id, participant_id, question_id, action) VALUES (:room_id, :participant_id, :question_id, :action)
-    ON CONFLICT(room_id, participant_id, question_id) DO UPDATE SET action = excluded.action, created_at = CURRENT_TIMESTAMP');
+$pdo = db();
+$sql = isSqlite($pdo)
+    ? 'INSERT INTO reactions (room_id, participant_id, question_id, action) VALUES (:room_id, :participant_id, :question_id, :action)
+        ON CONFLICT(room_id, participant_id, question_id) DO UPDATE SET action = excluded.action, created_at = CURRENT_TIMESTAMP'
+    : 'INSERT INTO reactions (room_id, participant_id, question_id, action) VALUES (:room_id, :participant_id, :question_id, :action)
+        ON DUPLICATE KEY UPDATE action = VALUES(action), created_at = CURRENT_TIMESTAMP';
+
+$stmt = $pdo->prepare($sql);
 $stmt->execute([
     'room_id' => $room['id'],
     'participant_id' => $participantId,

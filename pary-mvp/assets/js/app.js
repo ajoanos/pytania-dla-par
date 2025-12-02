@@ -587,8 +587,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch((err) => {
-      console.warn('SW registration failed', err);
-    });
+    const swUrl = new URL('service-worker.js', window.location.href);
+    // Bust caches on servers that might serve stale worker content
+    swUrl.searchParams.set('v', 'v22');
+
+    navigator.serviceWorker
+      .register(swUrl.toString())
+      .catch((err) => {
+        console.warn('SW registration failed', err);
+      });
   });
 }

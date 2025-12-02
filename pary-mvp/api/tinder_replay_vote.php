@@ -28,8 +28,13 @@ if (!$session || (int)$session['id'] !== $sessionId) {
 }
 
 $db = db();
-$voteStmt = $db->prepare('INSERT INTO tinder_replay_votes (room_id, session_id, participant_id, created_at) VALUES (:room_id, :session_id, :participant_id, CURRENT_TIMESTAMP)
-    ON CONFLICT(room_id, session_id, participant_id) DO UPDATE SET created_at = excluded.created_at');
+$voteSql = isSqlite($db)
+    ? 'INSERT INTO tinder_replay_votes (room_id, session_id, participant_id, created_at) VALUES (:room_id, :session_id, :participant_id, CURRENT_TIMESTAMP)
+        ON CONFLICT(room_id, session_id, participant_id) DO UPDATE SET created_at = excluded.created_at'
+    : 'INSERT INTO tinder_replay_votes (room_id, session_id, participant_id, created_at) VALUES (:room_id, :session_id, :participant_id, CURRENT_TIMESTAMP)
+        ON DUPLICATE KEY UPDATE created_at = CURRENT_TIMESTAMP';
+
+$voteStmt = $db->prepare($voteSql);
 $voteStmt->execute([
     'room_id' => $room['id'],
     'session_id' => $session['id'],

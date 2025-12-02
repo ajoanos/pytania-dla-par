@@ -7,19 +7,24 @@ require_once __DIR__ . '/bootstrap.php';
 $data = requireJsonInput();
 $deck = normalizeDeck($data['deck'] ?? 'default');
 
-purgeExpiredRooms();
+try {
+    purgeExpiredRooms();
 
-$attempts = 0;
-$maxAttempts = 20;
-$room = null;
+    $attempts = 0;
+    $maxAttempts = 20;
+    $room = null;
 
-while ($attempts < $maxAttempts) {
-    $attempts++;
-    $roomKey = generateRoomKey();
-    $room = createRoom($roomKey, $deck);
-    if ($room !== null) {
-        break;
+    while ($attempts < $maxAttempts) {
+        $attempts++;
+        $roomKey = generateRoomKey();
+        $room = createRoom($roomKey, $deck);
+        if ($room !== null) {
+            break;
+        }
     }
+} catch (PDOException $e) {
+    error_log('[rooms] create failed: ' . safeDbErrorMessage($e));
+    respondFatal('Nie udało się utworzyć pokoju: ' . safeDbErrorMessage($e));
 }
 
 if (!$room) {
