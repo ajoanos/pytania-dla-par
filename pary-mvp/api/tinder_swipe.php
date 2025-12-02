@@ -55,8 +55,14 @@ if (!$validPosition) {
     respond(['ok' => false, 'error' => 'Wybrana pozycja nie należy do tej rundy.']);
 }
 
-$stmt = db()->prepare('INSERT INTO tinder_swipes (session_id, participant_id, position_id, choice, created_at) VALUES (:session_id, :participant_id, :position_id, :choice, CURRENT_TIMESTAMP)
-    ON CONFLICT(session_id, participant_id, position_id) DO UPDATE SET choice = excluded.choice, created_at = CURRENT_TIMESTAMP');
+$pdo = db();
+$sql = isSqlite($pdo)
+    ? 'INSERT INTO tinder_swipes (session_id, participant_id, position_id, choice, created_at) VALUES (:session_id, :participant_id, :position_id, :choice, CURRENT_TIMESTAMP)
+        ON CONFLICT(session_id, participant_id, position_id) DO UPDATE SET choice = excluded.choice, created_at = CURRENT_TIMESTAMP'
+    : 'INSERT INTO tinder_swipes (session_id, participant_id, position_id, choice, created_at) VALUES (:session_id, :participant_id, :position_id, :choice, CURRENT_TIMESTAMP)
+        ON DUPLICATE KEY UPDATE choice = VALUES(choice), created_at = CURRENT_TIMESTAMP';
+
+$stmt = $pdo->prepare($sql);
 $stmt->execute([
     'session_id' => $sessionId,
     'participant_id' => $participantId,

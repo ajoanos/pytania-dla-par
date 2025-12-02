@@ -1121,9 +1121,18 @@ function saveBoardState(int $roomId, array $state): void
     if ($json === false) {
         throw new RuntimeException('Nie udało się zapisać stanu planszówki.');
     }
-    $stmt = db()->prepare('INSERT INTO board_sessions (room_id, state_json, updated_at)
-        VALUES (:room_id, :state_json, :updated_at)
-        ON CONFLICT(room_id) DO UPDATE SET state_json = excluded.state_json, updated_at = excluded.updated_at');
+
+    $pdo = db();
+    $isSqlite = isSqlite($pdo);
+    $sql = $isSqlite
+        ? 'INSERT INTO board_sessions (room_id, state_json, updated_at)
+            VALUES (:room_id, :state_json, :updated_at)
+            ON CONFLICT(room_id) DO UPDATE SET state_json = excluded.state_json, updated_at = excluded.updated_at'
+        : 'INSERT INTO board_sessions (room_id, state_json, updated_at)
+            VALUES (:room_id, :state_json, :updated_at)
+            ON DUPLICATE KEY UPDATE state_json = VALUES(state_json), updated_at = VALUES(updated_at)';
+
+    $stmt = $pdo->prepare($sql);
     $stmt->execute([
         'room_id' => $roomId,
         'state_json' => $json,
