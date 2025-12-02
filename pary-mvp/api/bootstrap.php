@@ -4,6 +4,50 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config.php';
 
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
+
+function respondFatal(string $message = 'Wewnętrzny błąd serwera. Spróbuj ponownie.', int $status = 500): void
+{
+    if (defined('BOOTSTRAP_EMIT_JSON') ? BOOTSTRAP_EMIT_JSON : true) {
+        http_response_code($status);
+        echo json_encode([
+            'ok' => false,
+            'error' => $message,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+    exit;
+}
+
+if (!function_exists('bootstrapExceptionHandler')) {
+    function bootstrapExceptionHandler(Throwable $throwable): void
+    {
+        error_log(sprintf('[api] %s in %s:%d', $throwable->getMessage(), $throwable->getFile(), $throwable->getLine()));
+        respondFatal();
+    }
+}
+
+if (!function_exists('bootstrapErrorHandler')) {
+    function bootstrapErrorHandler(int $severity, string $message, string $file, int $line): bool
+    {
+        if (!(error_reporting() & $severity)) {
+            return false;
+        }
+
+        bootstrapExceptionHandler(new ErrorException($message, 0, $severity, $file, $line));
+        return true;
+    }
+}
+
+set_exception_handler('bootstrapExceptionHandler');
+set_error_handler('bootstrapErrorHandler');
+register_shutdown_function(static function (): void {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+        bootstrapExceptionHandler(new ErrorException($error['message'], 0, $error['type'], $error['file'], $error['line']));
+    }
+});
+
 if (!defined('BOOTSTRAP_EMIT_JSON')) {
     define('BOOTSTRAP_EMIT_JSON', true);
 }
