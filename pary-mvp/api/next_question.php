@@ -52,8 +52,13 @@ if ($questionId !== '') {
     $selectedQuestion = $available[$randomIndex];
 }
 
-$stmt = db()->prepare('INSERT INTO session_questions (room_id, question_id) VALUES (:room_id, :question_id)
-    ON CONFLICT(room_id, question_id) DO UPDATE SET shown_at = CURRENT_TIMESTAMP');
+$pdo = db();
+$sql = isSqlite($pdo)
+    ? 'INSERT INTO session_questions (room_id, question_id) VALUES (:room_id, :question_id)
+        ON CONFLICT(room_id, question_id) DO UPDATE SET shown_at = CURRENT_TIMESTAMP'
+    : 'INSERT INTO session_questions (room_id, question_id) VALUES (:room_id, :question_id)
+        ON DUPLICATE KEY UPDATE shown_at = CURRENT_TIMESTAMP';
+$stmt = $pdo->prepare($sql);
 try {
     $stmt->execute([
         'room_id' => $room['id'],

@@ -22,10 +22,19 @@ export async function postJson(url, data) {
     },
     body: JSON.stringify(data),
   });
-  if (!response.ok) {
-    throw new Error(`Błąd sieci ${response.status}`);
+  let parsed;
+  try {
+    parsed = await response.json();
+  } catch (error) {
+    parsed = null;
   }
-  return response.json();
+
+  if (!response.ok) {
+    const message = parsed?.error || `Błąd sieci ${response.status}`;
+    throw new Error(message);
+  }
+
+  return parsed;
 }
 
 export async function getJson(url, headers = {}) {
