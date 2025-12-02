@@ -19,6 +19,19 @@ function respondFatal(string $message = 'Wewnętrzny błąd serwera. Spróbuj po
     exit;
 }
 
+function safeDbErrorMessage(Throwable $throwable): string
+{
+    $message = trim($throwable->getMessage());
+    $message = preg_replace('/\s+/', ' ', $message) ?: '';
+    $code = (string)$throwable->getCode();
+
+    if ($code !== '') {
+        return sprintf('[%s] %s', $code, $message);
+    }
+
+    return $message ?: 'nieznany błąd PDO';
+}
+
 if (!function_exists('bootstrapExceptionHandler')) {
     function bootstrapExceptionHandler(Throwable $throwable): void
     {
@@ -167,15 +180,22 @@ function db(): PDO
     try {
         $pdo = new PDO($dsn, $user, $password, $options);
     } catch (PDOException $e) {
-        error_log('[db] Connection failed: ' . $e->getMessage());
-        respondFatal('Błąd połączenia z bazą danych. Sprawdź ustawienia DB_DSN/DB_USER/DB_PASSWORD.');
+        $safeMessage = safeDbErrorMessage($e);
+        error_log('[db] Connection failed: ' . $safeMessage);
+        respondFatal('Błąd połączenia z bazą danych: ' . $safeMessage . '. Upewnij się, że użytkownik ma dostęp i poprawne hasło.');
     }
 
     if (isSqlite($pdo)) {
         $pdo->exec('PRAGMA foreign_keys = ON');
     }
 
-    initializeDatabase($pdo);
+    try {
+        initializeDatabase($pdo);
+    } catch (PDOException $e) {
+        $safeMessage = safeDbErrorMessage($e);
+        error_log('[db] Schema init failed: ' . $safeMessage);
+        respondFatal('Błąd inicjalizacji bazy danych: ' . $safeMessage . '. Sprawdź uprawnienia CREATE/ALTER dla użytkownika bazy.');
+    }
 
     return $pdo;
 }
