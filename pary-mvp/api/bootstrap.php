@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../config.php';
+
 if (!defined('BOOTSTRAP_EMIT_JSON')) {
     define('BOOTSTRAP_EMIT_JSON', true);
 }
@@ -64,8 +66,13 @@ if (!function_exists('checkRateLimit')) {
 
 checkRateLimit();
 
-define('DB_FILE', __DIR__ . '/../db/data.sqlite');
-const ROOM_LIFETIME_SECONDS = 6 * 60 * 60;
+if (!defined('DB_FILE')) {
+    define('DB_FILE', __DIR__ . '/../db/data.sqlite');
+}
+
+if (!defined('ROOM_LIFETIME_SECONDS')) {
+    define('ROOM_LIFETIME_SECONDS', 6 * 60 * 60);
+}
 const QUESTION_DECKS = [
     'default' => __DIR__ . '/../data/questions.json',
     'never' => __DIR__ . '/../data/nigdy-przenigdy.json',
@@ -96,12 +103,37 @@ function db(): PDO
         return $pdo;
     }
 
-    $pdo = new PDO('sqlite:' . DB_FILE, null, null, [
+    $dsn = getenv('DB_DSN') ?: (defined('DB_DSN') ? DB_DSN : null);
+    $user = getenv('DB_USER') ?: (defined('DB_USER') ? DB_USER : null);
+    $password = getenv('DB_PASSWORD') ?: (defined('DB_PASSWORD') ? DB_PASSWORD : null);
+
+    if (!$dsn) {
+        $dsn = 'sqlite:' . DB_FILE;
+    }
+
+    $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
+    ];
 
-    $pdo->exec('PRAGMA foreign_keys = ON');
+    if (str_starts_with($dsn, 'mysql:') && defined('PDO::MYSQL_ATTR_INIT_COMMAND')) {
+        $options[PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES utf8mb4';
+    }
+
+    try {
+        $pdo = new PDO($dsn, $user, $password, $options);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode([
+            'ok' => false,
+            'error' => 'Błąd połączenia z bazą danych. Sprawdź ustawienia DB_DSN/DB_USER/DB_PASSWORD.',
+        ]);
+        exit;
+    }
+
+    if (isSqlite($pdo)) {
+        $pdo->exec('PRAGMA foreign_keys = ON');
+    }
 
     initializeDatabase($pdo);
 
@@ -110,113 +142,122 @@ function db(): PDO
 
 function initializeDatabase(PDO $pdo): void
 {
+    $isSqlite = isSqlite($pdo);
+    $primaryKey = $isSqlite ? 'INTEGER PRIMARY KEY AUTOINCREMENT' : 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY';
+    $int = $isSqlite ? 'INTEGER' : 'INT';
+    $boolean = $isSqlite ? 'INTEGER' : 'TINYINT(1)';
+    $varchar255 = $isSqlite ? 'TEXT' : 'VARCHAR(255)';
+    $varchar100 = $isSqlite ? 'TEXT' : 'VARCHAR(100)';
+    $varchar50 = $isSqlite ? 'TEXT' : 'VARCHAR(50)';
+    $tableOptions = tableOptions($pdo);
+
     $pdo->exec('CREATE TABLE IF NOT EXISTS rooms (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_key TEXT UNIQUE NOT NULL,
+        id ' . $primaryKey . ',
+        room_key ' . $varchar255 . ' UNIQUE NOT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        deck TEXT NOT NULL DEFAULT "default"
-    )');
-    addColumnIfMissing($pdo, 'rooms', 'deck', 'TEXT NOT NULL DEFAULT "default"');
+        deck ' . $varchar100 . ' NOT NULL DEFAULT "default"
+    )' . $tableOptions);
+    addColumnIfMissing($pdo, 'rooms', 'deck', $varchar100 . ' NOT NULL DEFAULT "default"');
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS participants (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id INTEGER NOT NULL,
-        display_name TEXT NOT NULL,
+        id ' . $primaryKey . ',
+        room_id ' . $int . ' NOT NULL,
+        display_name ' . $varchar255 . ' NOT NULL,
         last_seen DATETIME NOT NULL,
-        status TEXT NOT NULL DEFAULT \'pending\',
-        is_host INTEGER NOT NULL DEFAULT 0,
+        status ' . $varchar50 . ' NOT NULL DEFAULT "pending",
+        is_host ' . $boolean . ' NOT NULL DEFAULT 0,
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
-    )');
+    )' . $tableOptions);
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS session_questions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id INTEGER NOT NULL,
-        question_id TEXT NOT NULL,
+        id ' . $primaryKey . ',
+        room_id ' . $int . ' NOT NULL,
+        question_id ' . $varchar255 . ' NOT NULL,
         shown_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(room_id, question_id),
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
-    )');
+    )' . $tableOptions);
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS reactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id INTEGER NOT NULL,
-        participant_id INTEGER NOT NULL,
-        question_id TEXT NOT NULL,
-        action TEXT NOT NULL,
+        id ' . $primaryKey . ',
+        room_id ' . $int . ' NOT NULL,
+        participant_id ' . $int . ' NOT NULL,
+        question_id ' . $varchar255 . ' NOT NULL,
+        action ' . $varchar50 . ' NOT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(room_id, participant_id, question_id),
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
         FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
-    )');
+    )' . $tableOptions);
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS chat_messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id INTEGER NOT NULL,
-        participant_id INTEGER NOT NULL,
+        id ' . $primaryKey . ',
+        room_id ' . $int . ' NOT NULL,
+        participant_id ' . $int . ' NOT NULL,
         ciphertext TEXT NOT NULL,
-        iv TEXT NOT NULL,
-        tag TEXT NOT NULL,
+        iv ' . $varchar255 . ' NOT NULL,
+        tag ' . $varchar255 . ' NOT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
         FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
-    )');
+    )' . $tableOptions);
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS board_sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id INTEGER NOT NULL UNIQUE,
+        id ' . $primaryKey . ',
+        room_id ' . $int . ' NOT NULL UNIQUE,
         state_json TEXT NOT NULL,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
-    )');
+    )' . $tableOptions);
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS tinder_sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id INTEGER NOT NULL,
-        positions_json TEXT NOT NULL,
-        total_count INTEGER NOT NULL,
-        status TEXT NOT NULL DEFAULT "active",
+        id ' . $primaryKey . ',
+        room_id ' . $int . ' NOT NULL,
+        positions_json LONGTEXT NOT NULL,
+        total_count ' . $int . ' NOT NULL,
+        status ' . $varchar50 . ' NOT NULL DEFAULT "active",
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
-    )');
+    )' . $tableOptions);
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS tinder_swipes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id INTEGER NOT NULL,
-        participant_id INTEGER NOT NULL,
-        position_id TEXT NOT NULL,
-        choice TEXT NOT NULL,
+        id ' . $primaryKey . ',
+        session_id ' . $int . ' NOT NULL,
+        participant_id ' . $int . ' NOT NULL,
+        position_id ' . $varchar255 . ' NOT NULL,
+        choice ' . $varchar50 . ' NOT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(session_id, participant_id, position_id),
         FOREIGN KEY (session_id) REFERENCES tinder_sessions(id) ON DELETE CASCADE,
         FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
-    )');
+    )' . $tableOptions);
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS tinder_replay_votes (
-        room_id INTEGER NOT NULL,
-        session_id INTEGER NOT NULL,
-        participant_id INTEGER NOT NULL,
+        room_id ' . $int . ' NOT NULL,
+        session_id ' . $int . ' NOT NULL,
+        participant_id ' . $int . ' NOT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (room_id, session_id, participant_id),
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
         FOREIGN KEY (session_id) REFERENCES tinder_sessions(id) ON DELETE CASCADE,
         FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
-    )');
+    )' . $tableOptions);
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS plan_invites (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id INTEGER NOT NULL,
-        sender_id INTEGER,
-        token TEXT NOT NULL UNIQUE,
-        sender_email TEXT NOT NULL,
-        sender_name TEXT,
-        partner_email TEXT NOT NULL,
-        mood TEXT,
-        closeness TEXT,
+        id ' . $primaryKey . ',
+        room_id ' . $int . ' NOT NULL,
+        sender_id ' . $int . ',
+        token ' . $varchar255 . ' NOT NULL UNIQUE,
+        sender_email ' . $varchar255 . ' NOT NULL,
+        sender_name ' . $varchar255 . ',
+        partner_email ' . $varchar255 . ' NOT NULL,
+        mood ' . $varchar50 . ',
+        closeness ' . $varchar50 . ',
         extras_json TEXT,
-        energy TEXT,
+        energy ' . $varchar50 . ',
         energy_context TEXT,
-        start_time TEXT,
+        start_time ' . $varchar100 . ',
         plan_link TEXT,
         proposal_link TEXT,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -224,16 +265,16 @@ function initializeDatabase(PDO $pdo): void
         declined_at DATETIME,
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
         FOREIGN KEY (sender_id) REFERENCES participants(id) ON DELETE SET NULL
-    )');
+    )' . $tableOptions);
 
     addColumnIfMissing($pdo, 'plan_invites', 'plan_link', 'TEXT');
     addColumnIfMissing($pdo, 'plan_invites', 'proposal_link', 'TEXT');
     addColumnIfMissing($pdo, 'plan_invites', 'declined_at', 'DATETIME');
-    addColumnIfMissing($pdo, 'plan_invites', 'sender_id', 'INTEGER');
-    addColumnIfMissing($pdo, 'plan_invites', 'start_time', 'TEXT');
+    addColumnIfMissing($pdo, 'plan_invites', 'sender_id', $int);
+    addColumnIfMissing($pdo, 'plan_invites', 'start_time', $varchar100);
 
-    $statusAdded = addColumnIfMissing($pdo, 'participants', 'status', "TEXT NOT NULL DEFAULT 'pending'");
-    $isHostAdded = addColumnIfMissing($pdo, 'participants', 'is_host', 'INTEGER NOT NULL DEFAULT 0');
+    $statusAdded = addColumnIfMissing($pdo, 'participants', 'status', $varchar50 . " NOT NULL DEFAULT 'pending'");
+    $isHostAdded = addColumnIfMissing($pdo, 'participants', 'is_host', $boolean . ' NOT NULL DEFAULT 0');
 
     if ($statusAdded) {
         $pdo->exec("UPDATE participants SET status = 'active'");
@@ -244,6 +285,20 @@ function initializeDatabase(PDO $pdo): void
     if ($isHostAdded) {
         $pdo->exec('UPDATE participants SET is_host = 0 WHERE is_host IS NULL');
     }
+}
+
+function isSqlite(PDO $pdo): bool
+{
+    return $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite';
+}
+
+function tableOptions(PDO $pdo): string
+{
+    if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql') {
+        return ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
+    }
+
+    return '';
 }
 
 function createPlanInvite(
@@ -365,9 +420,24 @@ function addColumnIfMissing(PDO $pdo, string $table, string $column, string $def
         return false;
     }
 
-    $stmt = $pdo->query('PRAGMA table_info(' . $table . ')');
-    while ($info = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        if (($info['name'] ?? '') === $column) {
+    if (isSqlite($pdo)) {
+        $stmt = $pdo->query('PRAGMA table_info(' . $table . ')');
+        while ($info = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            if (($info['name'] ?? '') === $column) {
+                return false;
+            }
+        }
+    } else {
+        $schemaStmt = $pdo->query('SELECT DATABASE()');
+        $schema = (string)$schemaStmt->fetchColumn();
+        $check = $pdo->prepare('SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = :schema AND TABLE_NAME = :table AND COLUMN_NAME = :column');
+        $check->execute([
+            'schema' => $schema,
+            'table' => $table,
+            'column' => $column,
+        ]);
+
+        if ((int)$check->fetchColumn() > 0) {
             return false;
         }
     }
@@ -1051,9 +1121,18 @@ function saveBoardState(int $roomId, array $state): void
     if ($json === false) {
         throw new RuntimeException('Nie udało się zapisać stanu planszówki.');
     }
-    $stmt = db()->prepare('INSERT INTO board_sessions (room_id, state_json, updated_at)
-        VALUES (:room_id, :state_json, :updated_at)
-        ON CONFLICT(room_id) DO UPDATE SET state_json = excluded.state_json, updated_at = excluded.updated_at');
+
+    $pdo = db();
+    $isSqlite = isSqlite($pdo);
+    $sql = $isSqlite
+        ? 'INSERT INTO board_sessions (room_id, state_json, updated_at)
+            VALUES (:room_id, :state_json, :updated_at)
+            ON CONFLICT(room_id) DO UPDATE SET state_json = excluded.state_json, updated_at = excluded.updated_at'
+        : 'INSERT INTO board_sessions (room_id, state_json, updated_at)
+            VALUES (:room_id, :state_json, :updated_at)
+            ON DUPLICATE KEY UPDATE state_json = VALUES(state_json), updated_at = VALUES(updated_at)';
+
+    $stmt = $pdo->prepare($sql);
     $stmt->execute([
         'room_id' => $roomId,
         'state_json' => $json,
@@ -1468,39 +1547,3 @@ function appendBoardHistory(array &$state, string $message): void
         $state['history'] = array_slice($state['history'], -40);
     }
 }
-function checkRateLimit(): void
-{
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $file = sys_get_temp_dir() . '/rate_limit_' . md5($ip);
-    $limit = 60; // requests per minute
-    $window = 60; // seconds
-
-    $current = time();
-    $data = ['count' => 0, 'start_time' => $current];
-
-    if (file_exists($file)) {
-        $content = file_get_contents($file);
-        if ($content !== false) {
-            $decoded = json_decode($content, true);
-            if (is_array($decoded)) {
-                $data = $decoded;
-            }
-        }
-    }
-
-    if ($current - $data['start_time'] > $window) {
-        $data['count'] = 1;
-        $data['start_time'] = $current;
-    } else {
-        $data['count']++;
-    }
-
-    if ($data['count'] > $limit) {
-        http_response_code(429);
-        die(json_encode(['ok' => false, 'error' => 'Zbyt wiele zapytań. Spróbuj później.']));
-    }
-
-    file_put_contents($file, json_encode($data));
-}
-
-checkRateLimit();
