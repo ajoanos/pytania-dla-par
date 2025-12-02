@@ -167,12 +167,8 @@ function db(): PDO
     try {
         $pdo = new PDO($dsn, $user, $password, $options);
     } catch (PDOException $e) {
-        http_response_code(500);
-        echo json_encode([
-            'ok' => false,
-            'error' => 'Błąd połączenia z bazą danych. Sprawdź ustawienia DB_DSN/DB_USER/DB_PASSWORD.',
-        ]);
-        exit;
+        error_log('[db] Connection failed: ' . $e->getMessage());
+        respondFatal('Błąd połączenia z bazą danych. Sprawdź ustawienia DB_DSN/DB_USER/DB_PASSWORD.');
     }
 
     if (isSqlite($pdo)) {
