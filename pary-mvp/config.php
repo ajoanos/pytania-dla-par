@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 // Konfiguracja aplikacji
 
+// Poświadczenia bazy – można je nadpisać zmiennymi środowiskowymi
+define('DB_DSN', getenv('DB_DSN') ?: 'mysql:host=mariadb118.server537967.nazwa.pl;port=3306;dbname=server537967_momenty;charset=utf8mb4');
+define('DB_USER', getenv('DB_USER') ?: 'server537967_momenty');
+define('DB_PASSWORD', getenv('DB_PASSWORD') ?: '090787Az44!?');
+
 // Hasło dostępu - można ustawić przez zmienną środowiskową
 define('ACCESS_PASSWORD', getenv('ACCESS_PASSWORD') ?: 'wedwoje25');
 
