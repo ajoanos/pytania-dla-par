@@ -1538,39 +1538,3 @@ function appendBoardHistory(array &$state, string $message): void
         $state['history'] = array_slice($state['history'], -40);
     }
 }
-function checkRateLimit(): void
-{
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $file = sys_get_temp_dir() . '/rate_limit_' . md5($ip);
-    $limit = 60; // requests per minute
-    $window = 60; // seconds
-
-    $current = time();
-    $data = ['count' => 0, 'start_time' => $current];
-
-    if (file_exists($file)) {
-        $content = file_get_contents($file);
-        if ($content !== false) {
-            $decoded = json_decode($content, true);
-            if (is_array($decoded)) {
-                $data = $decoded;
-            }
-        }
-    }
-
-    if ($current - $data['start_time'] > $window) {
-        $data['count'] = 1;
-        $data['start_time'] = $current;
-    } else {
-        $data['count']++;
-    }
-
-    if ($data['count'] > $limit) {
-        http_response_code(429);
-        die(json_encode(['ok' => false, 'error' => 'Zbyt wiele zapytań. Spróbuj później.']));
-    }
-
-    file_put_contents($file, json_encode($data));
-}
-
-checkRateLimit();
