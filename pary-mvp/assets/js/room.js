@@ -663,6 +663,10 @@ async function refreshState() {
     const incomingDeck = (payload.deck || '').toLowerCase();
     if (incomingDeck && incomingDeck !== currentDeck) {
       await applyVariant(incomingDeck);
+    } else if (questionsLoadedDeck !== currentDeck || allQuestions.length === 0) {
+      await ensureQuestionsLoaded(currentDeck);
+      updateQuestionFilterVisibility();
+      updateCatalogVisibility();
     }
     selfInfo = payload.self || null;
     if (maybeRedirectToWaiting(selfInfo)) {
