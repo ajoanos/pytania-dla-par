@@ -42,7 +42,7 @@ updateParticipantStatus($requestId, (int)$room['id'], $newStatus);
 if ($newStatus === 'active') {
     $stmt = db()->prepare('UPDATE participants SET last_seen = :last_seen WHERE id = :id');
     $stmt->execute([
-        'last_seen' => gmdate('c'),
+        'last_seen' => gmdate('Y-m-d H:i:s'),
         'id' => $requestId,
     ]);
 }

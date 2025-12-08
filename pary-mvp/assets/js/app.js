@@ -589,7 +589,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     const swUrl = new URL('service-worker.js', window.location.href);
     // Bust caches on servers that might serve stale worker content
-    swUrl.searchParams.set('v', 'v22');
+    swUrl.searchParams.set('v', 'v24');
 
     navigator.serviceWorker
       .register(swUrl.toString())

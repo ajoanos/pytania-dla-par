@@ -28,7 +28,7 @@ if (($participant['status'] ?? '') !== 'active' && (int)($participant['is_host']
 
 $stmt = db()->prepare('UPDATE participants SET last_seen = :last_seen WHERE id = :id AND room_id = :room_id');
 $stmt->execute([
-    'last_seen' => gmdate('c'),
+    'last_seen' => gmdate('Y-m-d H:i:s'),
     'id' => $participantId,
     'room_id' => $room['id'],
 ]);

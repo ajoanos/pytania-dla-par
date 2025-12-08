@@ -170,10 +170,28 @@ async function loadRemoteState() {
     setCurrentParticipants(snapshot.participants);
     applyState(snapshot.state, { skipBroadcast: true });
     updateSnapshotSignature(snapshot.state, snapshot.participants);
+    updateShareVisibility();
     return true;
   } catch (error) {
     console.error('Nie udało się pobrać stanu planszówki z serwera.', error);
     return false;
+  }
+}
+
+function updateShareVisibility() {
+  if (!shareElements.bar) {
+    return;
+  }
+  const shouldShow = isCurrentUserHost && currentParticipants.length < 2;
+  shareElements.bar.hidden = !shouldShow;
+
+  if (shareElements.openButton) {
+    shareElements.openButton.disabled = !shouldShow;
+    if (shouldShow) {
+      shareElements.openButton.removeAttribute('tabindex');
+    } else {
+      shareElements.openButton.setAttribute('tabindex', '-1');
+    }
   }
 }
 
@@ -718,11 +736,11 @@ function sanitizeState(state, participants = []) {
 
   const participantList = Array.isArray(participants)
     ? participants
-        .map((entry) => ({
-          id: String(entry?.id ?? ''),
-          name: String(entry?.name ?? '').trim() || 'Gracz',
-        }))
-        .filter((entry) => entry.id)
+      .map((entry) => ({
+        id: String(entry?.id ?? ''),
+        name: String(entry?.name ?? '').trim() || 'Gracz',
+      }))
+      .filter((entry) => entry.id)
     : [];
 
   const incomingPlayers = {};
@@ -859,11 +877,11 @@ function sanitizeState(state, participants = []) {
 
   next.history = Array.isArray(source.history)
     ? source.history
-        .map((entry) => ({
-          message: String(entry?.message ?? '').trim(),
-          timestamp: String(entry?.timestamp ?? ''),
-        }))
-        .filter((entry) => entry.message)
+      .map((entry) => ({
+        message: String(entry?.message ?? '').trim(),
+        timestamp: String(entry?.timestamp ?? ''),
+      }))
+      .filter((entry) => entry.message)
     : [];
 
   return next;

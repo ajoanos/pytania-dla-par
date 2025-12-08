@@ -1,6 +1,6 @@
-const CACHE_NAME = 'pary-mvp-v22';
+const CACHE_NAME = 'pary-mvp-v24';
 
-const BASE_PATH = new URL('./', self.location).pathname.replace(/\/service-worker\.js$/, '');
+const BASE_PATH = new URL('./', self.location).href;
 
 const RELATIVE_ASSETS = [
   './',
@@ -81,6 +81,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') {
+    return;
+  }
+  if (request.url.includes('/api/')) {
     return;
   }
   event.respondWith(

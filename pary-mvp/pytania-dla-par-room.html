@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,9 +11,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
-  <script type="module" src="assets/js/app.js"></script>
-  <script type="module" src="assets/js/topbar.js"></script>
+  <script type="module" src="assets/js/app.js?v=24"></script>
+  <script type="module" src="assets/js/topbar.js?v=24"></script>
 </head>
+
 <body class="page page--game" data-theme="light">
   <header id="topbar"></header>
   <main class="container">
@@ -26,12 +28,14 @@
           <summary class="game-switcher__toggle">Wybierz grę</summary>
           <div class="game-switcher__panel">
             <ul class="game-switcher__list">
-              <li><a class="game-switcher__link" href="pytania-dla-par.html" aria-current="page">Pytania dla par</a></li>
+              <li><a class="game-switcher__link" href="pytania-dla-par.html" aria-current="page">Pytania dla par</a>
+              </li>
               <li><a class="game-switcher__link" href="jak-dobrze-mnie-znasz.html">Jak dobrze mnie znasz</a></li>
               <li><a class="game-switcher__link" href="nigdy-przenigdy.html">Nigdy przenigdy</a></li>
               <li><a class="game-switcher__link" href="plan-wieczoru.html">Plan Wieczoru – We Dwoje</a></li>
               <li><a class="game-switcher__link" href="planszowa.html">Planszówka dla dwojga (dla dorosłych)</a></li>
-              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna, zbliżająca)</a></li>
+              <li><a class="game-switcher__link" href="planszowa-romantyczna.html">Planszówka dla dwojga (romantyczna,
+                  zbliżająca)</a></li>
               <li><a class="game-switcher__link" href="trio-challenge.html">Kółko i krzyżyk Wyzwanie</a></li>
               <li><a class="game-switcher__link" href="zdrapka-pozycji.html">Zaparowane Lustro</a></li>
               <li><a class="game-switcher__link" href="pozycje-na-czas.html">Pozycje na czas</a></li>
@@ -49,25 +53,20 @@
       <header class="card__header">
         <h2>Pytania dla par</h2>
       </header>
-      <form
-        id="join-form"
-        class="form"
-        data-success-active="room.html"
-        data-success-pending="room-waiting.html"
-        data-storage-key="pary.access.pdp"
-        data-access-redirect="pytania-dla-par.html"
-        data-require-room-key="true"
-        data-submit-mode="host"
-      >
+      <form id="join-form" class="form" data-success-active="room.html" data-success-pending="room-waiting.html"
+        data-storage-key="pary.access.pdp" data-access-redirect="pytania-dla-par.html" data-require-room-key="true"
+        data-submit-mode="host">
         <input type="hidden" id="room_key" name="room_key" autocomplete="off" />
         <aside class="form__notice" data-role="room-ready" hidden>
           <p>
-            Wasz pokój jest już gotowy. Wejdź do środka, aby zaprosić partnera linkiem lub kodem QR. Pokój wygaśnie po 6 godzinach.
+            Wasz pokój jest już gotowy. Wejdź do środka, aby zaprosić partnera linkiem lub kodem QR. Pokój wygaśnie po 6
+            godzinach.
           </p>
         </aside>
         <label class="form__field">
           <span>Twoje imię</span>
-          <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40" autocomplete="off" />
+          <input type="text" id="display_name" name="display_name" placeholder="np. Ola" required maxlength="40"
+            autocomplete="off" />
         </label>
         <button type="submit" class="btn btn--primary btn--enter-room">Wejdź do pokoju</button>
       </form>
@@ -84,4 +83,5 @@
     document.addEventListener('DOMContentLoaded', () => renderTopbar());
   </script>
 </body>
+
 </html>

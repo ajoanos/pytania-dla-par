@@ -1,9 +1,10 @@
 import { appendTokenToUrl, getJson, postJson } from './app.js';
 import { initShareSheet, initShareQrModal, initShareEmailForm, updateShareLinks } from './share.js';
 
+const SWIPE_THRESHOLD = 60;
 const EMAIL_ENDPOINT = 'api/send_positions_email.php';
 const SHARE_EMAIL_SUBJECT = 'Tinder wspólnych pomysłów – dołącz do mnie';
-const IDEAS_DATA_URL = 'data/tinder-wspolne-pomysly.json';
+const IDEAS_DATA_URL = 'api/tinder_ideas_catalog.php';
 
 const params = new URLSearchParams(window.location.search);
 const roomKey = (params.get('room_key') || '').toUpperCase();
@@ -18,50 +19,49 @@ const replayVoteEndpoint = 'api/tinder_ideas_replay_vote.php';
 const VISIBLE_POLL_INTERVAL_MS = 5000;
 const HIDDEN_POLL_INTERVAL_MS = 20000;
 const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
-const hostSetupCard = document.getElementById('host-setup');
-const categoryList = document.getElementById('idea-category-list');
-const selectAllButton = document.getElementById('idea-select-all');
-const setupHint = document.getElementById('setup-hint');
-const startButton = document.getElementById('start-session');
-const swipeCard = document.getElementById('swipe-card');
-const swipeStatus = document.getElementById('swipe-status');
-const swipePlaceholder = document.getElementById('swipe-placeholder');
-const swipeMedia = document.getElementById('swipe-media');
-const swipeText = document.getElementById('swipe-text');
-const swipeCategory = document.getElementById('swipe-category');
-const swipeStage = document.getElementById('swipe-stage');
-const swipeButtons = document.querySelectorAll('.swipe-button');
-const partnerProgress = document.getElementById('partner-progress');
-const progressLabel = document.getElementById('progress-label');
-const progressBar = document.getElementById('progress-bar');
-const summaryCard = document.getElementById('match-summary');
-const summaryLead = document.getElementById('summary-lead');
-const summaryEmpty = document.getElementById('summary-empty');
-const matchList = document.getElementById('match-list');
-const playAgainButton = document.getElementById('play-again');
-const playAgainDefaultLabel = playAgainButton?.textContent?.trim() || 'Gramy jeszcze raz?';
-if (playAgainButton) {
-  playAgainButton.disabled = true;
-}
-const shareBar = document.getElementById('share-bar');
-const shareLayer = document.getElementById('share-layer');
-const shareCard = document.getElementById('share-card');
-const shareOpen = document.getElementById('share-open');
-const shareClose = document.getElementById('share-close');
-const shareBackdrop = document.getElementById('share-backdrop');
-const shareCopy = document.getElementById('share-copy');
-const shareFeedback = document.getElementById('share-feedback');
-const shareLinks = document.getElementById('share-links');
-const shareQrButton = document.getElementById('share-show-qr');
-const shareQrModal = document.getElementById('share-qr-modal');
-const shareQrImage = document.getElementById('share-qr-image');
-const shareQrUrl = document.getElementById('share-qr-url');
-const shareQrClose = document.getElementById('share-qr-close');
-const shareEmailForm = document.getElementById('share-email');
-const shareEmailInput = document.getElementById('share-email-input');
-const shareEmailFeedback = document.getElementById('share-email-feedback');
 
-const SWIPE_THRESHOLD = 60;
+// DOM Elements (initialized in init)
+let hostSetupCard = null;
+let categoryList = null;
+let selectAllButton = null;
+let setupHint = null;
+let startButton = null;
+let swipeCard = null;
+let swipeStatus = null;
+let swipePlaceholder = null;
+let swipeMedia = null;
+let swipeText = null;
+let swipeCategory = null;
+let swipeStage = null;
+let swipeButtons = [];
+let partnerProgress = null;
+let progressLabel = null;
+let progressBar = null;
+let summaryCard = null;
+let summaryLead = null;
+let summaryEmpty = null;
+let matchList = null;
+let playAgainButton = null;
+let playAgainDefaultLabel = '';
+
+let shareBar = null;
+let shareLayer = null;
+let shareCard = null;
+let shareOpen = null;
+let shareClose = null;
+let shareBackdrop = null;
+let shareCopy = null;
+let shareFeedback = null;
+let shareLinks = null;
+let shareQrButton = null;
+let shareQrModal = null;
+let shareQrImage = null;
+let shareQrUrl = null;
+let shareQrClose = null;
+let shareEmailForm = null;
+let shareEmailInput = null;
+let shareEmailFeedback = null;
+
 
 let isHost = false;
 let currentSession = null;
@@ -929,6 +929,51 @@ function stopPolling() {
 let initialized = false;
 
 function init() {
+  hostSetupCard = document.getElementById('host-setup');
+  categoryList = document.getElementById('idea-category-list');
+  selectAllButton = document.getElementById('idea-select-all');
+  setupHint = document.getElementById('setup-hint');
+  startButton = document.getElementById('start-session');
+  swipeCard = document.getElementById('swipe-card');
+  swipeStatus = document.getElementById('swipe-status');
+  swipePlaceholder = document.getElementById('swipe-placeholder');
+  swipeMedia = document.getElementById('swipe-media');
+  swipeText = document.getElementById('swipe-text');
+  swipeCategory = document.getElementById('swipe-category');
+  swipeStage = document.getElementById('swipe-stage');
+  swipeButtons = document.querySelectorAll('.swipe-button');
+  partnerProgress = document.getElementById('partner-progress');
+  progressLabel = document.getElementById('progress-label');
+  progressBar = document.getElementById('progress-bar');
+  summaryCard = document.getElementById('match-summary');
+  summaryLead = document.getElementById('summary-lead');
+  summaryEmpty = document.getElementById('summary-empty');
+  matchList = document.getElementById('match-list');
+  playAgainButton = document.getElementById('play-again');
+
+  if (playAgainButton) {
+    playAgainDefaultLabel = playAgainButton.textContent?.trim() || 'Gramy jeszcze raz?';
+    playAgainButton.disabled = true;
+  }
+
+  shareBar = document.getElementById('share-bar');
+  shareLayer = document.getElementById('share-layer');
+  shareCard = document.getElementById('share-card');
+  shareOpen = document.getElementById('share-open');
+  shareClose = document.getElementById('share-close');
+  shareBackdrop = document.getElementById('share-backdrop');
+  shareCopy = document.getElementById('share-copy');
+  shareFeedback = document.getElementById('share-feedback');
+  shareLinks = document.getElementById('share-links');
+  shareQrButton = document.getElementById('share-show-qr');
+  shareQrModal = document.getElementById('share-qr-modal');
+  shareQrImage = document.getElementById('share-qr-image');
+  shareQrUrl = document.getElementById('share-qr-url');
+  shareQrClose = document.getElementById('share-qr-close');
+  shareEmailForm = document.getElementById('share-email');
+  shareEmailInput = document.getElementById('share-email-input');
+  shareEmailFeedback = document.getElementById('share-email-feedback');
+
   if (!roomKey || !participantId) {
     redirectToSetup();
     return;

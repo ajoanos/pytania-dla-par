@@ -100,7 +100,9 @@ let lastReactionId = 0;
 let currentETag = null;
 let allReactions = [];
 
-const POLL_INTERVAL_MS = 10000;
+const POLL_INTERVAL_WAITING = 2000;
+const POLL_INTERVAL_ACTIVE = 6000;
+const POLL_INTERVAL_BACKGROUND = 20000;
 const PRESENCE_INTERVAL_MS = 30000;
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -750,7 +752,7 @@ function renderParticipants(participants) {
     li.textContent = participant.display_name;
     const status = document.createElement('span');
     status.className = 'participants__status';
-    const lastSeen = participant.last_seen ? Date.parse(participant.last_seen) : 0;
+    const lastSeen = participant.last_seen ? Date.parse(participant.last_seen.replace(' ', 'T') + 'Z') : 0;
     const diff = now - lastSeen;
     status.textContent = diff < 20000 ? 'online' : 'offline';
     li.appendChild(status);
@@ -1907,7 +1909,10 @@ async function ensureQuestionsLoaded(deckId) {
   loadingCategories = true;
   try {
     const variant = getVariantConfig(deckId);
-    const response = await fetch(variant.questionsPath, { cache: 'no-cache' });
+    // Bypass Service Worker cache by appending a timestamp
+    const url = new URL(variant.questionsPath, window.location.href);
+    url.searchParams.set('t', Date.now().toString());
+    const response = await fetch(url.toString(), { cache: 'no-cache' });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
@@ -1921,8 +1926,9 @@ async function ensureQuestionsLoaded(deckId) {
     populateCategoryOptions(categories);
     renderCategoryChips(categories);
     renderCategoryButtons(variant.showCatalog ? categories : []);
+    console.log(`Załadowano ${data.length} pytań dla talii: ${deckId}, znaleziono kategorii: ${categories.length}`);
   } catch (error) {
-    console.warn('Nie udało się pobrać kategorii', error);
+    console.error('Nie udało się pobrać kategorii (błąd ładowania pytań):', error);
     allQuestions = [];
     questionsLoadedDeck = deckId;
     populateCategoryOptions([]);
@@ -2246,12 +2252,30 @@ function resumePolling() {
   startPolling();
 }
 
-async function startPolling() {
-  if (!isPolling) return;
-  await refreshState();
-  if (isPolling) {
-    pollTimer = setTimeout(startPolling, POLL_INTERVAL_MS);
+function getPollInterval() {
+  if (document.hidden) {
+    return POLL_INTERVAL_BACKGROUND;
   }
+  if (activeParticipantCount < 2) {
+    return POLL_INTERVAL_WAITING;
+  }
+  return POLL_INTERVAL_ACTIVE;
+}
+
+function scheduleNextPoll() {
+  if (pollTimer) {
+    clearTimeout(pollTimer);
+  }
+  pollTimer = setTimeout(async () => {
+    if (wasManuallyPaused) return;
+    await refreshState();
+    scheduleNextPoll();
+  }, getPollInterval());
+}
+
+async function startPolling() {
+  if (pollTimer) return;
+  scheduleNextPoll();
 }
 
 function pauseForInactivity() {

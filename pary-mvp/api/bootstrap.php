@@ -36,7 +36,7 @@ if (!function_exists('bootstrapExceptionHandler')) {
     function bootstrapExceptionHandler(Throwable $throwable): void
     {
         error_log(sprintf('[api] %s in %s:%d', $throwable->getMessage(), $throwable->getFile(), $throwable->getLine()));
-        respondFatal();
+        respondFatal($throwable->getMessage());
     }
 }
 
@@ -204,7 +204,7 @@ function initializeDatabase(PDO $pdo): void
 {
     $isSqlite = isSqlite($pdo);
     $primaryKey = $isSqlite ? 'INTEGER PRIMARY KEY AUTOINCREMENT' : 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY';
-    $int = $isSqlite ? 'INTEGER' : 'INT';
+    $int = $isSqlite ? 'INTEGER' : 'INT UNSIGNED';
     $boolean = $isSqlite ? 'INTEGER' : 'TINYINT(1)';
     $varchar255 = $isSqlite ? 'TEXT' : 'VARCHAR(255)';
     $varchar100 = $isSqlite ? 'TEXT' : 'VARCHAR(100)';
@@ -460,7 +460,7 @@ function markPlanInviteAccepted(int $inviteId): void
 {
     $stmt = db()->prepare('UPDATE plan_invites SET accepted_at = :accepted_at WHERE id = :id AND accepted_at IS NULL AND declined_at IS NULL');
     $stmt->execute([
-        'accepted_at' => gmdate('c'),
+        'accepted_at' => gmdate('Y-m-d H:i:s'),
         'id' => $inviteId,
     ]);
 }
@@ -469,7 +469,7 @@ function markPlanInviteDeclined(int $inviteId): void
 {
     $stmt = db()->prepare('UPDATE plan_invites SET declined_at = :declined_at WHERE id = :id AND declined_at IS NULL AND accepted_at IS NULL');
     $stmt->execute([
-        'declined_at' => gmdate('c'),
+        'declined_at' => gmdate('Y-m-d H:i:s'),
         'id' => $inviteId,
     ]);
 }
@@ -769,7 +769,7 @@ function ensureParticipant(int $roomId, string $displayName, bool $isHost = fals
     $stmt->execute([
         'room_id' => $roomId,
         'display_name' => $displayName,
-        'last_seen' => gmdate('c'),
+        'last_seen' => gmdate('Y-m-d H:i:s'),
         'status' => ($isHost || $forceActive) ? 'active' : 'pending',
         'is_host' => $isHost ? 1 : 0,
     ]);
@@ -917,6 +917,22 @@ function loadTinderIdeasCatalog(): array
         return $cache;
     }
 
+    // Cache Warmer: Use PHP file to leverage OpCache
+    $tempDir = sys_get_temp_dir();
+    $cacheFile = $tempDir . '/pary_tinder_ideas_cache_' . md5($path) . '.php';
+    
+    $sourceMtime = @filemtime($path);
+    $cacheMtime = @filemtime($cacheFile);
+
+    if ($cacheMtime && $sourceMtime && $cacheMtime >= $sourceMtime) {
+        // Load from PHP cache (fast)
+        $result = @include $cacheFile;
+        if (is_array($result)) {
+            $cache = $result;
+            return $result;
+        }
+    }
+
     $raw = file_get_contents($path);
     $data = json_decode((string)$raw, true);
     if (!is_array($data)) {
@@ -943,6 +959,14 @@ function loadTinderIdeasCatalog(): array
                 return $prompt !== '';
             })),
         ];
+    }
+
+    // Write to PHP cache file
+    try {
+        $phpCode = '<?php return ' . var_export($catalog, true) . ';';
+        @file_put_contents($cacheFile, $phpCode, LOCK_EX);
+    } catch (Throwable $e) {
+        // Ignore cache write errors
     }
 
     $cache = $catalog;
@@ -1171,7 +1195,7 @@ function fetchBoardState(int $roomId): array
     saveBoardState($roomId, $state);
     return [
         'state' => $state,
-        'updated_at' => gmdate('c'),
+        'updated_at' => gmdate('Y-m-d H:i:s'),
     ];
 }
 
@@ -1196,7 +1220,7 @@ function saveBoardState(int $roomId, array $state): void
     $stmt->execute([
         'room_id' => $roomId,
         'state_json' => $json,
-        'updated_at' => gmdate('c'),
+        'updated_at' => gmdate('Y-m-d H:i:s'),
     ]);
 }
 
