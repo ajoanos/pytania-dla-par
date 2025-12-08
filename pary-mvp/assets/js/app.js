@@ -382,6 +382,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayNameField = joinForm.elements.namedItem('display_name');
     const successActive = appendTokenToUrl(joinForm.dataset.successActive || 'room.html');
     const successPending = appendTokenToUrl(joinForm.dataset.successPending || 'room-waiting.html');
+    const deckParam =
+      (joinForm.dataset.deck || document.body.dataset.deck || params.get('deck') || 'default')
+        .trim()
+        .toLowerCase();
     const autoApprove = joinForm.dataset.autoApprove === 'true';
     const requireRoomKey = joinForm.dataset.requireRoomKey === 'true';
     const submitMode = (joinForm.dataset.submitMode || (autoApprove ? 'invite' : 'host')).trim().toLowerCase();
@@ -454,6 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
           room_key: roomKey,
           display_name: displayName,
           mode,
+          deck: deckParam,
         });
         if (!payload.ok) {
           throw new Error(payload.error || 'Nie udało się dołączyć do pokoju.');
